@@ -1,14 +1,11 @@
 #ifndef __LINUX_UDF_I_H
 #define __LINUX_UDF_I_H
 
-#ifndef CONFIG_UDF_FS_EXT
-
-#define UDF_I(X)	(&((X)->u.udf_i))
-
-#else
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,3,17) && defined(CONFIG_UDF_FS_EXT)
 /* we're not compiled in, so we can't expect our stuff in <linux/fs.h> */
 #define UDF_I(X)	( (struct udf_inode_info *) &((X)->u.ext2_i))
-	/* god, this is slimy. stealing another filesystem's union area. */
+#else
+#define UDF_I(X)	(&((X)->u.udf_i))
 #endif
 
 #define UDF_I_EXT0LOC(X)	( UDF_I(X)->i_ext0Location )
