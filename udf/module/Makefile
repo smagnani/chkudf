@@ -48,7 +48,7 @@ install: $(MODULES) ../.prereq.ok kcheck
 
 %.o:	../linux-$(UTS_SHORT)/%.c
 	$(CC) -MD $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
-	@mkdir -p .depfiles ; mv $*.d .depfiles
+	@mkdir -p .depfiles ; mv -f $*.d .depfiles
 
 kcheck:
 	@. ../config.out ; \
