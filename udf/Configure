@@ -384,7 +384,7 @@ case "$VERSION.$PATCHLEVEL" in
 	;;
 esac
 
-UTS_RELEASE=`grep UTS_RELEASE $LINUX/include/linux/version.h | awk '{print $3}' | sed 's/"//g'`
+UTS_RELEASE=`grep UTS_RELEASE $LINUX/include/linux/version.h | grep -v BOOT | awk '{print $3}' | sed 's/"//g'`
 if [ ! $UTS_RELEASE ] ; then
 	echo "Cannot determine version from version.h. Using Makefile."
 	UTS_RELEASE=$CUR_RELEASE
