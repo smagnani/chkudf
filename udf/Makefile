@@ -34,7 +34,6 @@ udftools: libudf .prereq.ok
 
 install: .prereq.ok
 	@make -C module install
-	@make -C tools install
 
 clean: clean-subdirs
 

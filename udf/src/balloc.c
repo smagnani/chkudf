@@ -256,7 +256,7 @@ int udf_new_block(const struct inode * inode, Uint16 partition, Uint32 goal,
 	int newblock = 0;
 
 #ifdef VDEBUG
-	udf_debug("ino=%ld, block=%d, partition=%d\n", inode->i_ino, goal, partition);
+	udf_debug("ino=%ld, goal=%d, partition=%d\n", inode->i_ino, goal, partition);
 #endif
 	
 	*err = -ENOSPC;
@@ -270,9 +270,8 @@ int udf_new_block(const struct inode * inode, Uint16 partition, Uint32 goal,
 
 repeat:
 	if (goal < 0 || goal >= UDF_SB_PARTLEN(sb, partition))
-	{
 		goal = 0;
-	}
+
 	nr_groups = (UDF_SB_PARTLEN(sb, partition) +
 		(sizeof(struct SpaceBitmapDesc) << 3) + sb->s_blocksize - 1) / sb->s_blocksize;
 	block = goal + (sizeof(struct SpaceBitmapDesc) << 3);

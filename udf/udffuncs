@@ -1,8 +1,8 @@
 file.c:
 file_operations
-  llseek (ext2_file_lseek)
+  llseek udf_file_llseek (ext2_file_lseek)
   read - udf_file_read (generic_file_read)
-  write (ext2_file_write)
+  write udf_file_write (ext2_file_write)
   readdir
   poll
   ioctl - udf_ioctl (ext2_ioctl)
@@ -10,7 +10,7 @@ file_operations
   open - udf_open_file (ext2_open_file)
   flush
   release - udf_release_file (ext2_release_file)
-  fsync (ext2_sync_file)
+  fsync udf_sync_file (ext2_sync_file)
   fasync
   check_media_change
   revalidate
@@ -49,7 +49,7 @@ file_operations
   open
   flush
   release
-  fsync (ext2_sync_file)
+  fsync udf_sync_file (ext2_sync_file)
   fasync
   check_media_change
   revalidate
@@ -64,7 +64,7 @@ inode_operations
   mkdir - udf_mkdir (ext2_mkdir)
   rmdir - udf_rmdir (ext2_rmdir)
   mknod - udf_mknod (ext2_mknod)
-  rename (ext2_rename)
+  rename udf_rename (ext2_rename)
   readlink
   follow_link
   readpage

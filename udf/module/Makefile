@@ -20,8 +20,8 @@ COFLAGS	= -kv
 CFLAGS	= $(KFLAGS) $(MFLAG)
 
 SRCS	:= balloc.c dir.c file.c ialloc.c inode.c lowlevel.c namei.c
-SRCS	+= partition.c super.c truncate.c symlink.c
-SRCS	+= crc.c directory.c misc.c udftime.c unicode.c fsync.c
+SRCS	+= partition.c super.c truncate.c symlink.c fsync.c
+SRCS	+= crc.c directory.c misc.c udftime.c unicode.c
 
 OBJS	= $(SRCS:%.c=%.o)
 
@@ -42,7 +42,7 @@ clean:
 
 install: $(MODULES) ../.prereq.ok kcheck
 	-mkdir -p $(MODDIR)/fs
-	install -o root -g root -m 644 $(MODULES) $(MODDIR)/fs/
+	install -o root -g root -m 644 $(MODULES) $(MODDIR)/fs
 
 # Stuff to automatically maintain dependency files
 

@@ -1,7 +1,7 @@
 #ifndef __UDF_DECL_H
 #define __UDF_DECL_H
 
-#define UDF_VERSION_NOTICE "v0.8.4"
+#define UDF_VERSION_NOTICE "v0.8.5.1"
 
 #ifdef __KERNEL__
 
@@ -38,6 +38,7 @@ struct super_block;
 
 extern struct inode_operations udf_dir_inode_operations;
 extern struct inode_operations udf_file_inode_operations;
+extern struct inode_operations udf_file_inode_operations_adinicb;
 extern struct inode_operations udf_symlink_inode_operations;
 
 struct udf_fileident_bh
@@ -102,6 +103,7 @@ extern void udf_free_inode(struct inode *);
 extern struct inode * udf_new_inode (const struct inode *, int, int *);
 extern void udf_discard_prealloc(struct inode *);
 extern void udf_truncate(struct inode *);
+extern void udf_truncate_adinicb(struct inode *);
 extern void udf_free_blocks(const struct inode *, lb_addr, Uint32, Uint32);
 extern int udf_new_block(const struct inode *, Uint16, Uint32, Uint32 *, Uint32 *, int *);
 extern int udf_sync_file(struct file *, struct dentry *);

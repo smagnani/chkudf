@@ -165,3 +165,29 @@ void udf_truncate(struct inode * inode)
 	inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 	mark_inode_dirty(inode);
 }
+
+void udf_truncate_adinicb(struct inode * inode)
+{
+	int offset;
+	struct buffer_head *bh;
+
+	if (!(S_ISREG(inode->i_mode) || S_ISDIR(inode->i_mode) ||
+			S_ISLNK(inode->i_mode)))
+		return;
+	if (IS_APPEND(inode) || IS_IMMUTABLE(inode))
+		return;
+
+	offset = (inode->i_size & (inode->i_sb->s_blocksize - 1)) +
+		UDF_I_EXT0OFFS(inode);
+	if ((bh = udf_tread(inode->i_sb,
+		udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0),
+		inode->i_sb->s_blocksize)))
+	{
+		memset(bh->b_data + offset, 0, inode->i_sb->s_blocksize - offset);
+		mark_buffer_dirty(bh, 0);
+		udf_release_data(bh);
+	}
+
+	inode->i_mtime = inode->i_ctime = CURRENT_TIME;
+	mark_inode_dirty(inode);
+}

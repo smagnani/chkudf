@@ -88,3 +88,6 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
 05/28/99 blf	Fixed various directory entry writing bugs. Added rename
 				for files and directories. Add fsync support (untested)
 				Handle VAT's that are in the ICB.
+
+06/03/99 blf	Fixed writing for files > 1 block
+				Started spliting out support for AD_IN_ICB files.
