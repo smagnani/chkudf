@@ -44,7 +44,9 @@
 
 MODULE_AUTHOR("Ben Fennema");
 MODULE_DESCRIPTION("Universal Disk Format Filesystem");
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,10)
 MODULE_LICENSE("GPL");
+#endif
 
 #define EXTENT_MERGE_SIZE 5
 
@@ -181,7 +183,7 @@ void udf_expand_file_adinicb(struct inode * inode, int newsize, int * err)
 	}
 
 	block = udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0);
-	bh = udf_tread(inode->i_sb, block, inode->i_sb->s_blocksize);
+	bh = udf_tread(inode->i_sb, block);
 	if (!bh)
 		return;
 	page = grab_cache_page(inode->i_mapping, 0);
@@ -205,7 +207,7 @@ void udf_expand_file_adinicb(struct inode * inode, int newsize, int * err)
 		UDF_I_ALLOCTYPE(inode) = ICBTAG_FLAG_AD_SHORT;
 	else
 		UDF_I_ALLOCTYPE(inode) = ICBTAG_FLAG_AD_LONG;
-	udf_mark_buffer_dirty_inode(bh, inode);
+	mark_buffer_dirty_inode(bh, inode);
 	udf_release_data(bh);
 
 	inode->i_data.a_ops->writepage(page);
@@ -248,10 +250,10 @@ struct buffer_head * udf_expand_dir_adinicb(struct inode *inode, int *block, int
 		UDF_I_LOCATION(inode).partitionReferenceNum, 0);
 	if (!newblock)
 		return NULL;
-	sbh = udf_tread(inode->i_sb, inode->i_ino, inode->i_sb->s_blocksize);
+	sbh = udf_tread(inode->i_sb, inode->i_ino);
 	if (!sbh)
 		return NULL;
-	dbh = udf_tgetblk(inode->i_sb, newblock, inode->i_sb->s_blocksize);
+	dbh = udf_tgetblk(inode->i_sb, newblock);
 	if (!dbh)
 		return NULL;
 	lock_buffer(dbh);
@@ -304,11 +306,12 @@ struct buffer_head * udf_expand_dir_adinicb(struct inode *inode, int *block, int
 	udf_add_aext(inode, &bloc, &extoffset, eloc, elen, &sbh, 0);
 	/* UniqueID stuff */
 
-#ifndef QUOTA_CHANGE
+#ifdef OLD_QUOTA
 	inode->i_blocks = inode->i_sb->s_blocksize / 512;
 #endif
-	udf_mark_buffer_dirty_inode(sbh, inode);
+	mark_buffer_dirty(sbh);
 	udf_release_data(sbh);
+	mark_inode_dirty(inode);
 	inode->i_version ++;
 	return dbh;
 }
@@ -381,7 +384,11 @@ struct buffer_head * udf_getblk(struct inode * inode, long block,
 	if (!*err && buffer_mapped(&dummy))
 	{
 		struct buffer_head *bh;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,18)
+		bh = sb_getblk(inode->i_sb, dummy.b_blocknr);
+#else
 		bh = getblk(dummy.b_dev, dummy.b_blocknr, inode->i_sb->s_blocksize);
+#endif
 		if (buffer_new(&dummy))
 		{
 			lock_buffer(bh);
@@ -591,7 +598,7 @@ static struct buffer_head * inode_getblk(struct inode * inode, long block,
 	UDF_I_NEXT_ALLOC_GOAL(inode) = newblocknum;
 	inode->i_ctime = CURRENT_TIME;
 	UDF_I_UCTIME(inode) = CURRENT_UTIME;
-#ifndef QUOTA_CHANGE
+#ifdef OLD_QUOTA
 	inode->i_blocks += inode->i_sb->s_blocksize / 512;
 #endif
 	if (IS_SYNC(inode))
@@ -736,7 +743,7 @@ static void udf_prealloc_extents(struct inode *inode, int c, int lastblock,
 
 				if (elen > numalloc)
 				{
-					laarr[i].extLength -=
+					laarr[c].extLength -=
 						(numalloc << inode->i_sb->s_blocksize_bits);
 					numalloc = 0;
 				}
@@ -887,11 +894,10 @@ void udf_truncate(struct inode * inode)
 				udf_file_entry_alloc_offset(inode);
 
 			if ((bh = udf_tread(inode->i_sb,
-				udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0),
-				inode->i_sb->s_blocksize)))
+				udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0))))
 			{
 				memset(bh->b_data + offset, 0x00, inode->i_sb->s_blocksize - offset);
-				udf_mark_buffer_dirty_inode(bh, inode);
+				mark_buffer_dirty(bh);
 				udf_release_data(bh);
 			}
 			UDF_I_LENALLOC(inode) = inode->i_size;
@@ -1053,11 +1059,11 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 		UDF_I_STRAT4096(inode) = 1;
 
 	UDF_I_ALLOCTYPE(inode) = le16_to_cpu(fe->icbTag.flags) & ICBTAG_FLAG_AD_MASK;
-	if (fe->descTag.tagIdent == TAG_IDENT_EFE)
+	if (le16_to_cpu(fe->descTag.tagIdent) == TAG_IDENT_EFE)
 		UDF_I_EXTENDED_FE(inode) = 1;
-	else if (fe->descTag.tagIdent == TAG_IDENT_FE)
+	else if (le16_to_cpu(fe->descTag.tagIdent) == TAG_IDENT_FE)
 		UDF_I_EXTENDED_FE(inode) = 0;
-	else if (fe->descTag.tagIdent == TAG_IDENT_USE)
+	else if (le16_to_cpu(fe->descTag.tagIdent) == TAG_IDENT_USE)
 	{
 		UDF_I_LENALLOC(inode) =
 			le32_to_cpu(
@@ -1299,7 +1305,9 @@ udf_convert_permissions(struct fileEntry *fe)
 
 void udf_write_inode(struct inode * inode, int sync)
 {
+	lock_kernel();
 	udf_update_inode(inode, sync);
+	unlock_kernel();
 }
 
 int udf_sync_inode(struct inode * inode)
@@ -1310,8 +1318,7 @@ int udf_sync_inode(struct inode * inode)
 static int
 udf_update_inode(struct inode *inode, int do_sync)
 {
-	struct buffer_head *bh = NULL, *ibh, *nbh;
-	struct indirectEntry *ie;
+	struct buffer_head *bh = NULL;
 	struct fileEntry *fe;
 	struct extendedFileEntry *efe;
 	struct terminalEntry *te;
@@ -1322,100 +1329,15 @@ udf_update_inode(struct inode *inode, int do_sync)
 	timestamp cpu_time;
 	int err = 0;
 
-	lock_kernel();
-	if (atomic_read(&inode->i_count) == 0)
-		udf_discard_prealloc(inode);
+	bh = udf_tread(inode->i_sb,
+		udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0));
 
-	if (UDF_I_BH(inode))
-		bh = UDF_I_BH(inode);
-	else
+	if (!bh)
 	{
-		bh = udf_tread(inode->i_sb,
-			udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0),
-			inode->i_sb->s_blocksize);
-
-		if (!bh)
-		{
-			unlock_kernel();
-			udf_debug("bread failure\n");
-			return -EIO;
-		}
-		else
-		{
-			lock_buffer(bh);
-			UDF_I_BH(inode) = bh;
-		}
+		udf_debug("bread failure\n");
+		return -EIO;
 	}
-
 	te = (struct terminalEntry *)bh->b_data;
-
-	if (UDF_I_STRAT4096(inode))
-	{
-		if (!UDF_I_NEW_INODE(inode) && !buffer_dirty(bh))
-		{
-			uint32_t block;
-
-			block = udf_new_blocks(inode->i_sb, NULL,
-				UDF_I_LOCATION(inode).partitionReferenceNum,
-				UDF_I_LOCATION(inode).logicalBlockNum+2, 2, &err);
-
-			ibh = udf_tgetblk(inode->i_sb,
-				udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 1),
-				inode->i_sb->s_blocksize);
-
-			lock_buffer(ibh);
-			memset(ibh->b_data, 0x00, inode->i_sb->s_blocksize);
-			mark_buffer_uptodate(ibh, 1);
-			unlock_buffer(ibh);
-
-			ie = (struct indirectEntry *)ibh->b_data;
-			ie->descTag.tagIdent = le16_to_cpu(TAG_IDENT_IE);
-			if (UDF_SB_UDFREV(inode->i_sb) >= 0x0200)
-				ie->descTag.descVersion = cpu_to_le16(3);
-			else
-				ie->descTag.descVersion = cpu_to_le16(2);
-			ie->descTag.tagSerialNum = cpu_to_le16(UDF_SB_SERIALNUM(inode->i_sb));
-			ie->descTag.tagLocation = cpu_to_le32(UDF_I_LOCATION(inode).logicalBlockNum+1);
-			ie->icbTag.priorRecordedNumDirectEntries = cpu_to_le32(le32_to_cpu(te->icbTag.priorRecordedNumDirectEntries)+1);
-			ie->icbTag.flags = cpu_to_le16(UDF_I_ALLOCTYPE(inode));
-			ie->icbTag.strategyType = cpu_to_le16(4096);
-			ie->icbTag.strategyParameter = cpu_to_le16(1);
-			ie->icbTag.numEntries = cpu_to_le16(2);
-
-			UDF_I_LOCATION(inode).logicalBlockNum = block;
-
-			ie->indirectICB.extLength = cpu_to_le32(inode->i_sb->s_blocksize * 2);
-			ie->indirectICB.extLocation = cpu_to_lelb(UDF_I_LOCATION(inode));
-			crclen = sizeof(struct indirectEntry) - sizeof(tag);
-			ie->descTag.descCRCLength = cpu_to_le16(crclen);
-			ie->descTag.descCRC = cpu_to_le16(udf_crc((char *)ie + sizeof(tag), crclen, 0));
-			ie->descTag.tagChecksum = 0;
-			for (i=0; i<16; i++)
-				if (i != 4)
-					ie->descTag.tagChecksum += ((uint8_t *)&(ie->descTag))[i];
-			mark_buffer_dirty(ibh);
-
-			nbh = udf_tgetblk(inode->i_sb,
-				udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0),
-				inode->i_sb->s_blocksize);
-			lock_buffer(nbh);
-			memset(nbh->b_data, 0x00, inode->i_sb->s_blocksize);
-			mark_buffer_uptodate(nbh, 1);
-			unlock_buffer(nbh);
-			memcpy(nbh->b_data, bh->b_data, inode->i_sb->s_blocksize);
-			udf_release_data(bh);
-			unlock_buffer(bh);
-
-			bh = nbh;
-			lock_buffer(bh);
-			UDF_I_BH(inode) = bh;
-			te = (struct terminalEntry *)bh->b_data;
-			te->icbTag.priorRecordedNumDirectEntries = ie->icbTag.priorRecordedNumDirectEntries;
-			udf_release_data(ibh);
-		}
-	}
-	unlock_kernel();
-
 	fe = (struct fileEntry *)bh->b_data;
 	efe = (struct extendedFileEntry *)bh->b_data;
 	if (UDF_I_NEW_INODE(inode) == 1)
@@ -1430,7 +1352,7 @@ udf_update_inode(struct inode *inode, int do_sync)
 		UDF_I_NEW_INODE(inode) = 0;
 	}
 
-	if (te->descTag.tagIdent == TAG_IDENT_USE)
+	if (le16_to_cpu(te->descTag.tagIdent) == TAG_IDENT_USE)
 	{
 		struct unallocSpaceEntry *use =
 			(struct unallocSpaceEntry *)bh->b_data;
@@ -1447,12 +1369,8 @@ udf_update_inode(struct inode *inode, int do_sync)
 			if (i != 4)
 				use->descTag.tagChecksum += ((uint8_t *)&(use->descTag))[i];
 
-		lock_kernel();
 		mark_buffer_dirty(bh);
 		udf_release_data(bh);
-		unlock_buffer(bh);
-		UDF_I_BH(inode) = NULL;
-		unlock_kernel();
 		return err;
 	}
 
@@ -1640,13 +1558,7 @@ udf_update_inode(struct inode *inode, int do_sync)
 			err = -EIO;
 		}
 	}
-
-	lock_kernel();
 	udf_release_data(bh);
-	unlock_buffer(bh);
-	UDF_I_BH(inode) = NULL;
-	unlock_kernel();
-
 	return err;
 }
 
@@ -1724,8 +1636,7 @@ int8_t udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 	if (!(*bh))
 	{
 		if (!(*bh = udf_tread(inode->i_sb,
-			udf_get_lb_pblock(inode->i_sb, *bloc, 0),
-			inode->i_sb->s_blocksize)))
+			udf_get_lb_pblock(inode->i_sb, *bloc, 0))))
 		{
 			udf_debug("reading block %d failed!\n",
 				udf_get_lb_pblock(inode->i_sb, *bloc, 0));
@@ -1753,7 +1664,7 @@ int8_t udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 			return -1;
 		}
 		if (!(nbh = udf_tgetblk(inode->i_sb, udf_get_lb_pblock(inode->i_sb,
-			*bloc, 0), inode->i_sb->s_blocksize)))
+			*bloc, 0))))
 		{
 			return -1;
 		}
@@ -1834,7 +1745,10 @@ int8_t udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 	etype = udf_write_aext(inode, *bloc, extoffset, eloc, elen, *bh, inc);
 
 	if (!memcmp(&UDF_I_LOCATION(inode), bloc, sizeof(lb_addr)))
+	{
 		UDF_I_LENALLOC(inode) += adsize;
+		mark_inode_dirty(inode);
+	}
 	else
 	{
 		aed = (struct allocExtDesc *)(*bh)->b_data;
@@ -1844,8 +1758,8 @@ int8_t udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 			udf_update_tag((*bh)->b_data, *extoffset + (inc ? 0 : adsize));
 		else
 			udf_update_tag((*bh)->b_data, sizeof(struct allocExtDesc));
+		mark_buffer_dirty_inode(*bh, inode);
 	}
-	udf_mark_buffer_dirty_inode(*bh, inode);
 
 	return etype;
 }
@@ -1860,8 +1774,7 @@ int8_t udf_write_aext(struct inode *inode, lb_addr bloc, int *extoffset,
 	if (!(bh))
 	{
 		if (!(bh = udf_tread(inode->i_sb,
-			udf_get_lb_pblock(inode->i_sb, bloc, 0),
-			inode->i_sb->s_blocksize)))
+			udf_get_lb_pblock(inode->i_sb, bloc, 0))))
 		{
 			udf_debug("reading block %d failed!\n",
 				udf_get_lb_pblock(inode->i_sb, bloc, 0));
@@ -1905,8 +1818,13 @@ int8_t udf_write_aext(struct inode *inode, lb_addr bloc, int *extoffset,
 			udf_update_tag((bh)->b_data,
 				le32_to_cpu(aed->lengthAllocDescs) + sizeof(struct allocExtDesc));
 		}
+		mark_buffer_dirty_inode(bh, inode);
 	}
-	udf_mark_buffer_dirty_inode(bh, inode);
+	else
+	{
+		mark_inode_dirty(inode);
+		mark_buffer_dirty(bh);
+	}
 
 	if (inc)
 		*extoffset += adsize;
@@ -1924,8 +1842,7 @@ int8_t udf_next_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 	if (!(*bh))
 	{
 		if (!(*bh = udf_tread(inode->i_sb,
-			udf_get_lb_pblock(inode->i_sb, *bloc, 0),
-			inode->i_sb->s_blocksize)))
+			udf_get_lb_pblock(inode->i_sb, *bloc, 0))))
 		{
 			udf_debug("reading block %d failed!\n",
 				udf_get_lb_pblock(inode->i_sb, *bloc, 0));
@@ -1933,7 +1850,7 @@ int8_t udf_next_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 		}
 	}
 
-	tagIdent = ((tag *)(*bh)->b_data)->tagIdent;
+	tagIdent = le16_to_cpu(((tag *)(*bh)->b_data)->tagIdent);
 
 	if (!memcmp(&UDF_I_LOCATION(inode), bloc, sizeof(lb_addr)))
 	{
@@ -2047,8 +1964,7 @@ int8_t udf_current_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 	if (!(*bh))
 	{
 		if (!(*bh = udf_tread(inode->i_sb,
-			udf_get_lb_pblock(inode->i_sb, *bloc, 0),
-			inode->i_sb->s_blocksize)))
+			udf_get_lb_pblock(inode->i_sb, *bloc, 0))))
 		{
 			udf_debug("reading block %d failed!\n",
 				udf_get_lb_pblock(inode->i_sb, *bloc, 0));
@@ -2129,8 +2045,7 @@ int8_t udf_insert_aext(struct inode *inode, lb_addr bloc, int extoffset,
 	if (!bh)
 	{
 		if (!(bh = udf_tread(inode->i_sb,
-			udf_get_lb_pblock(inode->i_sb, bloc, 0),
-			inode->i_sb->s_blocksize)))
+			udf_get_lb_pblock(inode->i_sb, bloc, 0))))
 		{
 			udf_debug("reading block %d failed!\n",
 				udf_get_lb_pblock(inode->i_sb, bloc, 0));
@@ -2164,8 +2079,7 @@ int8_t udf_delete_aext(struct inode *inode, lb_addr nbloc, int nextoffset,
 	if (!(nbh))
 	{
 		if (!(nbh = udf_tread(inode->i_sb,
-			udf_get_lb_pblock(inode->i_sb, nbloc, 0),
-			inode->i_sb->s_blocksize)))
+			udf_get_lb_pblock(inode->i_sb, nbloc, 0))))
 		{
 			udf_debug("reading block %d failed!\n",
 				udf_get_lb_pblock(inode->i_sb, nbloc, 0));
@@ -2211,7 +2125,10 @@ int8_t udf_delete_aext(struct inode *inode, lb_addr nbloc, int nextoffset,
 		udf_write_aext(inode, obloc, &oextoffset, eloc, elen, obh, 1);
 		udf_write_aext(inode, obloc, &oextoffset, eloc, elen, obh, 1);
 		if (!memcmp(&UDF_I_LOCATION(inode), &obloc, sizeof(lb_addr)))
+		{
 			UDF_I_LENALLOC(inode) -= (adsize * 2);
+			mark_inode_dirty(inode);
+		}
 		else
 		{
 			aed = (struct allocExtDesc *)(obh)->b_data;
@@ -2221,14 +2138,17 @@ int8_t udf_delete_aext(struct inode *inode, lb_addr nbloc, int nextoffset,
 				udf_update_tag((obh)->b_data, oextoffset - (2*adsize));
 			else
 				udf_update_tag((obh)->b_data, sizeof(struct allocExtDesc));
+			mark_buffer_dirty_inode(obh, inode);
 		}
-		udf_mark_buffer_dirty_inode(obh, inode);
 	}
 	else
 	{
 		udf_write_aext(inode, obloc, &oextoffset, eloc, elen, obh, 1);
 		if (!memcmp(&UDF_I_LOCATION(inode), &obloc, sizeof(lb_addr)))
+		{
 			UDF_I_LENALLOC(inode) -= adsize;
+			mark_inode_dirty(inode);
+		}
 		else
 		{
 			aed = (struct allocExtDesc *)(obh)->b_data;
@@ -2238,8 +2158,8 @@ int8_t udf_delete_aext(struct inode *inode, lb_addr nbloc, int nextoffset,
 				udf_update_tag((obh)->b_data, oextoffset - adsize);
 			else
 				udf_update_tag((obh)->b_data, sizeof(struct allocExtDesc));
+			mark_buffer_dirty_inode(obh, inode);
 		}
-		udf_mark_buffer_dirty_inode(obh, inode);
 	}
 	
 	udf_release_data(nbh);
@@ -2307,32 +2227,4 @@ long udf_block_map(struct inode *inode, long block)
 		return udf_fixed_to_variable(ret);
 	else
 		return ret;
-}
-
-void udf_mark_buffer_dirty_inode(struct buffer_head *bh, struct inode *inode)
-{
-	if (udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0) == bh->b_blocknr)
-	{
-		lock_kernel();
-		if (UDF_I_BH(inode) != bh)
-		{
-			if (UDF_I_BH(inode))
-			{
-				udf_debug("inode=%ld, ibh=%p, bh=%p\n",
-					inode->i_ino, UDF_I_BH(inode), bh);
-//				BUG();
-			}
-			else
-			{
-				lock_buffer(bh);
-				atomic_inc(&bh->b_count);
-				UDF_I_BH(inode) = bh;
-				mark_inode_dirty(inode);
-			}
-		}
-		mark_inode_dirty(inode);
-		unlock_kernel();
-	}
-	else
-		mark_buffer_dirty_inode(bh, inode);
 }
