@@ -67,6 +67,15 @@ udf64_high32(Uint64 indat)
 #if defined(__linux__) && defined(__KERNEL__)
 
 extern struct buffer_head *
+udf_tgetblk(struct super_block *sb, int block, int size)
+{
+	if (UDF_QUERY_FLAG(sb, UDF_FLAG_VARCONV))
+		return getblk(sb->s_dev, udf_fixed_to_variable(block), size);
+	else
+		return getblk(sb->s_dev, block, size);
+}
+
+extern struct buffer_head *
 udf_tread(struct super_block *sb, int block, int size)
 {
 	if (UDF_QUERY_FLAG(sb, UDF_FLAG_VARCONV))
