@@ -33,9 +33,9 @@ else
 endif
 
 KLIBUDF=libkudf.a
-KLIBUDFO=kcrc.o kunicode.o kudftime.o kdebug.o kmisc.o
+KLIBUDFO=kcrc.o kunicode.o kudftime.o kdebug.o kmisc.o kdirectory.o
 LIBUDF=libudf.a
-LIBUDFO=crc.o unicode.o udftime.o debug.o misc.o
+LIBUDFO=crc.o unicode.o udftime.o debug.o misc.o directory.o
 
 all: $(LIBUDF) $(KLIBUDF)
 
@@ -59,6 +59,12 @@ misc.o:  misc.c $(CONFIG) $(UDFINC)
 
 kmisc.o:  misc.c $(CONFIG) $(UDFINC)
 	$(CC) $(CFLAGS) $(MODFLAGS) -c misc.c -o $@
+
+directory.o:  directory.c $(CONFIG) $(UDFINC)
+	$(CC) $(CFLAGS) -c directory.c -o $@
+
+kdirectory.o:  directory.c $(CONFIG) $(UDFINC)
+	$(CC) $(CFLAGS) $(MODFLAGS) -c directory.c -o $@
 
 unicode.o:  unicode.c  $(UDFINC)
 	$(CC) $(CFLAGS) -c unicode.c -o $@

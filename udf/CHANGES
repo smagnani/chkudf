@@ -7,3 +7,9 @@
 
 10/7/98	dgb	Milestone reached. Rudimentary directory and file reading.
 		Limited in number of directory entries, though, about 30-40.
+
+10/16/98	Attempting some multi-session support.
+
+10/18/98	Fixed some directory problems; still limited but
+		doesn't seem to crash or oops now.
+		Enhanced "df" output a little.  Generally much more stable.

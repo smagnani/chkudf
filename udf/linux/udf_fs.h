@@ -98,16 +98,17 @@ extern gid_t  udf_convert_gid(int);
 /* module parms */
 extern int udf_debuglvl;
 extern int udf_strict;
-extern int udf_showdeleted;
-extern int udf_showhidden;
+extern int udf_undelete;
+extern int udf_unhide;
 
 extern void udf_dump(char * buffer, int size);
 extern int udf_read_tagged_data(char *, int size, int fd, int block, int offset);
 extern Uint32 udf64_low32(Uint64);
 extern Uint32 udf64_high32(Uint64);
-extern struct FileIdentDesc * udf_get_fileident(void * buffer, int * offset);
-extern extent_ad * udf_get_fileextent(void * buffer, int * offset);
-extern long_ad * udf_get_filelongad(void * buffer, int * offset);
+extern struct FileIdentDesc * udf_get_fileident(void * buffer, 
+			int bufsize, int * offset, int * remainder);
+extern extent_ad * udf_get_fileextent(void * buffer, int bufsize, int * offset);
+extern long_ad * udf_get_filelongad(void * buffer, int bufsize, int * offset);
 
 #define DUMP(X,S)	do { if (udf_debuglvl >= UDF_DEBUG_DUMP) udf_dump((X),(S)); } while(0)
 

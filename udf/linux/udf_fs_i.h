@@ -19,10 +19,13 @@
 
 struct udf_inode_info {
 	/* Physical address of inode */
+	__u32 i_alloc_type;
 	__u32 i_ext0Location;	/* partition relative */
 	__u32 i_ext0Length;  	/* in blocks */
+	__u32 i_ext0Offset;	/* for short directories */
 	__u32 i_fileLengthHigh;
 	__u32 i_fileLengthLow;
+	__u32 i_dir_position;
 };
 
 #ifdef CONFIG_UDF
@@ -34,10 +37,13 @@ struct udf_inode_info {
 	/* for the record, pipe_i is 9 ints long, we're using 4  	 */
 #endif
 
+#define UDF_I_ALLOCTYPE(X)	(UDF_I(X)->i_alloc_type)
 #define UDF_I_EXT0LOC(X)	(UDF_I(X)->i_ext0Location)
 #define UDF_I_EXT0LEN(X)	(UDF_I(X)->i_ext0Length)
+#define UDF_I_EXT0OFFS(X)	(UDF_I(X)->i_ext0Offset)
 #define UDF_I_FILELENHIGH(X)	(UDF_I(X)->i_fileLengthHigh)
 #define UDF_I_FILELENLOW(X)	(UDF_I(X)->i_fileLengthLow)
+#define UDF_I_DIRPOS(X)		(UDF_I(X)->i_dir_position)
 
 #endif /* defined(__KERNEL__) */
 

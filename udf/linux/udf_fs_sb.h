@@ -34,6 +34,7 @@ struct udf_sb_info {
 	__u16 s_id_crc;
 
 	/* Block headers */
+	__u32 s_session;
 	__u32 s_anchor;
 	__u32 s_lastblock;
 	__u32 s_voldesc;
@@ -79,6 +80,7 @@ struct udf_sb_info {
 #define IS_STRICT(X)	( UDF_SB(X)->s_flags & UDF_FLAG_STRICT)
 #define IS_FIXED(X)	( UDF_SB(X)->s_flags & UDF_FLAG_DEBUG)
 
+#define UDF_SB_SESSION(X)	( UDF_SB(X)->s_session )
 #define UDF_SB_ANCHOR(X)	( UDF_SB(X)->s_anchor )
 #define UDF_SB_VOLUME(X)	( UDF_SB(X)->s_thisvolume )
 #define UDF_SB_PARTITION(X)	( UDF_SB(X)->s_thispartition )
