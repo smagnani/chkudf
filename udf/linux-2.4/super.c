@@ -78,6 +78,7 @@ static char error_buf[1024];
 /* These are the "meat" - everything else is stuffing */
 static struct super_block *udf_read_super(struct super_block *, void *, int);
 static void udf_put_super(struct super_block *);
+static void udf_write_super(struct super_block *);
 static int udf_remount_fs(struct super_block *, int *, char *);
 static int udf_check_valid(struct super_block *, int, int);
 static int udf_vrs(struct super_block *sb, int silent);
@@ -96,34 +97,21 @@ static int udf_statfs(struct super_block *, struct statfs *, int);
 
 /* UDF filesystem type */
 static struct file_system_type udf_fstype = {
-	"udf",				/* name */
-	FS_REQUIRES_DEV,	/* fs_flags */
-	udf_read_super,		/* read_super */
-	NULL				/* next */
+	name:				"udf",
+	fs_flags:			FS_REQUIRES_DEV,
+	read_super:			udf_read_super,
 };
 
 /* Superblock operations */
-static struct super_operations udf_sb_ops =
-{
-	udf_read_inode,		/* read_inode */
-#if CONFIG_UDF_RW == 1
-	udf_write_inode,	/* write_inode */
-#else
-	NULL,				/* write_inode */
-#endif
-	udf_put_inode,		/* put_inode */
-#if CONFIG_UDF_RW == 1
-	udf_delete_inode,	/* delete_inode */
-#else
-	NULL,				/* delete_inode */
-#endif
-	NULL,				/* notify_change */
-	udf_put_super,		/* put_super */
-	NULL,				/* write_super */
-	udf_statfs,			/* statfs */
-	udf_remount_fs,		/* remount_fs */
-	NULL,				/* clear_inode */
-	NULL,				/* umount_begin */
+static struct super_operations udf_sb_ops = {
+	read_inode:			udf_read_inode,
+	write_inode:		udf_write_inode,
+	put_inode:			udf_put_inode,
+	delete_inode:		udf_delete_inode,
+	put_super:			udf_put_super,
+	write_super:		udf_write_super,
+	statfs:				udf_statfs,
+	remount_fs:			udf_remount_fs,
 };
 
 struct udf_options
@@ -277,15 +265,15 @@ udf_parse_options(char *options, struct udf_options *uopt)
 		else if (!strcmp(opt, "bs") && val)
 			uopt->blocksize = simple_strtoul(val, NULL, 0);
 		else if (!strcmp(opt, "unhide") && !val)
-			uopt->flags |= UDF_FLAG_UNHIDE;
+			uopt->flags |= (1 << UDF_FLAG_UNHIDE);
 		else if (!strcmp(opt, "undelete") && !val)
-			uopt->flags |= UDF_FLAG_UNDELETE;
+			uopt->flags |= (1 << UDF_FLAG_UNDELETE);
 		else if (!strcmp(opt, "gid") && val)
 			uopt->gid = simple_strtoul(val, NULL, 0);
 		else if (!strcmp(opt, "umask") && val)
 			uopt->umask = simple_strtoul(val, NULL, 0);
 		else if (!strcmp(opt, "strict") && !val)
-			uopt->flags |= UDF_FLAG_STRICT;
+			uopt->flags |= (1 << UDF_FLAG_STRICT);
 		else if (!strcmp(opt, "uid") && val)
 			uopt->uid = simple_strtoul(val, NULL, 0);
 		else if (!strcmp(opt, "session") && val)
@@ -318,6 +306,14 @@ udf_parse_options(char *options, struct udf_options *uopt)
 	return 1;
 }
 
+void
+udf_write_super(struct super_block *sb)
+{
+	if (!(sb->s_flags & MS_RDONLY))
+		udf_open_lvid(sb);
+	sb->s_dirt = 0;
+}
+		
 static int
 udf_remount_fs(struct super_block *sb, int *flags, char *options)
 {
@@ -335,6 +331,10 @@ udf_remount_fs(struct super_block *sb, int *flags, char *options)
 	UDF_SB(sb)->s_uid   = uopt.uid;
 	UDF_SB(sb)->s_gid   = uopt.gid;
 	UDF_SB(sb)->s_umask = uopt.umask;
+
+#if CONFIG_UDF_RW != 1
+	*flags |= MS_RDONLY;
+#endif
 
 	if ((*flags & MS_RDONLY) == (sb->s_flags & MS_RDONLY))
 		return 0;
@@ -558,7 +558,7 @@ udf_find_anchor(struct super_block *sb, int useranchor, int lastblock)
 			}
 			else if (location == udf_variable_to_fixed(last[i]) - UDF_SB_SESSION(sb))
 			{
-				UDF_SB(sb)->s_flags |= UDF_FLAG_VARCONV;
+				UDF_SET_FLAG(sb, UDF_FLAG_VARCONV);
 				lastblock = UDF_SB_ANCHOR(sb)[0] = udf_variable_to_fixed(last[i]);
 				UDF_SB_ANCHOR(sb)[1] = lastblock - 256;
 			}
@@ -607,7 +607,7 @@ udf_find_anchor(struct super_block *sb, int useranchor, int lastblock)
 				if (ident == TID_ANCHOR_VOL_DESC_PTR &&
 					location == udf_variable_to_fixed(last[i]) - 256)
 				{
-					UDF_SB(sb)->s_flags |= UDF_FLAG_VARCONV;
+					UDF_SET_FLAG(sb, UDF_FLAG_VARCONV);
 					lastblock = udf_variable_to_fixed(last[i]);
 					UDF_SB_ANCHOR(sb)[1] = lastblock - 256;
 				}
@@ -625,7 +625,7 @@ udf_find_anchor(struct super_block *sb, int useranchor, int lastblock)
 			udf_release_data(bh);
 
 			if (ident == TID_ANCHOR_VOL_DESC_PTR && location == 256)
-				UDF_SB(sb)->s_flags |= UDF_FLAG_VARCONV;
+				UDF_SET_FLAG(sb, UDF_FLAG_VARCONV);
 		}
 	}
 
@@ -1225,7 +1225,6 @@ udf_load_partition(struct super_block *sb, lb_addr *fileset)
 
 static void udf_open_lvid(struct super_block *sb)
 {
-#if CONFIG_UDF_RW == 1
 	if (UDF_SB_LVIDBH(sb))
 	{
 		int i;
@@ -1248,13 +1247,12 @@ static void udf_open_lvid(struct super_block *sb)
 					((Uint8 *)&(UDF_SB_LVID(sb)->descTag))[i];
 
 		mark_buffer_dirty(UDF_SB_LVIDBH(sb), 1);
+		sb->s_dirt = 0;
 	}
-#endif
 }
 
 static void udf_close_lvid(struct super_block *sb)
 {
-#if CONFIG_UDF_RW == 1
 	if (UDF_SB_LVIDBH(sb) &&
 		UDF_SB_LVID(sb)->integrityType == INTEGRITY_TYPE_OPEN)
 	{
@@ -1265,7 +1263,12 @@ static void udf_close_lvid(struct super_block *sb)
 		UDF_SB_LVIDIU(sb)->impIdent.identSuffix[1] = UDF_OS_ID_LINUX;
 		if (udf_time_to_stamp(&cpu_time, CURRENT_TIME, CURRENT_UTIME))
 			UDF_SB_LVID(sb)->recordingDateAndTime = cpu_to_lets(cpu_time);
-		
+		if (UDF_MAX_WRITE_VERSION > le16_to_cpu(UDF_SB_LVIDIU(sb)->maxUDFWriteRev))
+			UDF_SB_LVIDIU(sb)->maxUDFWriteRev = cpu_to_le16(UDF_MAX_WRITE_VERSION);
+		if (UDF_SB_UDFREV(sb) > le16_to_cpu(UDF_SB_LVIDIU(sb)->minUDFReadRev))
+			UDF_SB_LVIDIU(sb)->minUDFReadRev = cpu_to_le16(UDF_SB_UDFREV(sb));
+		if (UDF_SB_UDFREV(sb) > le16_to_cpu(UDF_SB_LVIDIU(sb)->minUDFWriteRev))
+			UDF_SB_LVIDIU(sb)->minUDFWriteRev = cpu_to_le16(UDF_SB_UDFREV(sb));
 		UDF_SB_LVID(sb)->integrityType = INTEGRITY_TYPE_CLOSE;
 
 		UDF_SB_LVID(sb)->descTag.descCRC =
@@ -1280,7 +1283,6 @@ static void udf_close_lvid(struct super_block *sb)
 
 		mark_buffer_dirty(UDF_SB_LVIDBH(sb), 1);
 	}
-#endif
 }
 
 /*
@@ -1307,7 +1309,7 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	lb_addr rootdir, fileset;
 	int i;
 
-	uopt.flags = 0;
+	uopt.flags = (1 << UDF_FLAG_USE_AD_IN_ICB);
 	uopt.uid = -1;
 	uopt.gid = -1;
 	uopt.umask = 0;
@@ -1316,19 +1318,17 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	MOD_INC_USE_COUNT;
 
 	lock_super(sb);
+	memset(UDF_SB(sb), 0x00, sizeof(struct udf_sb_info));
 
-	UDF_SB_PARTMAPS(sb) = NULL;
-	UDF_SB_LVIDBH(sb) = NULL;
-	UDF_SB_VAT(sb) = NULL;
+#if CONFIG_UDF_RW != 1
+	sb->s_flags |= MS_RDONLY;
+#endif
 
 	if (!udf_parse_options((char *)options, &uopt))
 		goto error_out;
 
-	memset(UDF_SB_ANCHOR(sb), 0x00, sizeof(UDF_SB_ANCHOR(sb)));
 	fileset.logicalBlockNum = 0xFFFFFFFF;
 	fileset.partitionReferenceNum = 0xFFFF;
-	UDF_SB_RECORDTIME(sb)=0;
-	UDF_SB_VOLIDENT(sb)[0]=0;
 
 	UDF_SB(sb)->s_flags = uopt.flags;
 	UDF_SB(sb)->s_uid = uopt.uid;
@@ -1357,7 +1357,7 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 
 	if (udf_check_valid(sb, uopt.novrs, silent)) /* read volume recognition sequences */
 	{
-		udf_debug("No VRS found\n");
+		printk("UDF-fs: No VRS found\n");
  		goto error_out;
 	}
 
@@ -1376,19 +1376,42 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 
 	if (udf_load_partition(sb, &fileset))
 	{
-		udf_debug("No partition found (1)\n");
+		printk("UDF-fs: No partition found (1)\n");
 		goto error_out;
+	}
+
+	if ( UDF_SB_LVIDBH(sb) )
+	{
+		Uint16 minUDFReadRev = le16_to_cpu(UDF_SB_LVIDIU(sb)->minUDFReadRev);
+		Uint16 minUDFWriteRev = le16_to_cpu(UDF_SB_LVIDIU(sb)->minUDFWriteRev);
+		/* Uint16 maxUDFWriteRev = le16_to_cpu(UDF_SB_LVIDIU(sb)->maxUDFWriteRev); */
+
+		if (minUDFReadRev > UDF_MAX_READ_VERSION)
+		{
+			printk("UDF-fs: minUDFReadRev=%x (max is %x)\n",
+				UDF_SB_LVIDIU(sb)->minUDFReadRev, UDF_MAX_READ_VERSION);
+			goto error_out;
+		}
+		else if (minUDFWriteRev > UDF_MAX_WRITE_VERSION)
+		{
+			sb->s_flags |= MS_RDONLY;
+		}
+
+		if (minUDFReadRev >= UDF_VERS_USE_EXTENDED_FE)
+			UDF_SET_FLAG(sb, UDF_FLAG_USE_EXTENDED_FE);
+		if (minUDFReadRev >= UDF_VERS_USE_STREAMS)
+			UDF_SET_FLAG(sb, UDF_FLAG_USE_STREAMS);
 	}
 
 	if ( !UDF_SB_NUMPARTS(sb) )
 	{
-		udf_debug("No partition found (2)\n");
+		printk("UDF-fs: No partition found (2)\n");
 		goto error_out;
 	}
 
 	if ( udf_find_fileset(sb, &fileset, &rootdir) )
 	{
-		udf_debug("No fileset found\n");
+		printk("UDF-fs: No fileset found\n");
 		goto error_out;
 	}
 
@@ -1411,7 +1434,7 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	inode = udf_iget(sb, rootdir); 
 	if (!inode)
 	{
-		udf_debug("Error in udf_iget, block=%d, partition=%d\n",
+		printk("UDF-fs: Error in udf_iget, block=%d, partition=%d\n",
 			rootdir.logicalBlockNum, rootdir.partitionReferenceNum);
 		goto error_out;
 	}
@@ -1420,8 +1443,8 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	sb->s_root = d_alloc_root(inode);
 	if (!sb->s_root)
 	{
+		printk("UDF-fs: Couldn't allocate root dentry\n");
 		iput(inode);
-		udf_debug("Couldn't allocate root dentry\n");
 		goto error_out;
 	}
 
