@@ -8,9 +8,9 @@
 #include <linux/fs.h>
 #include <linux/config.h>
 #include <linux/types.h>
-#include <linux/buffer_head.h>
 #include <linux/udf_fs_i.h>
 #include <linux/udf_fs_sb.h>
+#include <linux/buffer_head.h>
 
 #ifndef LINUX_VERSION_CODE
 #include <linux/version.h>
