@@ -113,8 +113,3 @@ skip:
 	err |= udf_sync_inode (inode);
 	return err ? -EIO : 0;
 }
-
-int udf_sync_file_adinicb(struct file * file, struct dentry *dentry)
-{
-	return udf_sync_inode(dentry->d_inode) ? -EIO : 0;
-}
