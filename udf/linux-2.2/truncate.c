@@ -45,7 +45,7 @@ static void extent_trunc(struct inode * inode, lb_addr bloc, int extoffset,
 		neloc = eloc;
 		nelen = (etype << 30) | nelen;
 	}
-		
+
 	if (elen != nelen)
 	{
 		udf_write_aext(inode, bloc, &extoffset, neloc, nelen, bh, 0);
@@ -62,7 +62,7 @@ static void extent_trunc(struct inode * inode, lb_addr bloc, int extoffset,
 	}
 }
 
-void udf_trunc(struct inode * inode)
+void udf_truncate_extents(struct inode * inode)
 {
 	lb_addr bloc, eloc, neloc = { 0, 0 };
 	Uint32 extoffset, elen, offset, nelen = 0, lelen = 0, lenalloc;
@@ -79,8 +79,7 @@ void udf_trunc(struct inode * inode)
 		adsize = 0;
 
 	etype = inode_bmap(inode, first_block, &bloc, &extoffset, &eloc, &elen, &offset, &bh);
-	offset = (offset << inode->i_sb->s_blocksize_bits) |
-		(inode->i_size & (inode->i_sb->s_blocksize - 1));
+	offset += (inode->i_size & (inode->i_sb->s_blocksize - 1));
 	if (etype != -1)
 	{
 		extoffset -= adsize;
@@ -176,7 +175,6 @@ void udf_trunc(struct inode * inode)
 		{
 			extoffset -= adsize;
 			etype = udf_next_aext(inode, &bloc, &extoffset, &eloc, &elen, &bh, 1);
-
 			if (etype == EXTENT_NOT_RECORDED_NOT_ALLOCATED)
 			{
 				extoffset -= adsize;
@@ -209,80 +207,7 @@ void udf_trunc(struct inode * inode)
 			}
 		}
 	}
+	UDF_I_LENEXTENTS(inode) = inode->i_size;
 
 	udf_release_data(bh);
-}
-
-void udf_truncate(struct inode * inode)
-{
-	int offset;
-
-	if (!(S_ISREG(inode->i_mode) || S_ISDIR(inode->i_mode) ||
-			S_ISLNK(inode->i_mode)))
-		return;
-	if (IS_APPEND(inode) || IS_IMMUTABLE(inode))
-		return;
-
-	udf_trunc(inode);
-
-	offset = (inode->i_size & (inode->i_sb->s_blocksize - 1));
-	if (offset)
-	{
-		struct buffer_head *bh;
-		bh = bread(inode->i_dev,
-			udf_bmap(inode, inode->i_size >> inode->i_sb->s_blocksize_bits),
-			inode->i_sb->s_blocksize);
-		if (bh)
-		{
-			memset(bh->b_data + offset, 0x00, inode->i_sb->s_blocksize - offset);
-			mark_buffer_dirty(bh, 0);
-			udf_release_data(bh);
-		}
-	}
-
-	inode->i_mtime = inode->i_ctime = CURRENT_TIME;
-	mark_inode_dirty(inode);
-}
-
-void udf_truncate_adinicb(struct inode * inode)
-{
-	int offset;
-	struct buffer_head *bh;
-	int err;
-
-	if (!(S_ISREG(inode->i_mode) || S_ISDIR(inode->i_mode) ||
-			S_ISLNK(inode->i_mode)))
-		return;
-	if (IS_APPEND(inode) || IS_IMMUTABLE(inode))
-		return;
-
-	if (inode->i_sb->s_blocksize < (udf_file_entry_alloc_offset(inode) +
-			inode->i_size))
-	{
-		udf_expand_file_adinicb(inode, inode->i_size, &err);
-		if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
-		{
-			inode->i_size = UDF_I_LENALLOC(inode);
-			return;
-		}
-		else
-			return udf_truncate(inode);
-	}
-	else
-		UDF_I_LENALLOC(inode) = inode->i_size;
-
-	offset = (inode->i_size & (inode->i_sb->s_blocksize - 1)) +
-		udf_file_entry_alloc_offset(inode);
-
-	if ((bh = udf_tread(inode->i_sb,
-		udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0),
-		inode->i_sb->s_blocksize)))
-	{
-		memset(bh->b_data + offset, 0x00, inode->i_sb->s_blocksize - offset);
-		mark_buffer_dirty(bh, 0);
-		udf_release_data(bh);
-	}
-
-	inode->i_mtime = inode->i_ctime = CURRENT_TIME;
-	mark_inode_dirty(inode);
 }
