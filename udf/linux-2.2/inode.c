@@ -178,7 +178,10 @@ void udf_expand_file_adinicb(struct file * filp, int newsize, int * err)
 
 	if (!UDF_I_LENALLOC(inode))
 	{
-		UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_LONG;
+		if (UDF_QUERY_FLAG(inode->i_sb, UDF_FLAG_USE_SHORT_AD))
+			UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_SHORT;
+		else
+			UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_LONG;
 		mark_inode_dirty(inode);
 		inode->i_op = &udf_file_inode_operations;
 		filp->f_op = inode->i_op->default_file_ops;
@@ -223,7 +226,10 @@ void udf_expand_file_adinicb(struct file * filp, int newsize, int * err)
 		&newad, sizeof(newad));
 
 	UDF_I_LENALLOC(inode) = sizeof(newad);
-	UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_LONG;
+	if (UDF_QUERY_FLAG(inode->i_sb, UDF_FLAG_USE_SHORT_AD))
+		UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_SHORT
+	else
+		UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_LONG;
 	inode->i_blocks = inode->i_sb->s_blocksize / 512;
 	mark_buffer_dirty(sbh, 1);
 	udf_release_data(sbh);
@@ -1954,7 +1960,7 @@ int udf_bmap(struct inode *inode, int block)
 	if (bh)
 		udf_release_data(bh);
 
-    if (UDF_SB(inode->i_sb)->s_flags & UDF_FLAG_VARCONV)
+	if (UDF_QUERY_FLAG(inode->i_sb, UDF_FLAG_VARCONV))
 		return udf_fixed_to_variable(ret);
 	else
 		return ret;
