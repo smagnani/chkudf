@@ -266,7 +266,7 @@ udf_parse_options(char *options, struct udf_options *uopt)
 	if (!options)
 		return 1;
 
-        for (opt = strtok(options, ","); opt; opt = strtok(NULL, ","))
+	for (opt = strtok(options, ","); opt; opt = strtok(NULL, ","))
 	{
 		/* Make "opt=val" into two strings */
 		val = strchr(opt, '=');
@@ -323,18 +323,18 @@ udf_remount_fs(struct super_block *sb, int *flags, char *options)
 {
 	struct udf_options uopt;
 
-	uopt.flags =    UDF_SB(sb)->s_flags ;
-	uopt.uid =      UDF_SB(sb)->s_uid ;
-	uopt.gid =      UDF_SB(sb)->s_gid ;
-	uopt.umask =    UDF_SB(sb)->s_umask ;
+	uopt.flags = UDF_SB(sb)->s_flags ;
+	uopt.uid   = UDF_SB(sb)->s_uid ;
+	uopt.gid   = UDF_SB(sb)->s_gid ;
+	uopt.umask = UDF_SB(sb)->s_umask ;
 
 	if ( !udf_parse_options(options, &uopt) )
 		return -EINVAL;
 
-	UDF_SB(sb)->s_flags =   uopt.flags;
-	UDF_SB(sb)->s_uid =     uopt.uid;
-	UDF_SB(sb)->s_gid =     uopt.gid;
-	UDF_SB(sb)->s_umask =   uopt.umask;
+	UDF_SB(sb)->s_flags = uopt.flags;
+	UDF_SB(sb)->s_uid   = uopt.uid;
+	UDF_SB(sb)->s_gid   = uopt.gid;
+	UDF_SB(sb)->s_umask = uopt.umask;
 
 	if ((*flags & MS_RDONLY) == (sb->s_flags & MS_RDONLY))
 		return 0;
@@ -765,12 +765,12 @@ udf_load_pvoldesc(struct super_block *sb, struct buffer_head *bh)
 	if ( udf_stamp_to_time(&recording, &recording_usec,
 		lets_to_cpu(pvoldesc->recordingDateAndTime)) )
 	{
-	    timestamp ts;
-	    ts = lets_to_cpu(pvoldesc->recordingDateAndTime);
+		timestamp ts;
+		ts = lets_to_cpu(pvoldesc->recordingDateAndTime);
 		udf_debug("recording time %ld/%ld, %04u/%02u/%02u %02u:%02u (%x)\n",
 			recording, recording_usec,
 			ts.year, ts.month, ts.day, ts.hour, ts.minute, ts.typeAndTimezone);
-	    UDF_SB_RECORDTIME(sb) = recording;
+		UDF_SB_RECORDTIME(sb) = recording;
 	}
 
 	if ( !udf_build_ustr(&instr, pvoldesc->volIdent, 32) )
@@ -879,7 +879,6 @@ udf_load_logicalvol(struct super_block *sb, struct buffer_head * bh, lb_addr *fi
 		 i++,offset+=((struct GenericPartitionMap *)&(lvd->partitionMaps[offset]))->partitionMapLength)
 	{
 		type = ((struct GenericPartitionMap *)&(lvd->partitionMaps[offset]))->partitionMapType;
-		udf_debug("Partition (%d) type %d\n", i, type);
 		if (type == 1)
 		{
 			struct GenericPartitionMap1 *gpm1 = (struct GenericPartitionMap1 *)&(lvd->partitionMaps[offset]);
@@ -926,6 +925,8 @@ udf_load_logicalvol(struct super_block *sb, struct buffer_head * bh, lb_addr *fi
 			UDF_SB_PARTVSN(sb,i) = le16_to_cpu(upm2->volSeqNum);
 			UDF_SB_PARTNUM(sb,i) = le16_to_cpu(upm2->partitionNum);
 		}
+		udf_debug("Partition (%d:%d) type %d on volume %d\n",
+			i, UDF_SB_PARTNUM(sb,i), type, UDF_SB_PARTVSN(sb,i));
 	}
 
 	if (fileset)
@@ -1117,10 +1118,10 @@ udf_load_partition(struct super_block *sb, lb_addr *fileset)
 	Uint16 ident;
 	struct buffer_head *bh;
 	long main_s, main_e, reserve_s, reserve_e;
-	int i;
+	int i, j;
 
 	if (!sb)
-	    return 1;
+		return 1;
 
 	for (i=0; i<sizeof(UDF_SB_ANCHOR(sb))/sizeof(int); i++)
 	{
@@ -1176,12 +1177,21 @@ udf_load_partition(struct super_block *sb, lb_addr *fileset)
 					return 1;
 				}
 
-				if (i == 0)
-					ino.partitionReferenceNum = i+1;
-				else
-					ino.partitionReferenceNum = i-1;
+				for (j=0; j<UDF_SB_NUMPARTS(sb); j++)
+				{
+					if (j != i &&
+						UDF_SB_PARTVSN(sb,i) == UDF_SB_PARTVSN(sb,j) &&
+						UDF_SB_PARTNUM(sb,i) == UDF_SB_PARTNUM(sb,j))
+					{
+						ino.partitionReferenceNum = j;
+						ino.logicalBlockNum = UDF_SB_LASTBLOCK(sb) -
+							UDF_SB_PARTROOT(sb,j);
+						break;
+					}
+				}
 
-				ino.logicalBlockNum = UDF_SB_LASTBLOCK(sb) - UDF_SB_PARTROOT(sb,ino.partitionReferenceNum);
+				if (j == UDF_SB_NUMPARTS(sb))
+					return 1;
 
 				if (!(UDF_SB_VAT(sb) = udf_iget(sb, ino)))
 					return 1;
