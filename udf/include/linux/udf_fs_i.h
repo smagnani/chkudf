@@ -43,7 +43,7 @@ typedef struct
 
 struct udf_inode_info
 {
-#if LINUX_KERNEL_VERSION >= KERNEL_VERSION(2,5,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
 	struct timespec		i_crtime;
 #else
 	long			i_umtime;
