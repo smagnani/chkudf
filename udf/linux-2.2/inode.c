@@ -176,7 +176,7 @@ void udf_expand_file_adinicb(struct file * filp, int newsize, int * err)
 	int block, newblock;
 	struct buffer_head *sbh = NULL, *dbh = NULL;
 
-	if (!newsize)
+	if (!UDF_I_LENALLOC(inode))
 	{
 		UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_LONG;
 		mark_inode_dirty(inode);
@@ -1967,7 +1967,6 @@ int udf_readpage_adinicb (struct file * file, struct page * page)
 	int block;
 
 	inode = file->f_dentry->d_inode;
-
 
 	memset((char *)page_address(page), 0, PAGE_SIZE);
 	block = udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0);
