@@ -1281,7 +1281,6 @@ static int
 udf_update_inode(struct inode *inode, int do_sync)
 {
 	struct buffer_head *bh = NULL;
-	Uint16 ident;
 	struct FileEntry *fe;
 	struct ExtendedFileEntry *efe;
 	Uint32 udfperms;
@@ -1291,29 +1290,9 @@ udf_update_inode(struct inode *inode, int do_sync)
 	timestamp cpu_time;
 	int err = 0;
 
-	if (UDF_I_NEW_INODE(inode) == 1)
-	{
-		bh = udf_tread(inode->i_sb,
-			udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0),
-			inode->i_sb->s_blocksize);
-	}
-	else
-	{
-		bh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode), 0, &ident);
-
-		if (UDF_I_EXTENDED_FE(inode) == 0 && ident != TID_FILE_ENTRY)
-		{
-			udf_debug("ident (%d) != TID_FILE_ENTRY (%d)",
-				ident, TID_FILE_ENTRY);
-			return -EFAULT;
-		}
-		else if (UDF_I_EXTENDED_FE(inode) == 1 && ident != TID_EXTENDED_FILE_ENTRY)
-		{
-			udf_debug("ident (%d) != TID_EXTENDED_FILE_ENTRY (%d)",
-				ident, TID_EXTENDED_FILE_ENTRY);
-			return -EFAULT;
-		}
-	}
+	bh = udf_tread(inode->i_sb,
+		udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0),
+		inode->i_sb->s_blocksize);
 
 	if (!bh)
 	{
