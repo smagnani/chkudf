@@ -304,13 +304,13 @@ out:
 	return alloc_count;
 }
 
-static int udf_bitmap_new_block(struct super_block * sb,
+static int udf_bitmap_new_blocks(struct super_block * sb,
 #ifdef QUOTA_CHANGE
 	struct inode * inode,
 #else
 	const struct inode * inode,
 #endif
-	struct udf_bitmap *bitmap, Uint16 partition, Uint32 goal, int *err)
+	struct udf_bitmap *bitmap, Uint16 partition, Uint32 goal, Uint32 blocks, int *err)
 {
 	int newbit, bit=0, block, block_group, group_start;
 	int end_goal, nr_groups, bitmap_nr, i;
@@ -324,6 +324,15 @@ static int udf_bitmap_new_block(struct super_block * sb,
 repeat:
 	if (goal < 0 || goal >= UDF_SB_PARTLEN(sb, partition))
 		goal = 0;
+
+	if (UDF_SB_LVIDBH(sb))
+	{
+		if (le32_to_cpu(UDF_SB_LVID(sb)->freeSpaceTable[partition]) < blocks)
+			goto error_return;
+	}
+
+	if (blocks != 1)
+		goto error_return;
 
 	nr_groups = bitmap->s_nr_groups;
 	block = goal + (sizeof(struct SpaceBitmapDesc) << 3);
@@ -414,9 +423,9 @@ got_block:
 	 * Check quota for allocation of this block.
 	 */
 #ifdef QUOTA_CHANGE
-	if (inode && DQUOT_ALLOC_BLOCK(inode, 1))
+	if (inode && DQUOT_ALLOC_BLOCK(inode, blocks))
 #else
-	if (inode && DQUOT_ALLOC_BLOCK(sb, inode, 1))
+	if (inode && DQUOT_ALLOC_BLOCK(sb, inode, blocks))
 #endif
 	{
 		unlock_super(sb);
@@ -777,15 +786,15 @@ static int udf_table_prealloc_blocks(struct super_block * sb,
 	return alloc_count;
 }
 
-static int udf_table_new_block(struct super_block * sb,
+static int udf_table_new_blocks(struct super_block * sb,
 #ifdef QUOTA_CHANGE
 	struct inode * inode,
 #else
 	const struct inode * inode,
 #endif
-	struct inode *table, Uint16 partition, Uint32 goal, int *err)
+	struct inode *table, Uint16 partition, Uint32 goal, Uint32 blocks, int *err)
 {
-	Uint32 spread = 0xFFFFFFFF, nspread;
+	Uint32 spread = 0xFFFFFFFF, nspread = 0xFFFFFFFF;
 	Uint32 newblock = 0, adsize;
 	Uint32 extoffset, goal_extoffset, elen, goal_elen = 0;
 	lb_addr bloc, goal_bloc, eloc, goal_eloc;
@@ -806,7 +815,8 @@ static int udf_table_new_block(struct super_block * sb,
 	if (goal < 0 || goal >= UDF_SB_PARTLEN(sb, partition))
 		goal = 0;
 
-	/* We search for the closest matching block to goal. If we find a exact hit,	   we stop. Otherwise we keep going till we run out of extents.
+	/* We search for the closest matching block to goal. If we find a exact hit,
+	   we stop. Otherwise we keep going till we run out of extents.
 	   We store the buffer_head, bloc, and extoffset of the current closest
 	   match and use that when we are done.
 	*/
@@ -820,16 +830,19 @@ static int udf_table_new_block(struct super_block * sb,
 	while (spread && (etype =
 		udf_next_aext(table, &bloc, &extoffset, &eloc, &elen, &bh, 1)) != -1)
 	{
-		if (goal >= eloc.logicalBlockNum)
+		if (goal + blocks > eloc.logicalBlockNum)
 		{
-			if (goal < eloc.logicalBlockNum + (elen >> sb->s_blocksize_bits))
+			if ((goal + blocks) <= eloc.logicalBlockNum +
+				((elen + sb->s_blocksize - 1) >> sb->s_blocksize_bits))
+			{
 				nspread = 0;
-			else
+			}
+			else if (((elen + sb->s_blocksize - 1) >> sb->s_blocksize_bits) >= blocks)
 				nspread = goal - eloc.logicalBlockNum -
-					(elen >> sb->s_blocksize_bits);
+					((elen + sb->s_blocksize - 1) >> sb->s_blocksize_bits);
 		}
-		else
-			nspread = eloc.logicalBlockNum - goal;
+		else if (((elen + sb->s_blocksize - 1) >> sb->s_blocksize_bits) >= blocks)
+			nspread = eloc.logicalBlockNum - goal + blocks - 1;
 
 		if (nspread < spread)
 		{
@@ -862,8 +875,8 @@ static int udf_table_new_block(struct super_block * sb,
 	/* This works, but very poorly.... */
 
 	newblock = goal_eloc.logicalBlockNum;
-	goal_eloc.logicalBlockNum ++;
-	goal_elen -= sb->s_blocksize;
+	goal_eloc.logicalBlockNum += blocks;
+	goal_elen -= (sb->s_blocksize * blocks);
 
 #ifdef QUOTA_CHANGE
 	if (inode && DQUOT_ALLOC_BLOCK(inode, 1))
@@ -970,37 +983,37 @@ inline int udf_prealloc_blocks(struct super_block * sb,
 		return 0;
 }
 
-inline int udf_new_block(struct super_block * sb,
+inline int udf_new_blocks(struct super_block * sb,
 #ifdef QUOTA_CHANGE
 	struct inode * inode,
 #else
 	const struct inode * inode,
 #endif
-	Uint16 partition, Uint32 goal, int *err)
+	Uint16 partition, Uint32 goal, Uint32 blocks, int *err)
 {
 	if (UDF_SB_PARTFLAGS(sb, partition) & UDF_PART_FLAG_UNALLOC_BITMAP)
 	{
-		return udf_bitmap_new_block(sb, inode,
+		return udf_bitmap_new_blocks(sb, inode,
 			UDF_SB_PARTMAPS(sb)[partition].s_uspace.s_bitmap,
-			partition, goal, err);
+			partition, goal, blocks, err);
 	}
 	else if (UDF_SB_PARTFLAGS(sb, partition) & UDF_PART_FLAG_UNALLOC_TABLE)
 	{
-		return udf_table_new_block(sb, inode,
+		return udf_table_new_blocks(sb, inode,
 			UDF_SB_PARTMAPS(sb)[partition].s_uspace.s_table,
-			partition, goal, err);
+			partition, goal, blocks, err);
 	}
 	else if (UDF_SB_PARTFLAGS(sb, partition) & UDF_PART_FLAG_FREED_BITMAP)
 	{
-		return udf_bitmap_new_block(sb, inode,
+		return udf_bitmap_new_blocks(sb, inode,
 			UDF_SB_PARTMAPS(sb)[partition].s_fspace.s_bitmap,
-			partition, goal, err);
+			partition, goal, blocks, err);
 	}
 	else if (UDF_SB_PARTFLAGS(sb, partition) & UDF_PART_FLAG_FREED_TABLE)
 	{
-		return udf_table_new_block(sb, inode,
+		return udf_table_new_blocks(sb, inode,
 			UDF_SB_PARTMAPS(sb)[partition].s_fspace.s_table,
-			partition, goal, err);
+			partition, goal, blocks, err);
 	}
 	else
 	{

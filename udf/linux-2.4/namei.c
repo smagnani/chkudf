@@ -948,9 +948,9 @@ static int udf_symlink(struct inode * dir, struct dentry * dentry, const char * 
 		lb_addr bloc, eloc;
 		Uint32 elen, extoffset;
 
-		block = udf_new_block(inode->i_sb, inode,
+		block = udf_new_blocks(inode->i_sb, inode,
 			UDF_I_LOCATION(inode).partitionReferenceNum,
-			UDF_I_LOCATION(inode).logicalBlockNum, &err);
+			UDF_I_LOCATION(inode).logicalBlockNum, 1, &err);
 		if (!block)
 			goto out_no_entry;
 		bloc = UDF_I_LOCATION(inode);

@@ -241,9 +241,9 @@ struct buffer_head * udf_expand_dir_adinicb(struct inode *inode, int *block, int
 	}
 
 	/* alloc block, and copy data to it */
-	*block = udf_new_block(inode->i_sb, inode,
+	*block = udf_new_blocks(inode->i_sb, inode,
 		UDF_I_LOCATION(inode).partitionReferenceNum,
-		UDF_I_LOCATION(inode).logicalBlockNum, err);
+		UDF_I_LOCATION(inode).logicalBlockNum, 1, err);
 
 	if (!(*block))
 		return NULL;
@@ -553,8 +553,8 @@ static struct buffer_head * inode_getblk(struct inode * inode, long block,
 				goal = UDF_I_LOCATION(inode).logicalBlockNum + 1;
 		}
 
-		if (!(newblocknum = udf_new_block(inode->i_sb, inode,
-			UDF_I_LOCATION(inode).partitionReferenceNum, goal, err)))
+		if (!(newblocknum = udf_new_blocks(inode->i_sb, inode,
+			UDF_I_LOCATION(inode).partitionReferenceNum, goal, 1, err)))
 		{
 			udf_release_data(pbh);
 			*err = -ENOSPC;
@@ -1652,8 +1652,8 @@ Sint8 udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 		int err, loffset;
 		lb_addr obloc = *bloc;
 
-		if (!(bloc->logicalBlockNum = udf_new_block(inode->i_sb, inode,
-			obloc.partitionReferenceNum, obloc.logicalBlockNum, &err)))
+		if (!(bloc->logicalBlockNum = udf_new_blocks(inode->i_sb, inode,
+			obloc.partitionReferenceNum, obloc.logicalBlockNum, 1, &err)))
 		{
 			return -1;
 		}

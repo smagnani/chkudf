@@ -95,8 +95,8 @@ struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
 	}
 	*err = -ENOSPC;
 
-	block = udf_new_block(dir->i_sb, NULL, UDF_I_LOCATION(dir).partitionReferenceNum,
-		start, err);
+	block = udf_new_blocks(dir->i_sb, NULL, UDF_I_LOCATION(dir).partitionReferenceNum,
+		start, 1, err);
 	if (*err)
 	{
 		iput(inode);
