@@ -107,6 +107,11 @@ void udf_delete_inode(struct inode * inode)
 	udf_free_inode(inode);
 }
 
+void udf_clear_inode(struct inode *inode)
+{
+	kfree(UDF_I_DATA(inode));
+}
+
 void udf_discard_prealloc(struct inode * inode)
 {
 	if (inode->i_size && inode->i_size != UDF_I_LENEXTENTS(inode) &&
@@ -976,14 +981,21 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 	UDF_I_ALLOCTYPE(inode) = le16_to_cpu(fe->icbTag.flags) & ICBTAG_FLAG_AD_MASK;
 
 	if (le16_to_cpu(fe->descTag.tagIdent) == TAG_IDENT_EFE)
+	{
 		UDF_I_EXTENDED_FE(inode) = 1;
+		UDF_I_DATA(inode) = kmalloc(sizeof(inode->i_sb->s_blocksize) - sizeof(struct extendedFileEntry), GFP_KERNEL);
+	}
 	else if (le16_to_cpu(fe->descTag.tagIdent) == TAG_IDENT_FE)
+	{
 		UDF_I_EXTENDED_FE(inode) = 0;
+		UDF_I_DATA(inode) = kmalloc(sizeof(inode->i_sb->s_blocksize) - sizeof(struct fileEntry), GFP_KERNEL);
+	}
 	else if (le16_to_cpu(fe->descTag.tagIdent) == TAG_IDENT_USE)
 	{
 		UDF_I_LENALLOC(inode) =
 			le32_to_cpu(
 				((struct unallocSpaceEntry *)bh->b_data)->lengthAllocDescs);
+		UDF_I_DATA(inode) = kmalloc(sizeof(inode->i_sb->s_blocksize) - sizeof(struct unallocSpaceEntry), GFP_KERNEL);
 		return;
 	}
 

@@ -127,6 +127,7 @@ extern void udf_truncate(struct inode *);
 extern void udf_read_inode(struct inode *);
 extern void udf_put_inode(struct inode *);
 extern void udf_delete_inode(struct inode *);
+extern void udf_clear_inode(struct inode *);
 extern void udf_write_inode(struct inode *);
 extern int8_t inode_bmap(struct inode *, int, lb_addr *, uint32_t *, lb_addr *, uint32_t *, uint32_t *, struct buffer_head **);
 extern int udf_bmap(struct inode *, int);

@@ -110,6 +110,7 @@ static struct super_operations udf_sb_ops =
 	udf_write_inode,	/* write_inode */
 	udf_put_inode,		/* put_inode */
 	udf_delete_inode,	/* delete_inode */
+	udf_clear_inode,	/* clear_inode */
 	NULL,			/* notify_change */
 	udf_put_super,		/* put_super */
 	udf_write_super,	/* write_super */
