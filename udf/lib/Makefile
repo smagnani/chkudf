@@ -56,7 +56,7 @@ kcheck:
 	fi
 
 $(LIBUDFSO): $(OBJS)
-	$(LD) -m "`ld --help | awk '/supported emulations/ { print $$4}'`" -r -o $@ $(OBJS)
+	$(LD) -r -o $@ $(OBJS)
 
 $(LIBUDF): $(OBJS)
 	$(AR) rcv $@ $^

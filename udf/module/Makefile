@@ -62,7 +62,7 @@ kcheck:
 	fi
 
 udf.o: $(OBJS)
-	$(LD) -m "`ld --help | awk '/supported emulations/ { print $$4}'`" -r -o $@ $(OBJS)
+	$(LD) -r -o $@ $(OBJS)
 	@echo Done.
 
 -include $(SRCS:%.c=.depfiles/%.d)
