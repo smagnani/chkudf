@@ -140,13 +140,13 @@ extern void udf_expand_file_adinicb(struct inode *, int, int *);
 extern struct buffer_head * udf_expand_dir_adinicb(struct inode *, int *, int *);
 extern struct buffer_head * udf_getblk(struct inode *, long, int, int *);
 extern struct buffer_head * udf_bread(struct inode *, int, int, int *);
+extern void udf_truncate(struct inode *);
 extern void udf_read_inode(struct inode *);
 extern void udf_put_inode(struct inode *);
 extern void udf_delete_inode(struct inode *);
 extern void udf_write_inode(struct inode *);
 extern int inode_bmap(struct inode *, int, lb_addr *, Uint32 *, lb_addr *, Uint32 *, Uint32 *, struct buffer_head **);
 extern int udf_bmap(struct inode *, int);
-extern int udf_readpage_adinicb(struct file *, struct page *);
 extern int udf_add_aext(struct inode *, lb_addr *, int *, lb_addr, Uint32, struct buffer_head **, int);
 extern int udf_write_aext(struct inode *, lb_addr, int *, lb_addr, Uint32, struct buffer_head *, int);
 extern int udf_insert_aext(struct inode *, lb_addr, int, lb_addr, Uint32, struct buffer_head *);
@@ -185,9 +185,7 @@ extern void udf_free_inode(struct inode *);
 extern struct inode * udf_new_inode (const struct inode *, int, int *);
 
 /* truncate.c */
-extern void udf_trunc(struct inode *);
-extern void udf_truncate(struct inode *);
-extern void udf_truncate_adinicb(struct inode *);
+extern void udf_truncate_extents(struct inode *);
 
 /* balloc.c */
 extern inline void udf_free_blocks(const struct inode *, lb_addr, Uint32, Uint32);
@@ -200,7 +198,7 @@ extern int udf_sync_file_adinicb(struct file *, struct dentry *);
 
 /* directory.c */
 extern Uint8 * udf_filead_read(struct inode *, Uint8 *, Uint8, lb_addr, int *, int *, struct buffer_head **, int *);
-extern struct FileIdentDesc * udf_fileident_read(struct inode *, int *, struct udf_fileident_bh *, struct FileIdentDesc *, lb_addr *, Uint32 *, lb_addr *, Uint32 *, Uint32 *, struct buffer_head **);
+extern struct FileIdentDesc * udf_fileident_read(struct inode *, loff_t *, struct udf_fileident_bh *, struct FileIdentDesc *, lb_addr *, Uint32 *, lb_addr *, Uint32 *, Uint32 *, struct buffer_head **);
 
 #endif /* __KERNEL__ */
 
