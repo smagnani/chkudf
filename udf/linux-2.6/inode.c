@@ -130,15 +130,6 @@ void udf_clear_inode(struct inode *inode)
 	UDF_I_DATA(inode) = NULL;
 }
 
-void udf_discard_prealloc(struct inode * inode)
-{
-	if (inode->i_size && inode->i_size != UDF_I_LENEXTENTS(inode) &&
-		UDF_I_ALLOCTYPE(inode) != ICBTAG_FLAG_AD_IN_ICB)
-	{
-		udf_truncate_extents(inode);
-	}
-}
-
 static int udf_writepage(struct page *page, struct writeback_control *wbc)
 {
 	return block_write_full_page(page, udf_get_block, wbc);

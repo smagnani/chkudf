@@ -110,17 +110,8 @@ void udf_delete_inode(struct inode * inode)
 
 void udf_clear_inode(struct inode *inode)
 {
-	if (!is_bad_inode(inode))
-		kfree(UDF_I_DATA(inode));
-}
-
-void udf_discard_prealloc(struct inode * inode)
-{
-	if (inode->i_size && inode->i_size != UDF_I_LENEXTENTS(inode) &&
-		UDF_I_ALLOCTYPE(inode) != ICBTAG_FLAG_AD_IN_ICB)
-	{
-		udf_truncate_extents(inode);
-	}
+	kfree(UDF_I_DATA(inode));
+	UDF_I_DATA(inode) = NULL;
 }
 
 void udf_expand_file_adinicb(struct inode * inode, int newsize, int * err)
@@ -835,6 +826,7 @@ void udf_truncate(struct inode * inode)
 void
 udf_read_inode(struct inode *inode)
 {
+	UDF_I_DATA(inode) = NULL;
 	memset(&UDF_I_LOCATION(inode), 0xFF, sizeof(lb_addr));
 }
 
