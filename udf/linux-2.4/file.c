@@ -42,6 +42,28 @@
 #include "udf_i.h"
 #include "udf_sb.h"
 
+static int udf_adinicb_writepage(struct file *file, struct dentry *dentry, struct page *page)
+{
+	struct inode *inode = (struct inode *)page->mapping->host;
+
+	struct buffer_head *bh;
+	int block;
+	char *kaddr;
+
+	if (!PageLocked(page))
+		PAGE_BUG(page);
+
+	kaddr = (char *)kmap(page);
+	block = udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0);
+	bh = bread (inode->i_dev, block, inode->i_sb->s_blocksize);
+	memcpy(bh->b_data + udf_ext0_offset(inode), kaddr, inode->i_size);
+	mark_buffer_dirty(bh, 0);
+	brelse(bh);
+	SetPageUptodate(page);
+	kunmap(page);
+	return 0;
+}
+
 static int udf_adinicb_readpage(struct dentry *dentry, struct page * page)
 {
 	struct inode *inode = (struct inode *)page->mapping->host;
@@ -62,28 +84,6 @@ static int udf_adinicb_readpage(struct dentry *dentry, struct page * page)
 	SetPageUptodate(page);
 	kunmap(page);
 	UnlockPage(page);
-	return 0;
-}
-
-static int udf_adinicb_writepage(struct dentry *dentry, struct page *page)
-{
-	struct inode *inode = (struct inode *)page->mapping->host;
-
-	struct buffer_head *bh;
-	int block;
-	char *kaddr;
-
-	if (!PageLocked(page))
-		PAGE_BUG(page);
-
-	kaddr = (char *)kmap(page);
-	block = udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0);
-	bh = bread (inode->i_dev, block, inode->i_sb->s_blocksize);
-	memcpy(bh->b_data + udf_ext0_offset(inode), kaddr, inode->i_size);
-	mark_buffer_dirty(bh, 0);
-	brelse(bh);
-	SetPageUptodate(page);
-	kunmap(page);
 	return 0;
 }
 
@@ -118,6 +118,7 @@ static int udf_adinicb_commit_write(struct file *file, struct page *page, unsign
 struct address_space_operations udf_adinicb_aops = {
 	readpage:			udf_adinicb_readpage,
 	writepage:			udf_adinicb_writepage,
+	sync_page:			block_sync_page,
 	prepare_write:		udf_adinicb_prepare_write,
 	commit_write:		udf_adinicb_commit_write,
 };
