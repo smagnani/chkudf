@@ -918,6 +918,7 @@ static int udf_symlink(struct inode * dir, struct dentry * dentry, const char * 
 {
 	struct inode * inode;
 	struct PathComponent *pc;
+	char *compstart;
 	struct udf_fileident_bh fibh;
 	struct buffer_head *bh = NULL;
 	int eoffset, elen = 0;
@@ -925,6 +926,7 @@ static int udf_symlink(struct inode * dir, struct dentry * dentry, const char * 
 	struct FileIdentDesc cfi;
 	char *ea;
 	int err;
+	int block;
 
 	if (!(inode = udf_new_inode(dir, S_IFLNK, &err)))
 		goto out;
@@ -933,8 +935,34 @@ static int udf_symlink(struct inode * dir, struct dentry * dentry, const char * 
 	inode->i_data.a_ops = &udf_symlink_aops;
 	inode->i_op = &page_symlink_inode_operations;
 
-	bh = udf_tread(inode->i_sb, inode->i_ino, inode->i_sb->s_blocksize);
-	ea = bh->b_data + udf_file_entry_alloc_offset(inode);
+	if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
+	{
+		struct buffer_head *bh = NULL;
+		lb_addr bloc, eloc;
+		Uint32 elen, extoffset;
+
+		block = udf_new_block(inode,
+			UDF_I_LOCATION(inode).partitionReferenceNum,
+			UDF_I_LOCATION(inode).logicalBlockNum, &err);
+		if (!block)
+			goto out_no_entry;
+		bloc = UDF_I_LOCATION(inode);
+		eloc.logicalBlockNum = block;
+		eloc.partitionReferenceNum = UDF_I_LOCATION(inode).partitionReferenceNum;
+		elen = inode->i_sb->s_blocksize;
+		extoffset = udf_file_entry_alloc_offset(inode);
+		udf_add_aext(inode, &bloc, &extoffset, eloc, elen, &bh, 0);
+		udf_release_data(bh);
+
+		inode->i_blocks = inode->i_sb->s_blocksize / 512;
+		block = udf_get_pblock(inode->i_sb, block,
+			UDF_I_LOCATION(inode).partitionReferenceNum, 0);
+	}
+	else
+		block = udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0);
+
+	bh = udf_tread(inode->i_sb, block, inode->i_sb->s_blocksize);
+	ea = bh->b_data + udf_ext0_offset(inode);
 
 	eoffset = inode->i_sb->s_blocksize - (ea - bh->b_data);
 	pc = (struct PathComponent *)ea;
@@ -953,9 +981,13 @@ static int udf_symlink(struct inode * dir, struct dentry * dentry, const char * 
 		elen += sizeof(struct PathComponent);
 	}
 
-	while (*symname && eoffset > elen + sizeof(struct PathComponent))
+	err = -ENAMETOOLONG;
+
+	while (*symname)
 	{
-		char *compstart;
+		if (elen + sizeof(struct PathComponent) > eoffset)
+			goto out_no_entry;
+
 		pc = (struct PathComponent *)(ea + elen);
 
 		compstart = (char *)symname;
@@ -979,7 +1011,7 @@ static int udf_symlink(struct inode * dir, struct dentry * dentry, const char * 
 		if (pc->componentType == 5)
 		{
 			if (elen + sizeof(struct PathComponent) + symname - compstart > eoffset)
-				pc->lengthComponentIdent = eoffset - elen - sizeof(struct PathComponent);
+				goto out_no_entry;
 			else
 				pc->lengthComponentIdent = symname - compstart;
 
@@ -998,11 +1030,13 @@ static int udf_symlink(struct inode * dir, struct dentry * dentry, const char * 
 	}
 
 	udf_release_data(bh);
-	UDF_I_LENALLOC(inode) = inode->i_size = elen;
+	inode->i_size = elen;
+	if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
+		UDF_I_LENALLOC(inode) = inode->i_size;
 	mark_inode_dirty(inode);
 
 	if (!(fi = udf_add_entry(dir, dentry, &fibh, &cfi, &err)))
-		goto out;
+		goto out_no_entry;
 	cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize);
 	cfi.icb.extLocation = cpu_to_lelb(UDF_I_LOCATION(inode));
 	if (UDF_SB_LVIDBH(inode->i_sb))
@@ -1032,6 +1066,12 @@ static int udf_symlink(struct inode * dir, struct dentry * dentry, const char * 
 
 out:
 	return err;
+
+out_no_entry:
+	inode->i_nlink--;
+	mark_inode_dirty(inode);
+	iput(inode);
+	goto out;
 }
 
 static int udf_link(struct dentry * old_dentry, struct inode * dir,
