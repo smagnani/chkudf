@@ -273,6 +273,14 @@ udf_parse_options(char *options, struct udf_options *uopt)
 			uopt->flags |= (1 << UDF_FLAG_UNHIDE);
 		else if (!strcmp(opt, "undelete") && !val)
 			uopt->flags |= (1 << UDF_FLAG_UNDELETE);
+		else if (!strcmp(opt, "noadinicb") && !val)
+			uopt->flags &= ~(1 << UDF_FLAG_USE_AD_IN_ICB);
+		else if (!strcmp(opt, "adinicb") && !val)
+			uopt->flags |= (1 << UDF_FLAG_USE_AD_IN_ICB);
+		else if (!strcmp(opt, "shortad") && !val)
+			uopt->flags |= (1 << UDF_FLAG_USE_SHORT_AD);
+		else if (!strcmp(opt, "longad") && !val)
+			uopt->flags &= ~(1 << UDF_FLAG_USE_SHORT_AD);
 		else if (!strcmp(opt, "gid") && val)
 			uopt->gid = simple_strtoul(val, NULL, 0);
 		else if (!strcmp(opt, "umask") && val)
