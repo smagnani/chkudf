@@ -368,7 +368,6 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 	Uint32 extoffset, elen, offset;
 	struct buffer_head *bh = NULL;
 
-	*err = -EINVAL;
 	if (!dir || !dir->i_nlink)
 		return NULL;
 	sb = dir->i_sb;
@@ -383,6 +382,12 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 
 	if (dentry->d_name.len)
 	{
+		if (!dentry->d_name.len)
+		{
+			*err = -EINVAL;
+			return NULL;
+		}
+
 		if ( !(udf_char_to_ustr(&unifilename, dentry->d_name.name, dentry->d_name.len)) )
 		{
 			*err = -ENAMETOOLONG;
@@ -395,15 +400,10 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 			return NULL;
 		}
 	}
-	else if (dir->i_size != 0)
-	{
-		*err = -ENOENT;
-		return NULL;
-	}
-	else /* .. */
+	else
 		namelen = 0;
 
-	nfidlen = (sizeof(struct FileIdentDesc) + 0 + namelen + 3) & ~3;
+	nfidlen = (sizeof(struct FileIdentDesc) + namelen + 3) & ~3;
 
 	f_pos = (udf_ext0_offset(dir) >> 2);
 
@@ -425,7 +425,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 		if (!(fibh->sbh = fibh->ebh = udf_tread(dir->i_sb, block, dir->i_sb->s_blocksize)))
 		{
 			udf_release_data(bh);
-			udf_debug("tread failure\n");
+			*err = -EIO;
 			return NULL;
 		}
 	
@@ -441,6 +441,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 					udf_release_data(fibh->ebh);
 				udf_release_data(fibh->sbh);
 				udf_release_data(bh);
+				*err = -EIO;
 				return NULL;
 			}
 	
@@ -479,7 +480,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 						return fi;
 					else
 					{
-						udf_debug("udf_write_fi failure\n");
+						*err = -EIO;
 						return NULL;
 					}
 				}
@@ -497,7 +498,6 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 					udf_release_data(fibh->sbh);
 					udf_release_data(bh);
 					*err = -EEXIST;
-					udf_debug("udf_match success\n");
 					return NULL;
 				}
 			}
@@ -575,12 +575,10 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 		block = eloc.logicalBlockNum + ((elen - 1) >>
 			dir->i_sb->s_blocksize_bits);
 
-		*err = -ENOSPC;
 		if (!(fibh->ebh = udf_bread(dir, f_pos >> (dir->i_sb->s_blocksize_bits - 2), 1, err)))
 		{
 			udf_release_data(bh);
 			udf_release_data(fibh->sbh);
-			udf_debug("getblk failure\n");
 			return NULL;
 		}
 
@@ -631,7 +629,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 		if (fibh->sbh != fibh->ebh)
 			udf_release_data(fibh->ebh);
 		udf_release_data(fibh->sbh);
-		udf_debug("udf_write_fi failure\n");
+		*err = -EIO;
 		return NULL;
 	}
 }
@@ -775,7 +773,6 @@ int udf_mkdir(struct inode * dir, struct dentry * dentry, int mode)
 	struct udf_fileident_bh fibh;
 	int err;
 	struct FileIdentDesc cfi, *fi;
-	struct dentry parent;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,6)
 	err = -ENAMETOOLONG;
@@ -793,10 +790,7 @@ int udf_mkdir(struct inode * dir, struct dentry * dentry, int mode)
 		goto out;
 
 	inode->i_op = &udf_dir_inode_operations;
-	parent.d_name.len = 0;
-	parent.d_name.name = NULL;
-	inode->i_size = 0;
-	if (!(fi = udf_add_entry(inode, &parent, &fibh, &cfi, &err)))
+	if (!(fi = udf_add_entry(inode, NULL, &fibh, &cfi, &err)))
 	{
 		inode->i_nlink--;
 		mark_inode_dirty(inode);
