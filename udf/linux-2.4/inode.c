@@ -120,17 +120,6 @@ void udf_discard_prealloc(struct inode * inode)
 		udf_trunc(inode);
 }
 
-static int udf_alloc_block(struct inode *inode, Uint16 partition,
-	Uint32 goal, int *err)
-{
-	int result = 0;
-	wait_on_super(inode->i_sb);
-
-	result = udf_new_block(inode, partition, goal, err);
-
-	return result;
-}
-
 static int udf_writepage(struct dentry *dentry, struct page *page)
 {
 	return block_write_full_page(page, udf_get_block);
@@ -217,9 +206,10 @@ void udf_expand_file_adinicb(struct inode * inode, int newsize, int * err)
 
 struct buffer_head * udf_expand_dir_adinicb(struct inode *inode, int *block, int *err)
 {
-	long_ad newad;
 	int newblock;
 	struct buffer_head *sbh = NULL, *dbh = NULL;
+	lb_addr bloc, eloc;
+	Uint32 elen, extoffset;
 
 	struct udf_fileident_bh sfibh, dfibh;
 	loff_t f_pos = udf_ext0_offset(inode) >> 2;
@@ -237,7 +227,7 @@ struct buffer_head * udf_expand_dir_adinicb(struct inode *inode, int *block, int
 	}
 
 	/* alloc block, and copy data to it */
-	*block = udf_alloc_block(inode,
+	*block = udf_new_block(inode,
 		UDF_I_LOCATION(inode).partitionReferenceNum,
 		UDF_I_LOCATION(inode).logicalBlockNum, err);
 
@@ -284,20 +274,19 @@ struct buffer_head * udf_expand_dir_adinicb(struct inode *inode, int *block, int
 	memset(sbh->b_data + udf_file_entry_alloc_offset(inode),
 		0, UDF_I_LENALLOC(inode));
 
-	memset(&newad, 0x00, sizeof(long_ad));
-	newad.extLength = inode->i_size;
-	newad.extLocation.logicalBlockNum = *block;
-	newad.extLocation.partitionReferenceNum = UDF_I_LOCATION(inode).partitionReferenceNum;
-	/* UniqueID stuff */
-
-	memcpy(sbh->b_data + udf_file_entry_alloc_offset(inode),
-		&newad, sizeof(newad));
-
-	UDF_I_LENALLOC(inode) = sizeof(newad);
+	UDF_I_LENALLOC(inode) = 0;
 	if (UDF_QUERY_FLAG(inode->i_sb, UDF_FLAG_USE_SHORT_AD))
 		UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_SHORT;
 	else
 		UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_LONG;
+	bloc = UDF_I_LOCATION(inode);
+	eloc.logicalBlockNum = *block;
+	eloc.partitionReferenceNum = UDF_I_LOCATION(inode).partitionReferenceNum;
+	elen = inode->i_size;
+	extoffset = udf_file_entry_alloc_offset(inode);
+	udf_add_aext(inode, &bloc, &extoffset, eloc, elen, &sbh, 0);
+	/* UniqueID stuff */
+
 	inode->i_blocks = inode->i_sb->s_blocksize / 512;
 	mark_buffer_dirty(sbh, 1);
 	udf_release_data(sbh);
@@ -545,7 +534,7 @@ static struct buffer_head * inode_getblk(struct inode * inode, long block,
 				goal = UDF_I_LOCATION(inode).logicalBlockNum + 1;
 		}
 
-		if (!(newblocknum = udf_alloc_block(inode,
+		if (!(newblocknum = udf_new_block(inode,
 			UDF_I_LOCATION(inode).partitionReferenceNum, goal, err)))
 		{
 			udf_release_data(pbh);
@@ -683,7 +672,7 @@ static void udf_prealloc_extents(struct inode *inode, int c, int lastblock,
 		int next = laarr[start].extLocation.logicalBlockNum +
 			(((laarr[start].extLength & UDF_EXTENT_LENGTH_MASK) +
 			inode->i_sb->s_blocksize - 1) >> inode->i_sb->s_blocksize_bits);
-		int numalloc = udf_alloc_blocks(inode,
+		int numalloc = udf_prealloc_blocks(inode,
 			laarr[start].extLocation.partitionReferenceNum,
 			next, (UDF_DEFAULT_PREALLOC_BLOCKS > length ? length :
 				UDF_DEFAULT_PREALLOC_BLOCKS) - currlength);
