@@ -86,16 +86,11 @@ int udf_readdir(struct file *filp, void *dirent, filldir_t filldir)
 	struct inode *dir = filp->f_dentry->d_inode;
 	int result;
 
-	if (!dir)
-	   return -EBADF;
-
- 	if (!S_ISDIR(dir->i_mode))
-	   return -ENOTDIR;
-
 	if ( filp->f_pos == 0 ) 
 	{
-		if (filldir(dirent, ".", 1, filp->f_pos, dir->i_ino, DT_DIR))
+		if (filldir(dirent, ".", 1, filp->f_pos, dir->i_ino, DT_DIR) < 0)
 			return 0;
+		filp->f_pos ++;
 	}
  
 	result = do_udf_readdir(dir, filp, filldir, dirent);
@@ -110,7 +105,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 	struct FileIdentDesc *fi=NULL;
 	struct FileIdentDesc cfi;
 	int block, iblock;
-	loff_t nf_pos = filp->f_pos;
+	loff_t nf_pos = filp->f_pos - 1;
 	int flen;
 	char fname[255];
 	char *nameptr;
@@ -133,6 +128,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 	if (inode_bmap(dir, nf_pos >> (dir->i_sb->s_blocksize_bits - 2),
 		&bloc, &extoffset, &eloc, &elen, &offset, &bh) == EXTENT_RECORDED_ALLOCATED)
 	{
+		offset >>= dir->i_sb->s_blocksize_bits;
 		block = udf_get_lb_pblock(dir->i_sb, eloc, offset);
 		if ((++offset << dir->i_sb->s_blocksize_bits) < elen)
 		{
@@ -180,7 +176,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 
 	while ( nf_pos < size )
 	{
-		filp->f_pos = nf_pos;
+		filp->f_pos = nf_pos + 1;
 
 		fi = udf_fileident_read(dir, &nf_pos, &fibh, &cfi, &bloc, &extoffset, &eloc, &elen, &offset, &bh);
 
@@ -226,9 +222,8 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 				continue;
 		}
 
-
 		if ( cfi.fileCharacteristics & FILE_PARENT )
- 		{
+		{
 			iblock = udf_get_lb_pblock(dir->i_sb, UDF_I_LOCATION(filp->f_dentry->d_parent->d_inode), 0);
 			flen = 2;
 			memcpy(fname, "..", flen);
@@ -243,7 +238,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 
 		if (flen)
 		{
-			if (filldir(dirent, fname, flen, filp->f_pos, iblock, dt_type))
+			if (filldir(dirent, fname, flen, filp->f_pos, iblock, dt_type) < 0)
 			{
 				if (fibh.sbh != fibh.ebh)
 					udf_release_data(fibh.ebh);
@@ -254,7 +249,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 		}
 	} /* end while */
 
-	filp->f_pos = nf_pos;
+	filp->f_pos = nf_pos + 1;
 
 	if (fibh.sbh != fibh.ebh)
 		udf_release_data(fibh.ebh);

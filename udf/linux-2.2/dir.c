@@ -128,8 +128,9 @@ int udf_readdir(struct file *filp, void *dirent, filldir_t filldir)
 
 	if ( filp->f_pos == 0 ) 
 	{
-		if (filldir(dirent, ".", 1, filp->f_pos, dir->i_ino))
+		if (filldir(dirent, ".", 1, filp->f_pos, dir->i_ino) < 0)
 			return 0;
+		filp->f_pos ++;
 	}
  
 	result = do_udf_readdir(dir, filp, filldir, dirent);
@@ -144,13 +145,13 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 	struct FileIdentDesc *fi=NULL;
 	struct FileIdentDesc cfi;
 	int block, iblock;
-	int nf_pos = filp->f_pos;
+	loff_t nf_pos = filp->f_pos - 1;
 	int flen;
 	char fname[255];
 	char *nameptr;
 	Uint16 liu;
 	Uint8 lfi;
-	int size = (udf_ext0_offset(dir) + dir->i_size) >> 2;
+	loff_t size = (udf_ext0_offset(dir) + dir->i_size) >> 2;
 	struct buffer_head * bh = NULL, * tmp, * bha[16];
 	lb_addr bloc, eloc;
 	Uint32 extoffset, elen, offset;
@@ -166,6 +167,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 	if (inode_bmap(dir, nf_pos >> (dir->i_sb->s_blocksize_bits - 2),
 		&bloc, &extoffset, &eloc, &elen, &offset, &bh) == EXTENT_RECORDED_ALLOCATED)
 	{
+		offset >>= dir->i_sb->s_blocksize_bits;
 		block = udf_get_lb_pblock(dir->i_sb, eloc, offset);
 		if ((++offset << dir->i_sb->s_blocksize_bits) < elen)
 		{
@@ -210,10 +212,10 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 				brelse(bha[i]);
 		}
 	}
-			
+
 	while ( nf_pos < size )
 	{
-		filp->f_pos = nf_pos;
+		filp->f_pos = nf_pos + 1;
 
 		fi = udf_fileident_read(dir, &nf_pos, &fibh, &cfi, &bloc, &extoffset, &eloc, &elen, &offset, &bh);
 
@@ -259,40 +261,32 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 				continue;
 		}
 
-		iblock = udf_get_lb_pblock(dir->i_sb, lelb_to_cpu(cfi.icb.extLocation), 0);
- 
- 		if (!lfi) /* parent directory */
- 		{
-			if (filldir(dirent, "..", 2, filp->f_pos, filp->f_dentry->d_parent->d_inode->i_ino))
+		if ( cfi.fileCharacteristics & FILE_PARENT )
+		{
+			iblock = udf_get_lb_pblock(dir->i_sb, UDF_I_LOCATION(filp->f_dentry->d_parent->d_inode), 0);
+			flen = 2;
+			memcpy(fname, "..", flen);
+		}
+		else
+		{
+			iblock = udf_get_lb_pblock(dir->i_sb, lelb_to_cpu(cfi.icb.extLocation), 0);
+			flen = udf_get_filename(nameptr, fname, lfi);
+		}
+
+		if (flen)
+		{
+			if (filldir(dirent, fname, flen, filp->f_pos, iblock))
 			{
 				if (fibh.sbh != fibh.ebh)
 					udf_release_data(fibh.ebh);
 				udf_release_data(fibh.sbh);
 				udf_release_data(bh);
- 				return 0;
-			}
-		}
-		else
-		{
-			if ((flen = udf_get_filename(nameptr, fname, lfi)))
-			{
-				if (filldir(dirent, fname, flen, filp->f_pos, iblock))
-				{
-					if (fibh.sbh != fibh.ebh)
-						udf_release_data(fibh.ebh);
-					udf_release_data(fibh.sbh);
-					udf_release_data(bh);
-		 			return 0;
-				}
-			}
-			else
-			{
-				udf_debug("size=%d, nf_pos=%d, liu=%d, lfi=%d\n", size, nf_pos, liu, lfi);
+	 			return 0;
 			}
 		}
 	} /* end while */
 
-	filp->f_pos = nf_pos;
+	filp->f_pos = nf_pos + 1;
 
 	if (fibh.sbh != fibh.ebh)
 		udf_release_data(fibh.ebh);
