@@ -1,16 +1,8 @@
 #ifndef __LINUX_UDF_I_H
 #define __LINUX_UDF_I_H
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,3,17) && defined(CONFIG_UDF_FS_EXT)
-/* we're not compiled in, so we can't expect our stuff in <linux/fs.h> */
-#define UDF_I(X)	( (struct udf_inode_info *) &((X)->u.ext2_i))
-#else
-#define UDF_I(X)	(&((X)->u.udf_i))
-#endif
+#define UDF_I(X)			(&((X)->u.udf_i))
 
-#define UDF_I_EXT0LOC(X)	( UDF_I(X)->i_ext0Location )
-#define UDF_I_EXT0LEN(X)	( UDF_I(X)->i_ext0Length )
-#define UDF_I_EXT0OFFS(X)	( UDF_I(X)->i_ext0Offset )
 #define UDF_I_LOCATION(X)	( UDF_I(X)->i_location )
 #define UDF_I_LENEATTR(X)	( UDF_I(X)->i_lenEAttr )
 #define UDF_I_LENALLOC(X)	( UDF_I(X)->i_lenAlloc )
@@ -18,8 +10,6 @@
 #define UDF_I_ALLOCTYPE(X)	( UDF_I(X)->i_alloc_type )
 #define UDF_I_EXTENDED_FE(X)( UDF_I(X)->i_extended_fe )
 #define UDF_I_STRAT4096(X)	( UDF_I(X)->i_strat_4096 )
-#define UDF_I_PREALLOC_COUNT(X)	( UDF_I(X)->i_prealloc_count )
-#define UDF_I_PREALLOC_BLOCK(X)	( UDF_I(X)->i_prealloc_block )
 #define UDF_I_NEXT_ALLOC_BLOCK(X)	( UDF_I(X)->i_next_alloc_block )
 #define UDF_I_NEXT_ALLOC_GOAL(X)	( UDF_I(X)->i_next_alloc_goal )
 #define UDF_I_UATIME(X)		( UDF_I(X)->i_uatime )
