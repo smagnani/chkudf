@@ -585,14 +585,14 @@ udf_find_anchor(struct super_block *sb)
 			{
 				if (location == last[i] - UDF_SB_SESSION(sb))
 				{
-					lastblock = UDF_SB_ANCHOR(sb)[0] = last[i];
-					UDF_SB_ANCHOR(sb)[1] = last[i] - 256;
+					lastblock = UDF_SB_ANCHOR(sb)[0] = last[i] - UDF_SB_SESSION(sb);
+					UDF_SB_ANCHOR(sb)[1] = last[i] - 256 - UDF_SB_SESSION(sb);
 				}
 				else if (location == udf_variable_to_fixed(last[i]) - UDF_SB_SESSION(sb))
 				{
 					UDF_SET_FLAG(sb, UDF_FLAG_VARCONV);
-					lastblock = UDF_SB_ANCHOR(sb)[0] = udf_variable_to_fixed(last[i]);
-					UDF_SB_ANCHOR(sb)[1] = lastblock - 256;
+					lastblock = UDF_SB_ANCHOR(sb)[0] = udf_variable_to_fixed(last[i]) - UDF_SB_SESSION(sb);
+					UDF_SB_ANCHOR(sb)[1] = lastblock - 256 - UDF_SB_SESSION(sb);
 				}
 				else
 					udf_debug("Anchor found at block %d, location mismatch %d.\n",
@@ -601,7 +601,7 @@ udf_find_anchor(struct super_block *sb)
 			else if (ident == TAG_IDENT_FE || ident == TAG_IDENT_EFE)
 			{
 				lastblock = last[i];
-				UDF_SB_ANCHOR(sb)[3] = 512 + UDF_SB_SESSION(sb);
+				UDF_SB_ANCHOR(sb)[3] = 512;
 			}
 			else
 			{
@@ -846,7 +846,7 @@ udf_load_partdesc(struct super_block *sb, struct buffer_head *bh)
 		if (UDF_SB_PARTMAPS(sb)[i].s_partition_num == le16_to_cpu(p->partitionNumber))
 		{
 			UDF_SB_PARTLEN(sb,i) = le32_to_cpu(p->partitionLength); /* blocks */
-			UDF_SB_PARTROOT(sb,i) = le32_to_cpu(p->partitionStartingLocation) + UDF_SB_SESSION(sb);
+			UDF_SB_PARTROOT(sb,i) = le32_to_cpu(p->partitionStartingLocation);
 			if (le32_to_cpu(p->accessType) == PD_ACCESS_TYPE_READ_ONLY)
 				UDF_SB_PARTFLAGS(sb,i) |= UDF_PART_FLAG_READ_ONLY;
 			if (le32_to_cpu(p->accessType) == PD_ACCESS_TYPE_WRITE_ONCE)
@@ -1469,7 +1469,7 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	UDF_SB_LASTBLOCK(sb) = uopt.lastblock;
 	UDF_SB_ANCHOR(sb)[0] = UDF_SB_ANCHOR(sb)[1] = 0;
 	UDF_SB_ANCHOR(sb)[2] = uopt.anchor;
-	UDF_SB_ANCHOR(sb)[3] = UDF_SB_SESSION(sb) + 256;
+	UDF_SB_ANCHOR(sb)[3] = 256;
 
 	if (udf_check_valid(sb, uopt.novrs, silent)) /* read volume recognition sequences */
 	{
