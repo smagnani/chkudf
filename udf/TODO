@@ -1,9 +1,7 @@
 support extended attributes (in their own blocks/udf 2.0 streams) -- blf
 
-full write support -- blf
-  block/inode allocation algorithm
-  support tables as well as bitmaps for block allocation
-  do delayed block assignments
+support tables as well as bitmaps for block allocation
+do delayed block assignments
 
 make sure reading works on big endian and/or 64 bit machines -- blf
 
