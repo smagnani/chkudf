@@ -1,6 +1,8 @@
 #ifndef __UDF_ENDIAN_H
 #define __UDF_ENDIAN_H
 
+#ifndef __KERNEL__ 
+
 #if __BYTE_ORDER == 0
 
 #error "__BYTE_ORDER must be defined"
@@ -27,19 +29,63 @@
 		  (((Uint64)(x) & 0x00FF000000000000ULL) >> 40) | \
 		  (((Uint64)(x) & 0xFF00000000000000ULL) >> 56)))		
 
-#define fstohs(x) (htofss(x))
-#define fstohl(x) (htofsl(x))
-#define fstohll(x) (htofsll(x))
+#define cpu_to_le16(x) (le16_to_cpu(x))
+#define cpu_to_le32(x) (le32_to_cpu(x))
+#define cpu_to_le64(x) (le64_to_cpu(x))
 
 #else /* __BYTE_ORDER == __LITTLE_ENDIAN */
 
 #define le16_to_cpu(x) (x)
 #define le32_to_cpu(x) (x)
 #define le64_to_cpu(x) (x)
-#define fstohs(x) (x)
-#define fstohl(x) (x)
-#define fstohll(x) (x)
+#define cpu_to_le16(x) (x)
+#define cpu_to_le32(x) (x)
+#define cpu_to_le64(x) (x)
 
 #endif
+
+#endif
+
+static inline lb_addr lelb_to_cpu(lb_addr in)
+{
+	lb_addr out;
+	out.logicalBlockNum = le32_to_cpu(in.logicalBlockNum);
+	out.partitionReferenceNum = le16_to_cpu(in.partitionReferenceNum);
+	return out;
+}
+
+static inline timestamp lets_to_cpu(timestamp in)
+{
+	timestamp out;
+	memcpy(&out, &in, sizeof(timestamp));
+	out.typeAndTimezone = le16_to_cpu(in.typeAndTimezone);
+	out.year = le16_to_cpu(in.year);
+	return out;
+}
+
+static inline long_ad lela_to_cpu(long_ad in)
+{
+	long_ad out;
+	out.extLength = le32_to_cpu(in.extLength);
+	out.extLocation = lelb_to_cpu(in.extLocation);
+	return out;
+}
+
+static inline extent_ad leea_to_cpu(extent_ad in)
+{
+	extent_ad out;
+	out.extLength = le32_to_cpu(in.extLength);
+	out.extLocation = le32_to_cpu(in.extLocation);
+	return out;
+}
+
+static inline timestamp cpu_to_lets(timestamp in)
+{
+	timestamp out;
+	memcpy(&out, &in, sizeof(timestamp));
+	out.typeAndTimezone = cpu_to_le16(in.typeAndTimezone);
+	out.year = cpu_to_le16(in.year);
+	return out;
+}
 
 #endif /* __UDF_ENDIAN_H */

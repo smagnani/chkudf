@@ -1,13 +1,13 @@
 /* ------------------------------------------------------------------
  * Linux(r) UDF Filesystem Driver
- * Version: 0.7.7
+ * Version: 0.8
  *
  * This is Andrew's second "patch" vs kernel 2.1.62, 
  * converted to a standalone package. Then many changes made. :-)
  * --------------------------------------------------------------- */
 
 REQUIRED:
-	Linux version 2.1.56 or higher
+	Linux version 2.1.70 or higher
 	
 COMPILING:
 	type: "make"

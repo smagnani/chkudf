@@ -326,17 +326,19 @@ int udf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 	int size;
 	struct buffer_head *bh;
 	struct FileEntry *fe;
+	Uint16 ident;
 
 	if ( permission(inode, MAY_READ) != 0 )
 	{
-			printk(KERN_DEBUG "udf: no permission to access inode %lu\n",
-							inode->i_ino);
-			return -EPERM;
+		printk(KERN_DEBUG "udf: no permission to access inode %lu\n",
+						inode->i_ino);
+		return -EPERM;
 	}
 
-	if ( !arg ) {
-			printk(KERN_DEBUG "udf: invalid argument to udf_ioctl\n");
-			return -EINVAL;
+	if ( !arg )
+	{
+		printk(KERN_DEBUG "udf: invalid argument to udf_ioctl\n");
+		return -EINVAL;
 	}
 
 	/* first, do ioctls that don't need to udf_read */
@@ -350,8 +352,9 @@ int udf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 	}
 
 	/* ok, we need to read the inode */
-	bh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode), 0, TID_FILE_ENTRY);
-	if (!bh)
+	bh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode), 0, &ident);
+
+	if (!bh || ident != TID_FILE_ENTRY)
 	{
 		printk(KERN_ERR "udf: udf_ioctl(ino %ld) failed !bh\n",
 			inode->i_ino);

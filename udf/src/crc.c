@@ -85,10 +85,8 @@ static Uint16 crc_table[256] = {
  *	Adapted from OSTA-UDF(tm) 1.50 standard.
  */
 extern Uint16
-udf_crc(Uint8 *data, Uint32 size)
+udf_crc(Uint8 *data, Uint32 size, Uint16 crc)
 {
-	register Uint16 crc = 0;
-
 	while (size--)
 		crc = crc_table[(crc >> 8 ^ *(data++)) & 0xffU] ^ (crc << 8);
 

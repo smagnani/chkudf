@@ -63,3 +63,6 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
 				Minor change to mkudf so it gives help w/'mkudf' and nothing
 				else. Changed 'dump' to 'dumpsect' to avoid conflict.
 
+03/07/99 blf	Beginnings of write support.. chmod + rm of files.
+				New implementation of udf_bmap			
+				Updates to mkudf

@@ -30,6 +30,8 @@
 
 extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partition, Uint32 offset)
 {
+	Uint16 ident;
+
 	if (partition >= UDF_SB_NUMPARTS(sb))
 	{
 		printk(KERN_DEBUG "udf: udf_get_pblock(%p,%d,%d,%d) invalid partition\n",
@@ -116,7 +118,7 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 			struct SparingTable *st;
 			SparingEntry *se;
 
-			bh = udf_read_tagged(sb, spartable, spartable, TID_UNUSED_DESC);
+			bh = udf_read_tagged(sb, spartable, spartable, &ident);
 
 			if (!bh)
 			{
@@ -126,7 +128,7 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 			}
 
 			st = (struct SparingTable *)bh->b_data;
-			if (le16_to_cpu(st->descTag.tagIdent) == 0)
+			if (ident == 0)
 			{
 				if (!strncmp(st->sparingIdent.ident, UDF_ID_SPARING, strlen(UDF_ID_SPARING)))
 				{

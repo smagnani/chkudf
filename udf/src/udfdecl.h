@@ -1,27 +1,37 @@
 #ifndef __UDF_DECL_H
 #define __UDF_DECL_H
 
-#define UDF_VERSION_NOTICE "v0.7.7"
-
-#ifdef __linux__
+#define UDF_VERSION_NOTICE "v0.8"
 
 #ifdef __KERNEL__
 
-/* linux types */
 #include <linux/types.h>
-/* our types */
 #include <linux/udf_udf.h>
-
 #include <linux/config.h>
+
+#ifndef LINUX_VERSION_CODE
+#include <linux/version.h>
+#endif
+
+#if LINUX_VERSION_CODE < 0x020170
+#error "The UDF Module Current Requires Kernel Version 2.1.70 or greater"
+#endif
+
+#ifndef UDF_COMPILING
+#define UDF_COMPILING
+#endif
+
 /* if we're not defined, we must be compiling outside of the kernel tree */
 #if !defined(CONFIG_UDF_FS) && !defined(CONFIG_UDF_FS_MODULE)
 /* ... so override config */
 #define CONFIG_UDF_FS_MODULE
-#endif
-#ifndef UDF_COMPILING
-#define UDF_COMPILING
-#endif
+#include <linux/fs.h>
+/* explicitly include udf_fs_sb.h and udf_fs_i.h */
+#include <linux/udf_fs_sb.h>
+#include <linux/udf_fs_i.h>
+#else
 #include <linux/fs.h> /* also gets udf_fs_i.h and udf_fs_sb.h */
+#endif
 
 struct dentry;
 struct inode;
@@ -38,6 +48,7 @@ extern struct inode_operations udf_file_inode_operations;
 
 extern int udf_physical_lookup(struct inode *, struct dentry *);
 extern int udf_lookup(struct inode *, struct dentry *);
+extern int udf_unlink(struct inode *, struct dentry *);
 extern int udf_ioctl(struct inode *, struct file *, unsigned int,
 	unsigned long);
 extern struct inode *udf_iget(struct super_block *, lb_addr);
@@ -45,7 +56,9 @@ extern void udf_read_inode(struct inode *);
 extern void udf_put_inode(struct inode *);
 extern void udf_delete_inode(struct inode *);
 extern void udf_write_inode(struct inode *);
-extern int udf_bmap(struct inode *, int block);
+extern int udf_bmap(struct inode *, int);
+extern int block_bmap(struct inode *, int, lb_addr *, Uint32 *, lb_addr *, Uint32 *, Uint32 *);
+extern int udf_next_aext(struct inode *, lb_addr *, int *, lb_addr *, Uint32 *);
 extern void udf_umount_begin(struct super_block *);
 
 /* module parms */
@@ -59,8 +72,8 @@ extern int udf_read_tagged_data(char *, int size, int fd, int block, int partref
 extern struct inode_operations udf_inode_operations;
 extern void udf_debug_dump(struct buffer_head *);
 extern struct buffer_head *udf_read_sector(struct super_block *, unsigned long sec);
-extern struct buffer_head *udf_read_tagged(struct super_block *, Uint32, Uint32, Uint32);
-extern struct buffer_head *udf_read_ptagged(struct super_block *, lb_addr, Uint32, Uint32);
+extern struct buffer_head *udf_read_tagged(struct super_block *, Uint32, Uint32, Uint16 *);
+extern struct buffer_head *udf_read_ptagged(struct super_block *, lb_addr, Uint32, Uint16 *);
 extern struct buffer_head *udf_read_untagged(struct super_block *, Uint32, Uint32);
 extern void udf_release_data(struct buffer_head *);
 
@@ -71,7 +84,12 @@ extern long udf_block_from_bmap(struct inode *, int block, int part);
 extern long udf_inode_from_block(struct super_block *, long block, int part);
 extern int  udf_part_from_inode(struct inode *);
 
-extern int udf_get_filename(struct FileIdentDesc *, char *, struct inode *);
+extern int udf_get_filename(char *, char *, int);
+
+void udf_free_inode(struct inode *);
+void udf_discard_prealloc(struct inode *);
+void udf_truncate(struct inode *);
+void udf_free_blocks(const struct inode *, lb_addr, Uint32, Uint32);
 
 #define DPRINTK(X,Y)	do { if (udf_debuglvl >= X) printk Y ; } while(0)
 #define PRINTK(X)	do { if (udf_debuglvl >= UDF_DEBUG_LVL1) printk X ; } while(0)
@@ -92,28 +110,7 @@ extern int udf_get_filename(struct FileIdentDesc *, char *, struct inode *);
 #define COOKIE(X)	
 #endif /* __KERNEL__ */
 
-#endif /* __linux__ */
-
-#ifndef __KERNEL__
 #include "udfend.h"
-#endif
-
-static inline lb_addr lelb_to_cpu(lb_addr in)
-{
-	lb_addr out;
-	out.logicalBlockNum = le32_to_cpu(in.logicalBlockNum);
-	out.partitionReferenceNum = le16_to_cpu(in.partitionReferenceNum);
-	return out;
-}
-
-static inline timestamp lets_to_cpu(timestamp in)
-{
-	timestamp out;
-	memcpy(&out, &in, sizeof(timestamp));
-	out.typeAndTimezone = le16_to_cpu(in.typeAndTimezone);
-	out.year = le16_to_cpu(in.year);
-	return out;
-}
 
 /* structures */
 struct udf_directory_record
@@ -160,7 +157,7 @@ struct ustr
 };
 
 /* Miscellaneous UDF Prototypes */
-extern Uint16 udf_crc(Uint8 *, Uint32);
+extern Uint16 udf_crc(Uint8 *, Uint32, Uint16);
 extern int udf_translate_to_linux(char *, char *, int, char *, int);
 extern int udf_build_ustr(struct ustr *, dstring *ptr, int size);
 extern int udf_build_ustr_exact(struct ustr *, dstring *ptr, int size);
@@ -174,6 +171,7 @@ extern Uint32 udf64_high32(Uint64);
 
 
 extern time_t *udf_stamp_to_time(time_t *, timestamp);
+extern timestamp *udf_time_to_stamp(timestamp *dest, time_t src);
 extern time_t udf_converttime (struct ktm *);
 
 /* --------------------------
@@ -201,8 +199,10 @@ udf_filead_read(struct inode *, Uint8 *, Uint8, lb_addr, int *, int *,
 	struct buffer_head **, int *);
 
 extern struct FileIdentDesc *
-udf_fileident_read(struct inode *, struct FileIdentDesc *,
-        int *, int *, struct buffer_head **, int *);
+udf_fileident_read(struct inode *, int *,
+	int *, struct buffer_head **,
+	int *, struct buffer_head **,
+	Uint8 *, Uint16 *);
 #endif
 extern struct FileIdentDesc * 
 udf_get_fileident(void * buffer, int bufsize, int * offset);

@@ -14,7 +14,7 @@ include ../Make.conf
 #
 UDF_INC		= ../include
 UDF_CONFIG	= $(UDF_INC)/config/udf.h
-# CFLAGS_DEBUG = -DDEBUG -g
+CFLAGS_DEBUG = -DDEBUG -g
 
 CFLAGS		= -D__KERNEL__=1 $(KERNH) -DUDF_COMPILING\
 	-DMODULE -O2 -Wall -Wstrict-prototypes -I$(UDF_INC) 
@@ -45,7 +45,8 @@ UDFH    = $(INCDIR)/udf_fs.h  $(INCDIR)/udf_udf.h $(INCDIR)/udf_167.h
 UDFH   += $(INCDIR)/udf_fs_sb.h $(INCDIR)/udf_fs_i.h udfdecl.h udf_i.h udf_sb.h
 
 O_OBJS   := inode.o super.o dir.o crc.o debug.o directory.o file.o
-O_OBJS   += udftime.o unicode.o misc.o partition.o namei.o
+O_OBJS   += udftime.o unicode.o misc.o partition.o namei.o balloc.o
+O_OBJS   +=  ialloc.o truncate.o
 
 %.S:  	../src/%.c 
 	$(CC) -S -c $(CFLAGS) -o $@ $<

@@ -1,0 +1,242 @@
+/*
+ * balloc.c
+ *
+ * PURPOSE
+ *	Block allocation handling routines for the OSTA-UDF(tm) filesystem.
+ *
+ * CONTACTS
+ *	E-mail regarding any portion of the Linux UDF file system should be
+ *	directed to the development team mailing list (run by majordomo):
+ *		linux_udf@hootie.lvld.hp.com
+ *
+ * COPYRIGHT
+ *	This file is distributed under the terms of the GNU General Public
+ *	License (GPL). Copies of the GPL can be obtained from:
+ *		ftp://prep.ai.mit.edu/pub/gnu/GPL
+ *	Each contributing author retains all rights to their own work.
+ *
+ * HISTORY
+ *
+ *  2/24/98 blf  Created.
+ *
+ */
+
+#include "udfdecl.h"
+#include <linux/fs.h>
+#include <linux/locks.h>
+
+#include <asm/bitops.h>
+
+#include "udf_i.h"
+#include "udf_sb.h"
+
+#define udf_set_bit(nr,addr) ext2_set_bit(nr,addr)
+
+static int read_block_bitmap(struct super_block * sb, unsigned int block,
+	unsigned long bitmap_nr)
+{
+	struct buffer_head *bh;
+	int retval = 0;
+	lb_addr loc;
+
+	loc.logicalBlockNum = UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_uspace_bitmap;
+	loc.partitionReferenceNum = UDF_SB_PARTITION(sb);
+
+	bh = bread(sb->s_dev, udf_get_lb_pblock(sb, loc, block), sb->s_blocksize);
+	if (!bh)
+	{
+		retval = -EIO;
+	}
+	UDF_SB_BLOCK_BITMAP_NUMBER(sb, bitmap_nr) = block;
+	UDF_SB_BLOCK_BITMAP(sb, bitmap_nr) = bh;
+	return retval;
+}
+
+static int load__block_bitmap(struct super_block * sb, unsigned int block)
+{
+	int i, j, retval = 0;
+	unsigned long block_bitmap_number;
+	struct buffer_head * block_bitmap;
+	int sbd_len = (UDF_SB_PARTLEN(sb, UDF_SB_PARTITION(sb)) + sizeof(struct SpaceBitmapDesc)) >> (sb->s_blocksize_bits + 3);
+
+#ifdef VDEBUG
+	printk(KERN_DEBUG "udf: load__block_bitmap: %d,%d\n", block, sbd_len);
+#endif
+
+	if (block > sbd_len)
+	{
+		printk(KERN_DEBUG "udf: ack!\n");
+	}
+
+	if (sbd_len <= UDF_MAX_BLOCK_LOADED)
+	{
+		if (UDF_SB_BLOCK_BITMAP(sb, block))
+		{
+			if (UDF_SB_BLOCK_BITMAP_NUMBER(sb, block) == block)
+				return block;
+		}
+		retval = read_block_bitmap(sb, block, block);
+		if (retval < 0)
+			return retval;
+		return block;
+	}
+
+	for (i=0; i<UDF_SB_LOADED_BLOCK_BITMAPS(sb) &&
+		UDF_SB_BLOCK_BITMAP_NUMBER(sb, i) != block; i++)
+	{
+		;
+	}
+	if (i < UDF_SB_LOADED_BLOCK_BITMAPS(sb) &&
+		UDF_SB_BLOCK_BITMAP_NUMBER(sb, i) == block)
+	{
+		block_bitmap_number = UDF_SB_BLOCK_BITMAP_NUMBER(sb, i);
+		block_bitmap = UDF_SB_BLOCK_BITMAP(sb, i);
+		for (j=i; j>0; j--)
+		{
+			UDF_SB_BLOCK_BITMAP_NUMBER(sb, j) = UDF_SB_BLOCK_BITMAP_NUMBER(sb, j-1);
+			UDF_SB_BLOCK_BITMAP(sb, j) = UDF_SB_BLOCK_BITMAP(sb, j-1);
+		}
+		UDF_SB_BLOCK_BITMAP_NUMBER(sb, 0) = block_bitmap_number;
+		UDF_SB_BLOCK_BITMAP(sb, 0) = block_bitmap;
+
+		if (!block_bitmap)
+			retval = read_block_bitmap(sb, block, 0);
+	}
+	else
+	{
+		if (UDF_SB_LOADED_BLOCK_BITMAPS(sb) < UDF_MAX_BLOCK_LOADED)
+			UDF_SB_LOADED_BLOCK_BITMAPS(sb) ++;
+		else
+			brelse(UDF_SB_BLOCK_BITMAP(sb, UDF_MAX_BLOCK_LOADED-1));
+		for (j=UDF_SB_LOADED_BLOCK_BITMAPS(sb)-1; j>0; j--)
+		{
+			UDF_SB_BLOCK_BITMAP_NUMBER(sb, j) = UDF_SB_BLOCK_BITMAP_NUMBER(sb, j-1);
+			UDF_SB_BLOCK_BITMAP(sb, j) = UDF_SB_BLOCK_BITMAP(sb, j-1);
+		}
+		retval = read_block_bitmap(sb, block, 0);
+	}
+	return retval;
+}
+
+static inline int load_block_bitmap(struct super_block *sb, unsigned int block)
+{
+	int slot;
+	int sbd_len = (UDF_SB_PARTLEN(sb, UDF_SB_PARTITION(sb)) + sizeof(struct SpaceBitmapDesc)) >> (sb->s_blocksize_bits + 3);
+
+#ifdef VDEBUG
+	printk(KERN_DEBUG "udf: load_block_bitmap: %d,%d\n", block, sbd_len);
+#endif
+
+	if (UDF_SB_LOADED_BLOCK_BITMAPS(sb) > 0 &&
+		UDF_SB_BLOCK_BITMAP_NUMBER(sb, 0) == block &&
+		UDF_SB_BLOCK_BITMAP(sb, block))
+	{
+		return 0;
+	}
+	else if (sbd_len <= UDF_MAX_BLOCK_LOADED &&
+		UDF_SB_BLOCK_BITMAP_NUMBER(sb, block) == block &&
+		UDF_SB_BLOCK_BITMAP(sb, block))
+	{
+		slot = block;
+	}
+	else
+	{
+		slot = load__block_bitmap(sb, block);
+	}
+
+	if (slot < 0)
+		return slot;
+
+	if (!UDF_SB_BLOCK_BITMAP(sb, slot))
+		return -EIO;
+
+	return slot;
+}
+
+void udf_free_blocks(const struct inode * inode, lb_addr bloc, Uint32 offset,
+	Uint32 count)
+{
+	struct buffer_head * bh;
+	unsigned long block;
+	unsigned long block_group;
+	unsigned long bit;
+	unsigned long i;
+	int bitmap_nr;
+	unsigned long overflow;
+	struct super_block * sb;
+
+#ifdef VDEBUG
+	printk(KERN_DEBUG "udf: udf_free_blocks: %ld,(%d,%d)+%d,%d\n", inode->i_ino,
+		bloc.logicalBlockNum, bloc.partitionReferenceNum, offset, count);
+#endif
+
+	sb = inode->i_sb;
+	if (!sb)
+	{
+		printk(KERN_DEBUG "udf_free_blocks: nonexistent device");
+		return;
+	}
+
+	if (UDF_SB_PARTMAPS(sb)[bloc.partitionReferenceNum].s_uspace_bitmap == 0xFFFFFFFF)
+		return;
+
+	lock_super(sb);
+	if (bloc.logicalBlockNum < 0 ||
+		(bloc.logicalBlockNum + count) > UDF_SB_PARTLEN(sb, bloc.partitionReferenceNum))
+	{
+		printk(KERN_DEBUG "udf: udf_free_blocks: %d < %d || %d + %d > %d\n",
+			bloc.logicalBlockNum, 0, bloc.logicalBlockNum, count,
+			UDF_SB_PARTLEN(sb, bloc.partitionReferenceNum));
+		goto error_return;
+	}
+
+	block = bloc.logicalBlockNum + offset + (sizeof(struct SpaceBitmapDesc) << 3);
+
+do_more:
+	overflow = 0;
+	block_group = block >> (sb->s_blocksize_bits + 3);
+	bit = block % (sb->s_blocksize << 3);
+
+#ifdef VDEBUG
+	printk(KERN_DEBUG "udf: group = %ld, bit = %ld\n", block_group, bit);
+#endif
+
+	/*
+	 * Check to see if we are freeing blocks across a group boundary.
+	 */
+	if (bit + count > (sb->s_blocksize << 3))
+	{
+		overflow = bit + count - (sb->s_blocksize << 3);
+		count -= overflow;
+	}
+	bitmap_nr = load_block_bitmap(sb, block_group);
+	if (bitmap_nr < 0)
+		goto error_return;
+
+	bh = UDF_SB_BLOCK_BITMAP(sb, bitmap_nr);
+	for (i=0; i < count; i++)
+	{
+		if (udf_set_bit(bit + i, bh->b_data))
+		{
+			printk(KERN_DEBUG "udf: bit %ld already set\n", bit + i);
+			printk(KERN_DEBUG "udf: byte=%2x\n", ((char *)bh->b_data)[(bit + i) >> 3]);
+		}
+		else if (UDF_SB_LVIDBH(sb))
+		{
+			UDF_SB_LVID(sb)->freeSpaceTable[UDF_SB_PARTITION(sb)] =
+				cpu_to_le32(le32_to_cpu(UDF_SB_LVID(sb)->freeSpaceTable[UDF_SB_PARTITION(sb)])+1);
+		}
+	}
+	mark_buffer_dirty(bh, 1);
+	if (overflow)
+	{
+		block += count;
+		count = overflow;
+		goto do_more;
+	}
+error_return:
+	if (UDF_SB_LVIDBH(sb))
+		mark_buffer_dirty(UDF_SB_LVIDBH(sb), 1);
+	unlock_super(sb);
+	return;
+}

@@ -114,19 +114,59 @@ time_t udf_converttime (struct ktm *tm)
     time_t r;
     int yday;
 
-    if ( !tm )
-	return -1;
-    if ( (tm->tm_year+TM_YEAR_BASE < EPOCH_YEAR) || 
-	 (tm->tm_year+TM_YEAR_BASE > EPOCH_YEAR+MAX_YEAR_SECONDS) )
-	return -1;
-    r=year_seconds[tm->tm_year-70];
+	if ( !tm )
+		return -1;
+	if ( (tm->tm_year+TM_YEAR_BASE < EPOCH_YEAR) || 
+		 (tm->tm_year+TM_YEAR_BASE > EPOCH_YEAR+MAX_YEAR_SECONDS) )
+		return -1;
+	r = year_seconds[tm->tm_year-70];
 
-    yday = ((__mon_yday[__isleap (tm->tm_year + TM_YEAR_BASE)]
+	yday = ((__mon_yday[__isleap (tm->tm_year + TM_YEAR_BASE)]
 	       [tm->tm_mon-1])
 	      + tm->tm_mday - 1);
-    r+= ( ( (yday* 24) + (tm->tm_hour-1) ) * 60 + tm->tm_min ) * 60 + tm->tm_sec;
-    return r;
+	r += ( ( (yday* 24) + (tm->tm_hour-1) ) * 60 + tm->tm_min ) * 60 + tm->tm_sec;
+	return r;
 }
+
+#ifdef __KERNEL__
+
+timestamp *
+udf_time_to_stamp(timestamp *dest, time_t src)
+{
+    int i;
+
+    if (!dest)
+        return NULL;
+
+	dest->typeAndTimezone = 0x1000;
+
+    for (i=src / 31536000; i<MAX_YEAR_SECONDS; i++)
+    {
+        if (src < year_seconds[i])
+            break;
+    }
+    dest->year = i - 1 + EPOCH_YEAR;
+    src -= year_seconds[i-1];
+    for (i=1; i<13; i++)
+    {
+        if (src < __mon_yday[__isleap(dest->year)][i] * 86400)
+            break;
+    }
+    dest->month = i;
+    src -= __mon_yday[__isleap(dest->year + TM_YEAR_BASE)][i-1] * 86400;
+    dest->day = src / 86400 + 1;
+    src -= (dest->day - 1) * 86400;
+    dest->hour = src / 3600 + 1;
+    src -= (dest->hour - 1) * 3600;
+    dest->minute = src / 60;
+    src -= (dest->minute) * 60;
+    dest->second = src;
+	dest->centiseconds = 0;
+	dest->hundredsOfMicroseconds = 0;
+	dest->microseconds = 0;
+    return dest;
+}
+#endif
 
 #else
 

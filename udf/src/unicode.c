@@ -40,15 +40,15 @@ int udf_build_ustr(struct ustr *dest, dstring *ptr, int size)
 {
     int usesize;
 
-    if ( (!dest) || (!ptr) || (!size) )
-	return -1;
+	if ( (!dest) || (!ptr) || (!size) )
+		return -1;
 
-    memset(dest, 0, sizeof(struct ustr));
-    usesize= (size > UDF_NAME_LEN) ? UDF_NAME_LEN : size;
-    dest->u_cmpID=ptr[0];
-    dest->u_len=ptr[size-1];
-    memcpy(dest->u_name, ptr+1, usesize-1);
-    return 0;
+	memset(dest, 0, sizeof(struct ustr));
+	usesize= (size > UDF_NAME_LEN) ? UDF_NAME_LEN : size;
+	dest->u_cmpID=ptr[0];
+	dest->u_len=ptr[size-1];
+	memcpy(dest->u_name, ptr+1, usesize-1);
+	return 0;
 }
 
 /*
@@ -94,13 +94,22 @@ int udf_CS0toUTF8(struct ustr *utf_o, struct ustr *ocu_i)
 	unsigned c, cmp_id, ocu_len;
 	int i;
 
-	ocu=ocu_i->u_name;
+	ocu = ocu_i->u_name;
 
 	ocu_len = ocu_i->u_len;
 	cmp_id = ocu_i->u_cmpID;
-	utf_o->u_len=0;
+	utf_o->u_len = 0;
 
-	if ((cmp_id != 8) && (cmp_id != 16)) {
+	if (ocu_len == 0)
+	{
+		memset(utf_o, 0, sizeof(struct ustr));
+		utf_o->u_cmpID = 0;
+		utf_o->u_len = 0;
+		return 0;
+	}
+
+	if ((cmp_id != 8) && (cmp_id != 16))
+	{
 #ifdef __KERNEL__
 		printk(KERN_ERR "udf: unknown compression code (%d) stri=%s\n", cmp_id, ocu_i->u_name);
 #endif
@@ -252,24 +261,24 @@ error_out:
 }
 
 #ifdef __KERNEL__
-int udf_get_filename(struct FileIdentDesc *fi, char *name, struct inode *inode)
+int udf_get_filename(char *sname, char *dname, int flen)
 {
 	struct ustr filename;
 	struct ustr unifilename;
 	int len;
 
-	if (udf_build_ustr_exact(&unifilename, fi->fileIdent + le16_to_cpu(fi->lengthOfImpUse),
-		fi->lengthFileIdent) )
+	if (udf_build_ustr_exact(&unifilename, sname, flen))
 	{
 		return 0;
 	}
 
 	if (udf_CS0toUTF8(&filename, &unifilename) )
 	{
+		printk(KERN_DEBUG "udf: udf_CS0toUTF8 failed in udf_get_filename: sname = %s\n", sname);
 		return 0;
 	}
 
-	if ((len = udf_translate_to_linux(name, filename.u_name, filename.u_len-1,
+	if ((len = udf_translate_to_linux(dname, filename.u_name, filename.u_len-1,
 		unifilename.u_name, unifilename.u_len)))
 	{
 		return len;
@@ -361,7 +370,7 @@ int udf_translate_to_linux(char *newName, char *udfName, int udfLen, char *fidNa
 		else if (newIndex > 250)
 			newIndex = 250;
 		newName[newIndex++] = CRC_MARK;
-		valueCRC = udf_crc(fidName, fidNameLen);
+		valueCRC = udf_crc(fidName, fidNameLen, 0);
 		newName[newIndex++] = hexChar[(valueCRC & 0xf000) >> 12];
 		newName[newIndex++] = hexChar[(valueCRC & 0x0f00) >> 8];
 		newName[newIndex++] = hexChar[(valueCRC & 0x00f0) >> 4];

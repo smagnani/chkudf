@@ -229,7 +229,7 @@ struct PrimaryVolDesc {
 	charspec descCharSet;
 	charspec explanatoryCharSet;
 	extent_ad volAbstract;
-	extent_ad volCopyrightNotice;
+	extent_ad volCopyright;
 	EntityID appIdent;
 	timestamp recordingDateAndTime;
 	EntityID impIdent;
@@ -375,7 +375,6 @@ struct LogicalVolIntegrityDesc {
 	Uint32 freeSpaceTable[0];
 	Uint32 sizeTable[0];
 	Uint8 impUse[0];
-	/*struct LogicalVolIntegrityDescImpUse impUse;*/
 };
 
 /* Integrity Types (ECMA 167 3/10.10.3) */

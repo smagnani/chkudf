@@ -49,7 +49,7 @@ struct file_operations udf_dir_fops = {
 	NULL,
 	udf_readdir,	/* readdir */
 	NULL,			/* poll */
-	udf_ioctl,			/* ioctl */
+	udf_ioctl,		/* ioctl */
 	NULL,			/* mmap */
 	NULL,			/* open */
 	NULL,			/* flush */
@@ -113,16 +113,18 @@ int udf_readdir(struct file *filp, void *dirent, filldir_t filldir)
 static int 
 do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *dirent)
 {
-	struct buffer_head *bh;
+	struct buffer_head *sbh, *ebh;
 	struct FileIdentDesc *fi=NULL;
-	struct FileIdentDesc *tmpfi;
-	int block;
-	int offset;
+	int block, iblock;
+	int soffset, eoffset;
 	int nf_pos = filp->f_pos;
 	int flen;
 	char fname[255];
-	Uint32 ino;
-	int error = 0;
+	char *nameptr;
+	lb_addr ino;
+	Uint8 filechar;
+	Uint16 liu;
+	Uint8 lfi;
 	int size = (UDF_I_EXT0OFFS(dir) + dir->i_size) >> 2;
 
 #ifdef VDEBUG
@@ -136,57 +138,100 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 	if (nf_pos == 0)
 		nf_pos = (UDF_I_EXT0OFFS(dir) >> 2);
 
-	offset = (nf_pos & ((dir->i_sb->s_blocksize - 1) >> 2)) << 2;
+	soffset = eoffset = (nf_pos & ((dir->i_sb->s_blocksize - 1) >> 2)) << 2;
 	block = udf_bmap(dir, nf_pos >> (dir->i_sb->s_blocksize_bits - 2));
 
 	if (!block)
 		return 0;
-	if (!(bh = bread(dir->i_dev, block, dir->i_sb->s_blocksize)))
+	if (!(sbh = ebh = bread(dir->i_dev, block, dir->i_sb->s_blocksize)))
 		return 0;
-
-	tmpfi = (struct FileIdentDesc *) __get_free_page(GFP_KERNEL);
 
 	while ( nf_pos < size )
 	{
 		filp->f_pos = nf_pos;
 
-		fi = udf_fileident_read(dir, tmpfi, &nf_pos, &offset, &bh, &error);
+		fi = udf_fileident_read(dir, &nf_pos, &soffset, &sbh, &eoffset, &ebh, &lfi, &liu);
 
 		if (!fi)
 		{
-			free_page((unsigned long) tmpfi);
-			return error;
+			udf_release_data(sbh);
+			if (sbh != ebh)
+				udf_release_data(ebh);
+			return 1;
 		}
 
-		if ( (fi->fileCharacteristics & FILE_DELETED) != 0 )
+		if (sbh == ebh)
+		{
+			filechar = fi->fileCharacteristics;
+			nameptr = fi->fileIdent + liu;
+			ino = lelb_to_cpu(fi->icb.extLocation);
+		}
+		else
+		{
+			struct FileIdentDesc *nfi;
+			int poffset;	/* Unpaded ending offset */
+
+			nfi = (struct FileIdentDesc *)(ebh->b_data + soffset);
+
+			if (&(nfi->fileCharacteristics) < (Uint8 *)ebh->b_data)
+				filechar = fi->fileCharacteristics;
+			else
+				filechar = nfi->fileCharacteristics;
+
+			if (&(nfi->icb.extLocation.logicalBlockNum) < (Uint32 *)ebh->b_data)
+				ino.logicalBlockNum = le32_to_cpu(fi->icb.extLocation.logicalBlockNum);
+			else
+				ino.logicalBlockNum = le32_to_cpu(nfi->icb.extLocation.logicalBlockNum);
+
+			if (&(nfi->icb.extLocation.partitionReferenceNum) < (Uint16 *)ebh->b_data)
+				ino.partitionReferenceNum = le16_to_cpu(fi->icb.extLocation.partitionReferenceNum);
+			else
+				ino.partitionReferenceNum = le16_to_cpu(nfi->icb.extLocation.partitionReferenceNum);
+
+			poffset = soffset + sizeof(struct FileIdentDesc) + liu + lfi;
+
+			if (poffset >= lfi)
+				nameptr = (char *)(ebh->b_data + poffset - lfi);
+			else
+			{
+				nameptr = fname;
+				memcpy(nameptr, fi->fileIdent + liu, lfi - poffset);
+				memcpy(nameptr + lfi - poffset, ebh->b_data, poffset);
+			}
+		}
+
+		if ( (filechar & FILE_DELETED) != 0 )
 		{
 			if ( !IS_UNDELETE(dir->i_sb) )
 				continue;
 		}
 		
-		if ( (fi->fileCharacteristics & FILE_HIDDEN) != 0 )
+		if ( (filechar & FILE_HIDDEN) != 0 )
 		{
 			if ( !IS_UNHIDE(dir->i_sb) )
 				continue;
 		}
 
-		ino = udf_get_lb_pblock(dir->i_sb, lelb_to_cpu(fi->icb.extLocation), 0);
+		iblock = udf_get_lb_pblock(dir->i_sb, ino, 0);
  
- 		if (fi->lengthFileIdent == 0) /* parent directory */
+ 		if (!lfi) /* parent directory */
  		{
 			if (filldir(dirent, "..", 2, filp->f_pos, filp->f_dentry->d_parent->d_inode->i_ino) < 0)
 			{
-				udf_release_data(bh);
-				free_page((unsigned long) tmpfi);
+				udf_release_data(sbh);
+				if (sbh != ebh)
+					udf_release_data(ebh);
  				return 1;
 			}
  		}
-		if ((flen = udf_get_filename(fi, fname, dir)))
+
+		if ((flen = udf_get_filename(nameptr, fname, lfi)))
 		{
-			if (filldir(dirent, fname, flen, filp->f_pos, ino) < 0)
+			if (filldir(dirent, fname, flen, filp->f_pos, iblock) < 0)
 			{
-				udf_release_data(bh);
-				free_page((unsigned long) tmpfi);
+				udf_release_data(sbh);
+				if (sbh != ebh)
+					udf_release_data(ebh);
 	 			return 1; /* halt enum */
 			}
 		}
@@ -194,9 +239,9 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 
 	filp->f_pos = nf_pos;
 
-	udf_release_data(bh);
-
-	free_page((unsigned long) tmpfi);
+	udf_release_data(sbh);
+	if (sbh != ebh)
+		udf_release_data(ebh);
 
 	if ( filp->f_pos >= size)
 		return 1;
@@ -534,7 +579,7 @@ struct inode_operations udf_dir_inode_operations= {
 	NULL,			/* create */
 	udf_lookup,		/* lookup */
 	NULL,			/* link */
-	NULL,			/* unlink */
+	udf_unlink,		/* unlink */
 	NULL,			/* symlink */
 	NULL,			/* mkdir */
 	NULL,			/* rmdir */
@@ -544,7 +589,7 @@ struct inode_operations udf_dir_inode_operations= {
 	NULL,			/* follow_link */
 	NULL,			/* readpage */
 	NULL,			/* writepage */
-	NULL,		/* bmap */
+	udf_bmap,		/* bmap */
 	NULL,			/* truncate */
 #ifdef CONFIG_UDF_FULL_FS
 	udf_permission,		/* permission */

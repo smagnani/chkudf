@@ -24,6 +24,8 @@
  * 12/12/98      rewrote udf_bmap to handle next extents and descs across
  *               block boundaries (which is not actually allowed)
  * 12/20/98      added support for strategy 4096
+ * 03/07/99		 rewrote udf_bmap (again)
+ *				 New funcs, block_bmap, udf_next_aext
  *
  */
 
@@ -34,8 +36,71 @@
 #include "udf_i.h"
 #include "udf_sb.h"
 
-static mode_t udf_convert_permissions(struct FileEntry *fe);
+static mode_t udf_convert_permissions(struct FileEntry *);
+static int udf_update_inode(struct inode *);
+static void udf_fill_inode(struct inode *, struct FileEntry *);
+
 static struct semaphore read_semaphore = MUTEX;
+
+/*
+ * udf_put_inode
+ *
+ * PURPOSE
+ *
+ * DESCRIPTION
+ *	This routine is called whenever the kernel no longer needs the inode.
+ *
+ * HISTORY
+ *	July 1, 1997 - Andrew E. Mileski
+ *	Written, tested, and released.
+ *
+ *  Called at each iput()
+ */
+void udf_put_inode(struct inode * inode)
+{
+	udf_discard_prealloc(inode);
+}
+
+/*
+ * udf_delete_inode
+ *
+ * PURPOSE
+ *	Clean-up before the specified inode is destroyed.
+ *
+ * DESCRIPTION
+ *	This routine is called when the kernel destroys an inode structure
+ *	ie. when iput() finds i_count == 0.
+ *
+ * HISTORY
+ *	July 1, 1997 - Andrew E. Mileski
+ *	Written, tested, and released.
+ *
+ *  Called at the last iput() if i_nlink is zero.
+ */
+void udf_delete_inode(struct inode * inode)
+{
+#ifdef VDEBUG
+	printk(KERN_DEBUG "udf: udf_delete_inode: %ld,%ld,%ld\n", inode->i_ino, inode->i_size, inode->i_blocks);
+#endif
+	inode->i_size = 0;
+	if (inode->i_blocks)
+		udf_truncate(inode);
+	udf_free_inode(inode);
+}
+
+void udf_discard_prealloc(struct inode * inode)
+{
+#ifdef UDF_PREALLOCATE
+	unsigned short total;
+
+	if (UDF_I_PREALLOC_COUNT(inode))
+	{
+		total = UDF_I_PREALLOC_COUNT(inode);
+		UDF_I_PREALLOC_COUNT(inode) = 0;
+		udf_free_blocks(inode, UDF_I_PREALLOC_BLOCK(inode), total);
+	}
+#endif
+}
 
 /*
  * udf_read_inode
@@ -59,8 +124,7 @@ udf_read_inode(struct inode *inode)
 {
 	struct buffer_head *bh;
 	struct FileEntry *fe;
-	time_t modtime, acctime;
-	int offset;
+	Uint16 ident;
 
 #ifdef VDEBUG
 	printk(KERN_DEBUG "udf_read_inode: inode=0x%lx\n", (unsigned long)inode);
@@ -97,12 +161,20 @@ udf_read_inode(struct inode *inode)
                 UDF_I_LOCATION(inode).logicalBlockNum),
                 UDF_I_LOCATION(inode).partitionReferenceNum);
 #endif
-	bh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode), 0, TID_FILE_ENTRY);
+	bh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode), 0, &ident);
 
 	if (!bh)
 	{
 		printk(KERN_ERR "udf: udf_read_inode(ino %ld) failed !bh\n",
 			inode->i_ino);
+		make_bad_inode(inode);
+		return;
+	}
+
+	if (ident != TID_FILE_ENTRY)
+	{
+		printk(KERN_DEBUG "ident == %d\n", ident);
+		udf_release_data(bh);
 		make_bad_inode(inode);
 		return;
 	}
@@ -115,28 +187,40 @@ udf_read_inode(struct inode *inode)
 		struct buffer_head *nbh;
 		struct IndirectEntry *ie;
 
-		ibh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode), 1,
-			TID_INDIRECT_ENTRY);
-		if (ibh)
+		ibh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode), 1, &ident);
+		if (ident == TID_INDIRECT_ENTRY)
 		{
-			lb_addr loc;
-			ie = (struct IndirectEntry *)ibh->b_data;
-
-			loc = lelb_to_cpu(ie->indirectICB.extLocation);
-
-			if (ie->indirectICB.extLength && 
-				(nbh = udf_read_ptagged(inode->i_sb, loc, 0, TID_FILE_ENTRY)))
+			if (ibh)
 			{
-				memcpy(&UDF_SB_LOCATION(inode->i_sb), &loc, sizeof(lb_addr));
-				udf_release_data(bh);
-				udf_release_data(ibh);
-				udf_release_data(nbh);
-				udf_read_inode(inode);
-				return;
+				lb_addr loc;
+				ie = (struct IndirectEntry *)ibh->b_data;
+	
+				loc = lelb_to_cpu(ie->indirectICB.extLocation);
+	
+				if (ie->indirectICB.extLength && 
+					(nbh = udf_read_ptagged(inode->i_sb, loc, 0, &ident)))
+				{
+					if (ident == TID_FILE_ENTRY)
+					{
+						memcpy(&UDF_SB_LOCATION(inode->i_sb), &loc, sizeof(lb_addr));
+						udf_release_data(bh);
+						udf_release_data(ibh);
+						udf_release_data(nbh);
+						udf_read_inode(inode);
+						return;
+					}
+					else
+					{
+						udf_release_data(nbh);
+						udf_release_data(ibh);
+					}
+				}
+				else
+					udf_release_data(ibh);
 			}
-			else
-				udf_release_data(ibh);
 		}
+		else
+			udf_release_data(ibh);
 	}
 	else if (fe->icbTag.strategyType != 4)
 	{
@@ -146,6 +230,14 @@ udf_read_inode(struct inode *inode)
 		make_bad_inode(inode);
 		return;
 	}
+	udf_fill_inode(inode, fe);
+	udf_release_data(bh);
+}
+
+static void udf_fill_inode(struct inode *inode, struct FileEntry *fe)
+{
+    time_t modtime, acctime;
+	int offset, alen;
 
 	UDF_I_FILELEN(inode) = le64_to_cpu(fe->informationLength);
 
@@ -158,7 +250,7 @@ udf_read_inode(struct inode *inode)
 
 #ifdef VDEBUG
 	printk(KERN_DEBUG
-		"udf: block: %u (%u,%u) ino %ld FILE_ENTRY: len %lu blocks %lu perm 0x%x link %d type 0x%x flags 0x%x\n",
+		"udf: block: %u (%u,%u) ino %ld FILE_ENTRY: len %Lu blocks %Lu perm 0x%x link %d type 0x%x flags 0x%x\n",
 		udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0),
 		UDF_I_LOCATION(inode).logicalBlockNum,
 		UDF_I_LOCATION(inode).partitionReferenceNum,
@@ -167,7 +259,8 @@ udf_read_inode(struct inode *inode)
 		le64_to_cpu(fe->logicalBlocksRecorded), /* may be zero! */
 		le32_to_cpu(fe->permissions),
 		le16_to_cpu(fe->fileLinkCount), 
-		fe->icbTag.fileType, le16_to_cpu(fe->icbTag.flags));
+		fe->icbTag.fileType,
+		le16_to_cpu(fe->icbTag.flags));
 #endif
 
 	inode->i_uid = udf_convert_uid(le32_to_cpu(fe->uid));
@@ -177,11 +270,17 @@ udf_read_inode(struct inode *inode)
 	if ( !inode->i_gid ) inode->i_gid = UDF_SB(inode->i_sb)->s_gid;
 
 	inode->i_nlink = le16_to_cpu(fe->fileLinkCount);
+	if (!inode->i_nlink)
+	{
+		printk(KERN_DEBUG "udf: ino %ld, fileLinkCount == 0\n", inode->i_ino);
+		inode->i_nlink = 1;
+	}
+		
 	inode->i_size = UDF_I_FILELEN(inode) & 0x00000000FFFFFFFFULL;
 
 	if (inode->i_size)
 	{
-		inode->i_blocks = ( (inode->i_size - 1) /  512 ) + 1;
+		inode->i_blocks = ( (inode->i_size - 1) >> 9 ) + 1;
 		/* blocksize for i_blocks is always 512 */
 	}
 	else
@@ -207,6 +306,9 @@ udf_read_inode(struct inode *inode)
 		inode->i_atime = UDF_SB_RECORDTIME(inode->i_sb);
 
 	UDF_I_ALLOCTYPE(inode) = le16_to_cpu(fe->icbTag.flags) & ICB_FLAG_ALLOC_MASK;
+	
+	offset = sizeof(struct FileEntry) + le32_to_cpu(fe->lengthExtendedAttr);
+	alen = offset + le32_to_cpu(fe->lengthAllocDescs);
 
 	switch (UDF_I_ALLOCTYPE(inode))
 	{
@@ -214,8 +316,7 @@ udf_read_inode(struct inode *inode)
  		{
  			short_ad * sa;
 
-			offset = 0;
-			sa = udf_get_fileshortad(fe, inode->i_sb->s_blocksize, &offset);
+			sa = udf_get_fileshortad(fe, alen, &offset);
 			if ( (sa) && (sa->extLength) )
 			{
 				UDF_I_EXT0LEN(inode) = le32_to_cpu(sa->extLength) & UDF_EXTENT_LENGTH_MASK;
@@ -228,8 +329,7 @@ udf_read_inode(struct inode *inode)
 		{
 		    long_ad * la;
 
-		    offset=0;
-		    la = udf_get_filelongad(fe, inode->i_sb->s_blocksize, &offset);
+		    la = udf_get_filelongad(fe, alen, &offset);
 		    if ( (la) && (la->extLength) )
 			{
 				UDF_I_EXT0LEN(inode) = le32_to_cpu(la->extLength) & UDF_EXTENT_LENGTH_MASK;
@@ -242,8 +342,7 @@ udf_read_inode(struct inode *inode)
 		{
 			extent_ad * ext;
 
-		    offset=0;
-		    ext = udf_get_fileextent(fe, inode->i_sb->s_blocksize, &offset);
+		    ext = udf_get_fileextent(fe, alen, &offset);
 		    if ( (ext) && (ext->extLength) )
 			{
 				UDF_I_EXT0LEN(inode) = le32_to_cpu(ext->extLength) & UDF_EXTENT_LENGTH_MASK;
@@ -262,6 +361,12 @@ udf_read_inode(struct inode *inode)
 			break;
 		}
 	} /* end switch ad_type */
+
+#if 0
+	printk(KERN_DEBUG "udf: Ext0len %d, Loc (%d,%d)\n",
+		UDF_I_EXT0LEN(inode), UDF_I_EXT0LOC(inode).logicalBlockNum,
+		UDF_I_EXT0LOC(inode).partitionReferenceNum);
+#endif
 
 	switch (fe->icbTag.fileType)
 	{
@@ -298,14 +403,6 @@ udf_read_inode(struct inode *inode)
 			break;
 		}
 	}
-#if 0
-	printk(KERN_DEBUG "udf: first extent (%d,%d) len %d offset %d\n",
-		UDF_I_EXT0LOC(inode).logicalBlockNum,
-		UDF_I_EXT0LOC(inode).partitionReferenceNum,
-		UDF_I_EXT0LEN(inode),
-		UDF_I_EXT0OFFS(inode));
-#endif
-	udf_release_data(bh);
 }
 
 static mode_t
@@ -342,55 +439,79 @@ udf_convert_permissions(struct FileEntry *fe)
  *	July 1, 1997 - Andrew E. Mileski
  *	Written, tested, and released.
  */
+
 void
 udf_write_inode(struct inode *inode)
 {
-	COOKIE(("udf_write_inode: inode=0x%lx\n", (unsigned long)inode));
+	udf_update_inode(inode);
 }
 
-/*
- * udf_put_inode
- *
- * PURPOSE
- *
- * DESCRIPTION
- *	This routine is called whenever the kernel no longer needs the inode.
- *	Currently this routine is just a placeholder.
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-void
-udf_put_inode(struct inode *inode)
+static int
+udf_update_inode(struct inode *inode)
 {
-	COOKIE(("udf_put_inode: inode=0x%lx\n", (unsigned long)inode));
+	struct buffer_head *bh;
+	struct FileEntry *fe;
+	Uint32 udfperms;
+	int i;
+	timestamp cpu_time;
+	Uint16 ident;
 
-	/* Delete unused inodes */
-	if (inode && inode->i_count == 1)
-		inode->i_nlink = 0;
-}
+	bh = bread(inode->i_sb->s_dev,
+		udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0),
+		inode->i_sb->s_blocksize);
+	if (bh)
+		ident = le16_to_cpu(((tag *)(bh->b_data))->tagIdent);
+#if 0
+	bh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode), 0, &ident);
+#endif
+	if (!bh)
+	{
+		printk(KERN_DEBUG "udf: udf_write_inode: !bh\n");
+		return -EIO;
+	}
+	if (ident != TID_FILE_ENTRY)
+	{
+		udf_release_data(bh);
+		printk(KERN_DEBUG "udf: udf_write_inode: ident == %d\n", ident);
+		return -EIO;
+	}
+	fe = (struct FileEntry *)bh->b_data;
 
-/*
- * udf_delete_inode
- *
- * PURPOSE
- *	Clean-up before the specified inode is destroyed.
- *
- * DESCRIPTION
- *	This routine is called when the kernel destroys an inode structure
- *	ie. when iput() finds i_count == 0.
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-void
-udf_delete_inode(struct inode *inode)
-{
-	COOKIE(("udf_delete_inode: inode=0x%lx\n", (unsigned long)inode));
-	inode->i_size = 0;
-	clear_inode(inode);
+	/* Set fe info from inode */
+	udfperms =  ((inode->i_mode & S_IRWXO)     ) |
+				((inode->i_mode & S_IRWXG) << 2) |
+				((inode->i_mode & S_IRWXU) << 4);
+
+	udfperms |= (le32_to_cpu(fe->permissions) &
+		(PERM_O_DELETE | PERM_O_CHATTR |
+		 PERM_G_DELETE | PERM_G_CHATTR |
+		 PERM_U_DELETE | PERM_U_CHATTR));
+	fe->permissions = cpu_to_le32(udfperms);
+
+	if (inode->i_uid != UDF_SB(inode->i_sb)->s_uid)
+		fe->uid = cpu_to_le32(inode->i_uid);
+
+	if (inode->i_gid != UDF_SB(inode->i_sb)->s_gid)
+		fe->gid = cpu_to_le32(inode->i_gid);
+
+	if (udf_time_to_stamp(&cpu_time, inode->i_atime))
+		fe->accessTime = cpu_to_lets(cpu_time);
+	if (udf_time_to_stamp(&cpu_time, inode->i_mtime))
+		fe->modificationTime = cpu_to_lets(cpu_time);
+
+	fe->descTag.descCRC = cpu_to_le16(udf_crc((char *)fe + sizeof(tag),
+		 le16_to_cpu(fe->descTag.descCRCLength), 0));
+
+	fe->descTag.tagChecksum = 0;
+	for (i=0; i<16; i++)
+		if (i != 4)
+			fe->descTag.tagChecksum += ((Uint8 *)&(fe->descTag))[i];
+
+	/* write the data blocks */
+
+	mark_buffer_dirty(bh, 1);
+	udf_release_data(bh);
+	return 0;
 }
 
 /*
@@ -418,6 +539,7 @@ udf_iget(struct super_block *sb, lb_addr ino)
 		udf_get_lb_pblock(sb, ino, 0));
 #endif
 	down(&read_semaphore); /* serialize access to UDF_SB_LOCATION() */
+	/* This is really icky.. should fix -- blf */
 
 	/* put the location where udf_read_inode can find it */
 	memcpy(&UDF_SB_LOCATION(sb), &ino, sizeof(lb_addr));
@@ -451,17 +573,195 @@ udf_iget(struct super_block *sb, lb_addr ino)
 	return inode;
 }
 
+int udf_next_aext(struct inode *inode, lb_addr *bloc, int *ext, lb_addr *eloc, Uint32 *elen)
+{
+	struct buffer_head *bh;
+	int offset, pos, alen;
+	Uint16 ident;
+
+	if (!(bh = udf_read_ptagged(inode->i_sb, *bloc, 0, &ident)))
+		return 0;
+
+	if (ident == TID_FILE_ENTRY)
+	{
+		struct FileEntry *fe = (struct FileEntry *)bh->b_data;
+
+		pos = sizeof(struct FileEntry) + fe->lengthExtendedAttr;
+		alen = fe->lengthAllocDescs + pos;
+	}
+	else if (ident == TID_ALLOC_EXTENT_DESC)
+	{
+		struct AllocExtDesc *aed = (struct AllocExtDesc *)bh->b_data;
+
+		pos = sizeof(struct AllocExtDesc);
+		alen = aed->lengthAllocDescs + pos;
+	}
+	else
+	{
+		printk(KERN_DEBUG "udf: udf_next_aext, ident == %d\n", ident);
+		return 0;
+	}
+
+	switch (UDF_I_ALLOCTYPE(inode))
+	{
+		case ICB_FLAG_AD_SHORT:
+		{
+			short_ad *sad;
+
+			offset = pos + (*ext * sizeof(short_ad));
+			if (!(sad = udf_get_fileshortad(bh->b_data, alen, &offset)))
+			{
+				udf_release_data(bh);
+				return 0;
+			}
+
+			eloc->logicalBlockNum = le32_to_cpu(sad->extPosition);
+			eloc->partitionReferenceNum = UDF_I_LOCATION(inode).partitionReferenceNum;
+			*elen = le32_to_cpu(sad->extLength) & UDF_EXTENT_LENGTH_MASK;
+
+			sad = udf_get_fileshortad(bh->b_data, alen, &offset);
+			if (sad && le32_to_cpu(sad->extLength) >> 30 == EXTENT_NEXT_EXTENT_ALLOCDECS)
+			{
+				bloc->logicalBlockNum = le32_to_cpu(sad->extPosition);
+				*ext = 0;
+			}
+			else
+				(*ext)++;
+			break;
+		}
+		case ICB_FLAG_AD_LONG:
+		{
+			long_ad *lad;
+
+			offset = pos + (*ext * sizeof(long_ad));
+			if (!(lad = udf_get_filelongad(bh->b_data, alen, &offset)))
+			{
+				udf_release_data(bh);
+				return 0;
+			}
+
+			*eloc = lelb_to_cpu(lad->extLocation);
+			*elen = le32_to_cpu(lad->extLength) & UDF_EXTENT_LENGTH_MASK;
+
+			lad = udf_get_filelongad(bh->b_data, alen, &offset);
+			if (lad && le32_to_cpu(lad->extLength) >> 30 == EXTENT_NEXT_EXTENT_ALLOCDECS)
+			{
+				*bloc = lelb_to_cpu(lad->extLocation);
+				*ext = 0;
+			}
+			else
+				(*ext)++;
+			break;
+		}
+		default:
+		{
+			printk(KERN_DEBUG "udf: udf_next_aext: alloc_type = %d unsupported\n",
+				UDF_I_ALLOCTYPE(inode));
+			udf_release_data(bh);
+			return 0;
+		}
+	}
+	udf_release_data(bh);
+	if (!(*elen))
+		return 0;
+	else
+		return 1;
+}
+
+int block_bmap(struct inode *inode, int block, lb_addr *bloc, Uint32 *ext,
+	lb_addr *eloc, Uint32 *elen, Uint32 *offset)
+{
+	int lbcount = 0;
+	int b_off;
+
+	*ext = 1;
+
+	if (block < 0)
+	{
+		printk(KERN_ERR "udf: block_bmap: block < 0\n");
+		return 0;
+	}
+	if (!inode)
+	{
+		printk(KERN_ERR "udf: block_bmap: NULL inode\n");
+		return 0;
+	}
+	if (block >> (inode->i_sb->s_blocksize_bits - 9) > inode->i_blocks)
+	{
+		off_t   max_legal_read_offset;
+
+		max_legal_read_offset = (inode->i_blocks + PAGE_SIZE / 512 - 1)
+			& ~(PAGE_SIZE / 512 - 1);
+
+        if (block >> (inode->i_sb->s_blocksize_bits - 9) >= max_legal_read_offset)
+		{
+			printk(KERN_DEBUG "udf: udf_bmap: inode: %ld, block >= EOF(%d,%ld)\n",
+				inode->i_ino, block >> (inode->i_sb->s_blocksize_bits - 9), inode->i_blocks);
+		}
+		return 0;
+	}
+
+	b_off = block << inode->i_sb->s_blocksize_bits;
+	*bloc = UDF_I_LOCATION(inode);
+	*eloc = UDF_I_EXT0LOC(inode);
+	*elen = UDF_I_EXT0LEN(inode);
+
+	while (lbcount + *elen <= b_off)
+	{
+		lbcount += *elen;
+		if (!(udf_next_aext(inode, bloc, ext, eloc, elen)))
+			return 0;
+	}
+
+	*offset = (b_off - lbcount) >> inode->i_sb->s_blocksize_bits;
+
+	return 1;
+}
+
+int udf_bmap2(struct inode *, int);
+
+int udf_bmap(struct inode *inode, int block)
+{
+	lb_addr eloc, bloc;
+	Uint32 offset, ext, elen;
+	int ret;
+
+	if (block_bmap(inode, block, &bloc, &ext, &eloc, &elen, &offset))
+		ret = udf_get_lb_pblock(inode->i_sb, eloc, offset);
+	else
+		ret = 0;
+
+#if 0
+	{
+		int ret2 = udf_bmap2(inode, block);
+
+		if (ret != ret2)
+		{
+			printk(KERN_DEBUG "udf: udf_bmap: (block=%d,ino=%ld) block_bmap (%d) != udf_bmap2 (%d) [%d,%d + %d]\n",
+				block, inode->i_ino, ret, ret2, eloc.logicalBlockNum, eloc.partitionReferenceNum, offset);
+			return ret2;
+		}
+		else
+			return ret;
+	}
+#else
+	return ret;
+#endif
+}
+	
+
 /*
  * given an inode and block ...
  */
 int 
-udf_bmap(struct inode *inode, int block)
+udf_bmap2(struct inode *inode, int block)
 {
 	off_t b_off, size;
 	unsigned int currblk = 0;
 	unsigned int currpart = 0;
 	int offset = 0;
 	int adesclen=0;
+	Uint16 ident;
 
 	if (block < 0)
 	{
@@ -477,10 +777,15 @@ udf_bmap(struct inode *inode, int block)
 
 	b_off = block << inode->i_sb->s_blocksize_bits;
 
+#if 0
+	printk(KERN_DEBUG "udf: udf_bmap(%d) b_off = %ld\n", block, b_off);
+#endif
+
 	/*
 	 * If we are beyond the end of this file, don't give out any
 	 * blocks.
 	 */
+#if 0
 	if( b_off > inode->i_size )
 	{
 	    off_t	max_legal_read_offset;
@@ -502,6 +807,22 @@ udf_bmap(struct inode *inode, int block)
 	    }
 	    return 0;
 	}
+#else
+	if (b_off / 512 > inode->i_blocks)
+	{
+		off_t	max_legal_read_offset;
+
+		max_legal_read_offset = (inode->i_blocks + PAGE_SIZE / 512 - 1)
+			& ~(PAGE_SIZE / 512 - 1);
+
+		if (b_off / 512 >= max_legal_read_offset)
+		{
+			printk(KERN_DEBUG "udf: udf_bmap: inode: %ld, block >= EOF(%ld,%ld)\n",
+				inode->i_ino, b_off / 512, inode->i_blocks);
+		}
+		return 0;
+	}
+#endif
 
 	/* check for first extent case, so we don't need to reread FileEntry */
 	size = UDF_I_EXT0LEN(inode);
@@ -520,21 +841,19 @@ udf_bmap(struct inode *inode, int block)
 		int error=0;
 		memcpy(&loc, &UDF_I_LOCATION(inode), sizeof(lb_addr));
 
-
 		switch (UDF_I_ALLOCTYPE(inode))
 		{
 			case ICB_FLAG_AD_SHORT: adsize = sizeof(short_ad); break;
 			case ICB_FLAG_AD_LONG: adsize = sizeof(long_ad); break;
 			default:
 			{
-				printk(KERN_ERR "udf: udf_bmap: unsporrted alloctype: %d\n",
+				printk(KERN_ERR "udf: udf_bmap: unsupported alloctype: %d\n",
 					UDF_I_ALLOCTYPE(inode));
 				return 0;
 			}
 		}
 
-
-		bh = udf_read_ptagged(inode->i_sb, loc, 0, TID_FILE_ENTRY);
+		bh = udf_read_ptagged(inode->i_sb, loc, 0, &ident);
 
 		if ( !bh )
 		{
@@ -542,6 +861,14 @@ udf_bmap(struct inode *inode, int block)
 				"udf: udf_read_ptagged(%p,(%d,%d)) (%ld) block failed !bh\n",
 				inode->i_sb, loc.logicalBlockNum,
 				loc.partitionReferenceNum, inode->i_ino);
+			free_page((unsigned long) tmpad);
+			return 0;
+		}
+
+		if (ident != TID_FILE_ENTRY)
+		{
+			udf_release_data(bh);
+			printk(KERN_ERR "udf: udf_bmap: ident == %d\n", ident);
 			free_page((unsigned long) tmpad);
 			return 0;
 		}
@@ -569,7 +896,10 @@ udf_bmap(struct inode *inode, int block)
 				case EXTENT_RECORDED_ALLOCATED:
 				{
 					if (size == 0)
+					{
 						printk(KERN_DEBUG "udf: End of extents!\n");
+						return 0;
+					}
 					break;
 				}
 				case EXTENT_RECORDED_NOT_ALLOCATED:
@@ -604,7 +934,7 @@ udf_bmap(struct inode *inode, int block)
 					}
 
 					udf_release_data(bh);
-					bh = udf_read_ptagged(inode->i_sb, loc, 0, TID_ALLOC_EXTENT_DESC);
+					bh = udf_read_ptagged(inode->i_sb, loc, 0, &ident);
 					if (!bh)
 					{
 						printk(KERN_ERR 
@@ -614,6 +944,14 @@ udf_bmap(struct inode *inode, int block)
 						free_page((unsigned long) tmpad);
 						return 0;
 					}
+					if (ident != TID_ALLOC_EXTENT_DESC)
+					{
+						printk(KERN_ERR "udf: udf_bmap: ident == %d\n", ident);
+						udf_release_data(bh);
+						free_page((unsigned long) tmpad);
+						return 0;
+					}
+
 					aed = (struct AllocExtDesc *)bh->b_data;
 					offset = sizeof(struct AllocExtDesc);
 					adesclen = le32_to_cpu(aed->lengthAllocDescs) + adsize;
@@ -656,6 +994,15 @@ udf_bmap(struct inode *inode, int block)
 		currblk = UDF_I_EXT0LOC(inode).logicalBlockNum;
 		currpart = UDF_I_EXT0LOC(inode).partitionReferenceNum;
 	}
+
+	if (currpart > UDF_SB_NUMPARTS(inode->i_sb))
+		printk(KERN_DEBUG "udf: udf_bmap (%ld): get_pblock(%p,%d,%d,%ld)\n", inode->i_ino,
+			inode->i_sb, currblk, currpart, b_off >> inode->i_sb->s_blocksize_bits);
+
+#if 0
+	printk(KERN_DEBUG "udf: udf_bmap2, currblk=%d, currpart=%d, offset=%ld\n",
+		currblk, currpart, b_off >> inode->i_sb->s_blocksize_bits);
+#endif
 
 	return udf_get_pblock(inode->i_sb, currblk, currpart, b_off >> inode->i_sb->s_blocksize_bits);
 }
