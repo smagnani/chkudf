@@ -1,10 +1,10 @@
 *
 * ./Documentation/filesystems/udf.txt
 *
-UDF Filesystem version 0.9.1
+UDF Filesystem version 0.9.2.1
 
 If you encounter problems with reading UDF discs using this driver,
-please report them to linux_udf@hootie.lvld.hp.com, which is the
+please report them to linux_udf@hpesjro.fc.hp.com, which is the
 developer's list.
 
 Write support requires a block driver which supports writing. The current

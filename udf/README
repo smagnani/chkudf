@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------
  * Linux(r) UDF Filesystem Driver
- * Version: 0.9.1
+ * Version: 0.9.2.1
  * --------------------------------------------------------------- */
 
 REQUIRED:
@@ -24,26 +24,28 @@ TESTING:
          "mount -t udf -o loop image /mnt"
 		(Substitute "scd0", "image",  and "/mnt" as appropriate for your system)
 
-    For sample images, send email to Thomas Tempelmann <tempel@corp.adaptec.com>
-    with a subject of "Get UDF Sample Discs Access". You should get the URL
-    sent back within 5 minutes.
-
 If you want to help out, subscribe to the linux_udf mailing list below.
 
 OSTA-UDF
     Optical Storage Technology Association Universal Disk Format
 
 The Linux UDF development team mail list is:
-    linux_udf@hootie.lvld.hp.com
+    linux_udf@hpesjro.fc.hp.com
 
 Subscribe to the mailing list by sending a message to:
-    majordomo@hootie.lvld.hp.com
+    majordomo@hpesjro.fc.hp.com
 with a body of:
     subscribe linux_udf
 
 UDF developers should subscribe to additional lists:
-    subscribe osta_tc
-    subscribe osta_cd_dvd
+    cd.dvd@list.osta.org
+    udf@list.osta.org
+
+Subscribe to the mailing lists by sending a message to:
+    requests@list.osta.org
+with a body of:
+    subscribe cd.dvd
+    subscribe udf
 
 Documentation on UDF and ECMA 167 is available FREE from:
     http://www.osta.org/
