@@ -101,7 +101,12 @@ static int udf_symlink_filler(struct file *file, struct page *page)
 
 	udf_pc_to_char(inode->i_sb, symlink, inode->i_size, p);
 	udf_release_data(bh);
-	err = 0;
+
+	unlock_kernel();
+	SetPageUptodate(page);
+	kunmap(page);
+	unlock_page(page);
+	return 0;
 out:
 	unlock_kernel();
 	SetPageError(page);
