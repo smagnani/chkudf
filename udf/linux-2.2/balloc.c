@@ -285,7 +285,7 @@ error_return:
 	return;
 }
 
-int udf_alloc_blocks(const struct inode * inode, Uint16 partition,
+int udf_prealloc_blocks(const struct inode * inode, Uint16 partition,
 	Uint32 first_block, Uint32 block_count)
 {
 	int alloc_count = 0;

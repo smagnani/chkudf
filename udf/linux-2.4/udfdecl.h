@@ -180,7 +180,7 @@ extern void udf_truncate(struct inode *);
 
 /* balloc.c */
 extern void udf_free_blocks(const struct inode *, lb_addr, Uint32, Uint32);
-extern int udf_alloc_blocks(const struct inode *, Uint16, Uint32, Uint32);
+extern int udf_prealloc_blocks(const struct inode *, Uint16, Uint32, Uint32);
 extern int udf_new_block(const struct inode *, Uint16, Uint32, int *);
 extern int udf_sync_file(struct file *, struct dentry *);
 
