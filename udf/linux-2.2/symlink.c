@@ -83,14 +83,7 @@ static struct dentry * udf_follow_link(struct dentry * dentry,
 	char *symlink, *tmpbuf;
 	
 	if (UDF_I_ALLOCTYPE(inode) == ICBTAG_FLAG_AD_IN_ICB)
-	{
-		bh = udf_tread(inode->i_sb, inode->i_ino, inode->i_sb->s_blocksize);
-
-		if (!bh)
-			return 0;
-
-		symlink = bh->b_data + udf_file_entry_alloc_offset(inode);
-	}
+		symlink = UDF_I_DATA(inode) + UDF_I_LENALLOC(inode);
 	else
 	{
 		bh = bread(inode->i_dev, udf_bmap(inode, 0), inode->i_sb->s_blocksize);
@@ -103,12 +96,16 @@ static struct dentry * udf_follow_link(struct dentry * dentry,
 	if ((tmpbuf = (char *)kmalloc(inode->i_size, GFP_KERNEL)))
 	{
 		udf_pc_to_char(symlink, inode->i_size, tmpbuf);
+		udf_release_data(bh);
 		base = lookup_dentry(tmpbuf, base, follow);
 		kfree(tmpbuf);
 		return base;
 	}
 	else
+	{
+		udf_release_data(bh);
 		return ERR_PTR(-ENOMEM);
+	}
 }
 
 static int udf_readlink(struct dentry * dentry, char * buffer, int buflen)
@@ -119,14 +116,7 @@ static int udf_readlink(struct dentry * dentry, char * buffer, int buflen)
 	int len;
 	
 	if (UDF_I_ALLOCTYPE(inode) == ICBTAG_FLAG_AD_IN_ICB)
-	{
-		bh = udf_tread(inode->i_sb, inode->i_ino, inode->i_sb->s_blocksize);
-
-		if (!bh)
-			return 0;
-
-		symlink = bh->b_data + udf_file_entry_alloc_offset(inode);
-	}
+		symlink = UDF_I_DATA(inode) + UDF_I_LENALLOC(inode);
 	else
 	{
 		bh = bread(inode->i_dev, udf_bmap(inode, 0), inode->i_sb->s_blocksize);
@@ -150,8 +140,7 @@ static int udf_readlink(struct dentry * dentry, char * buffer, int buflen)
 		len = -ENOMEM;
 
 	UPDATE_ATIME(inode);
-	if (bh)
-		udf_release_data(bh);
+	udf_release_data(bh);
 	return len;
 }
 
