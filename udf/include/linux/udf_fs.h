@@ -37,8 +37,8 @@
 #define UDF_PREALLOCATE
 #define UDF_DEFAULT_PREALLOC_BLOCKS		8
 
-#define UDFFS_DATE		"2000/12/25"
-#define UDFFS_VERSION	"0.9.3"
+#define UDFFS_DATE		"2001/05/20"
+#define UDFFS_VERSION	"0.9.4-cvs"
 
 #if !defined(UDFFS_RW)
 
