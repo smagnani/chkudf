@@ -159,7 +159,19 @@ struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
 	inode->i_size = 0;
 	UDF_I_LENEATTR(inode) = 0;
 	UDF_I_LENALLOC(inode) = 0;
-	UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_IN_ICB;
+	if (UDF_QUERY_FLAG(inode->i_sb, UDF_FLAG_USE_EXTENDED_FE))
+	{
+		UDF_I_EXTENDED_FE(inode) = 1;
+		UDF_UPDATE_UDFREV(inode->i_sb, UDF_VERS_USE_EXTENDED_FE);
+	}
+	else
+		UDF_I_EXTENDED_FE(inode) = 0;
+	if (UDF_QUERY_FLAG(inode->i_sb, UDF_FLAG_USE_AD_IN_ICB))
+		UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_IN_ICB;
+	else if (UDF_QUERY_FLAG(inode->i_sb, UDF_FLAG_USE_SHORT_AD))
+		UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_SHORT;
+	else
+		UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_LONG;
 	inode->i_mtime = inode->i_atime = inode->i_ctime = CURRENT_TIME;
 	UDF_I_UMTIME(inode) = UDF_I_UATIME(inode) = UDF_I_UCTIME(inode) = CURRENT_UTIME;
 	inode->i_op = NULL;
