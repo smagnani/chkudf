@@ -44,7 +44,7 @@ void udf_free_inode(struct inode * inode)
 	 * Note: we must free any quota before locking the superblock,
 	 * as writing the quota to disk may need the lock as well.
 	 */
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 	DQUOT_FREE_INODE(inode);
 #else
 	DQUOT_INIT(inode);
@@ -61,16 +61,20 @@ void udf_free_inode(struct inode * inode)
 	if (UDF_SB_LVIDBH(sb))
 	{
 		if (is_directory)
-			udf_adj_dirs(inode->i_sb, -1);
+			UDF_SB_LVIDIU(sb)->numDirs =
+				cpu_to_le32(le32_to_cpu(UDF_SB_LVIDIU(sb)->numDirs) - 1);
 		else
-			udf_adj_files(inode->i_sb, -1);
+			UDF_SB_LVIDIU(sb)->numFiles =
+				cpu_to_le32(le32_to_cpu(UDF_SB_LVIDIU(sb)->numFiles) - 1);
+		
+		mark_buffer_dirty(UDF_SB_LVIDBH(sb));
 	}
 	unlock_super(sb);
 
 	udf_free_blocks(sb, NULL, UDF_I_LOCATION(inode), 0, 1);
 }
 
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 struct inode * udf_new_inode (struct inode *dir, int mode, int * err)
 #else
 struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
@@ -91,14 +95,8 @@ struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
 	}
 	*err = -ENOSPC;
 
-	if (UDF_I_STRAT4096(dir))
-	{
-		UDF_I_STRAT4096(inode) = 1;
-		block = udf_new_blocks(dir->i_sb, NULL, UDF_I_LOCATION(dir).partitionReferenceNum, start, 2, err);
-	}
-	else
-		block = udf_new_blocks(dir->i_sb, NULL, UDF_I_LOCATION(dir).partitionReferenceNum, start, 1, err);
-
+	block = udf_new_blocks(dir->i_sb, NULL, UDF_I_LOCATION(dir).partitionReferenceNum,
+		start, 1, err);
 	if (*err)
 	{
 		iput(inode);
@@ -112,9 +110,11 @@ struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
 		uint64_t uniqueID;
 		lvhd = (struct logicalVolHeaderDesc *)(UDF_SB_LVID(sb)->logicalVolContentsUse);
 		if (S_ISDIR(mode))
-			udf_adj_dirs(sb, 1);
+			UDF_SB_LVIDIU(sb)->numDirs =
+				cpu_to_le32(le32_to_cpu(UDF_SB_LVIDIU(sb)->numDirs) + 1);
 		else
-			udf_adj_files(sb, 1);
+			UDF_SB_LVIDIU(sb)->numFiles =
+				cpu_to_le32(le32_to_cpu(UDF_SB_LVIDIU(sb)->numFiles) + 1);
 		UDF_I_UNIQUE(inode) = uniqueID = le64_to_cpu(lvhd->uniqueID);
 		if (!(++uniqueID & 0x00000000FFFFFFFFUL))
 			uniqueID += 16;
@@ -161,14 +161,16 @@ struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
 	mark_inode_dirty(inode);
 
 	unlock_super(sb);
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 	if (DQUOT_ALLOC_INODE(inode))
 #else
 	if (DQUOT_ALLOC_INODE(sb, inode))
 #endif
 	{
 		DQUOT_DROP(inode);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,10)
 		inode->i_flags |= S_NOQUOTA;
+#endif
 		inode->i_nlink = 0;
 		iput(inode);
 		*err = -EDQUOT;
