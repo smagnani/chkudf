@@ -43,8 +43,9 @@ fi
 CONFIG=config.new
 # CONFIG_H=linux/udf_config.h
 CONFIG_MK=config.mk
+CONFIG_MAKEFILE=config.makefile
 MODVER=include/linux/modversions.h
-rm -f .prereq.ok $CONFIG $CONFIG_H $CONFIG_MK $MODVER
+rm -f .prereq.ok $CONFIG $CONFIG_H $CONFIG_MK $CONFIG_MAKEFILE $MODVER
 touch $CONFIG_MK
 
 cat << 'EOF' > $CONFIG
@@ -133,6 +134,19 @@ if [ ! -f $LINUX/Makefile ] ; then
     has_makefile=0
 else
     has_makefile=1
+fi
+
+ARCH=`uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc64/ -e s/arm.*/arm/ -e s/sa110/arm/`
+if [ -f $LINUX/arch/$ARCH/Makefile ] ; then
+	echo "include $LINUX/arch/$ARCH/Makefile" > $CONFIG_MAKEFILE
+	echo 'udftest:' >> $CONFIG_MAKEFILE
+	echo '	echo $(LD)' >> $CONFIG_MAKEFILE
+
+	KERNEL_LD=`make -s -f $CONFIG_MAKEFILE udftest`
+	rm -f $CONFIG_MAKEFILE
+	if [ "$KERNEL_LD" ] ; then
+		LD=$KERNEL_LD
+	fi
 fi
 
 ask_str "Alternate target install directory" PREFIX
@@ -269,7 +283,6 @@ case $src in
 esac
 
 
-ARCH=`uname -m`
 echo "ARCH=$ARCH" >> $CONFIG_MK
 
 if [ $src != "1" -a "$CONFIG_MODVERSIONS" = "y" ] ; then
@@ -385,6 +398,7 @@ echo "LINUX_VERSION_CODE=$VERSION_CODE" >> $CONFIG_MK
 echo "" >> $CONFIG
 echo "" >> $CONFIG_MK
 echo ""
+
 
 #=======================================================================
 
