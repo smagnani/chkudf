@@ -439,13 +439,15 @@ udf_read_tagged_data(char *buffer, int size, int fd, int block, int offset)
 	udf_errno=0;
 	
 	offs=(long)block * udf_blocksize;
-	if ( lseek(fd, offs, SEEK_SET) != offs ) {
+	if ( lseek(fd, offs, SEEK_SET) != offs )
+	{
 		udf_errno=4;
 		return -1;
 	}
 
 	i=read(fd, buffer, udf_blocksize);
-	if ( i < udf_blocksize ) {
+	if ( i < udf_blocksize )
+	{
 		udf_errno=5;
 		return -1;
 	}
@@ -453,7 +455,8 @@ udf_read_tagged_data(char *buffer, int size, int fd, int block, int offset)
 	tag_p = (tag *)(buffer);
 
 	/* Verify the tag location */
-	if ((block-offset) != tag_p->tagLocation) {
+	if ((block-offset) != tag_p->tagLocation)
+	{
 #ifdef __KERNEL__
 		printk(KERN_ERR "udf: location mismatch block %d, tag %d\n",
 			block, tag_p->tagLocation);
@@ -469,7 +472,8 @@ udf_read_tagged_data(char *buffer, int size, int fd, int block, int offset)
 		checksum += (Uint8)(buffer[i]);
 	for (i = 5; i < 16; i++)
 		checksum += (Uint8)(buffer[i]);
-	if (checksum != tag_p->tagChecksum) {
+	if (checksum != tag_p->tagChecksum)
+	{
 #ifdef __KERNEL__
 		printk(KERN_ERR "udf: tag checksum failed\n");
 #else
@@ -479,7 +483,8 @@ udf_read_tagged_data(char *buffer, int size, int fd, int block, int offset)
 	}
 
 	/* Verify the tag version */
-	if (tag_p->descVersion != 0x0002U) {
+	if (tag_p->descVersion != 0x0002U)
+	{
 #ifdef __KERNEL__
 		printk(KERN_ERR "udf: tag version 0x%04x != 0x0002U\n",
 			tag_p->descVersion);
@@ -490,14 +495,15 @@ udf_read_tagged_data(char *buffer, int size, int fd, int block, int offset)
 	}
 
 	/* Verify the descriptor CRC */
-	if (tag_p->descCRC == udf_crc(buffer + 16, tag_p->descCRCLength, 0)) {
+	if (tag_p->descCRC == udf_crc(buffer + 16, tag_p->descCRCLength, 0))
+	{
 		udf_errno=0;
 		return 0;
 	}
 #ifdef __KERNEL__
 	printk(KERN_ERR "udf: crc failure in udf_read_tagged\n");
 #else
-	udf_errno=9;
+	udf_errno = 9;
 #endif
 
 error_out:
