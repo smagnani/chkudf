@@ -1,10 +1,10 @@
 /*
- * osta_udf201.h
+ * osta_udf.h
  *
  * This file is based on OSTA UDF(tm) 2.01 (March 15, 2000)
  * http://www.osta.org
  *
- * Copyright (c) 2001 Ben Fennema
+ * Copyright (c) 2001-2002  Ben Fennema <bfennema@falcon.csc.calpoly.edu>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,10 +32,10 @@
  * SUCH DAMAGE.
  */
 
-#include <linux/ecma_167r3.h>
+#include "ecma_167.h"
 
-#ifndef _OSTA_UDF201_H
-#define _OSTA_UDF201_H 1
+#ifndef _OSTA_UDF_H
+#define _OSTA_UDF_H 1
 
 /* OSTA CS0 Charspec (UDF 2.01 2.1.2) */
 #define UDF_CHAR_SET_TYPE		0
@@ -268,4 +268,4 @@ struct freeAppEASpace
 #define UDF_OS_ID_BEOS			0x00U
 #define UDF_OS_ID_WINCE			0x00U
 
-#endif /* _OSTA_UDF201_H */
+#endif /* _OSTA_UDF_H */
