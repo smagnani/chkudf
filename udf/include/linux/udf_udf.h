@@ -114,14 +114,9 @@ struct DVDCopyrightImpUse {
 	Uint8  protectionSystemInfo[4];
 };
 
-/* the impUse of long_ad used with FileIdent - UDF 2.0 2.3.4.3 */
-struct UniqueID {
-	Uint16 reserved;	/* #00 */
-	Uint32 uniqueIdent;
-};
-
 /* the impUse of long_ad used in AllocDescs  - UDF 1.02 2.3.10.1 */
-struct ADImpUse {
+struct ADImpUse
+{
 	Uint16 flags;
 	Uint8  impUse[4];
 };

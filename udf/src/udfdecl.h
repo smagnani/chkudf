@@ -1,7 +1,7 @@
 #ifndef __UDF_DECL_H
 #define __UDF_DECL_H
 
-#define UDF_VERSION_NOTICE "v0.8.6"
+#define UDF_VERSION_NOTICE "v0.8.7"
 
 #ifdef __KERNEL__
 

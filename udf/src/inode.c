@@ -505,6 +505,7 @@ dont_create:
 				{
 					if (tetype == EXTENT_NOT_RECORDED_NOT_ALLOCATED)
 					{
+						extoffset -= adsize;
 						elen = (EXTENT_NOT_RECORDED_NOT_ALLOCATED << 30) |
 							(elen + (offset << inode->i_sb->s_blocksize_bits));
 						if (ext0offset == extoffset)
@@ -1500,6 +1501,13 @@ int udf_write_aext(struct inode *inode, lb_addr bloc, int *extoffset,
 		}
 	}
 
+	if (memcmp(&UDF_I_LOCATION(inode), &bloc, sizeof(lb_addr)))
+	{
+		struct AllocExtDesc *aed = (struct AllocExtDesc *)(*bh)->b_data;
+		udf_update_tag((*bh)->b_data,
+			le32_to_cpu(aed->lengthAllocDescs) + sizeof(struct AllocExtDesc));
+	}
+
 	mark_buffer_dirty(*bh, 1);
 
 	if (inc)
@@ -1875,9 +1883,11 @@ int inode_bmap(struct inode *inode, int block, lb_addr *bloc, Uint32 *extoffset,
 	{
 		lbcount += *elen;
 		if ((etype = udf_next_aext(inode, bloc, extoffset, eloc, elen, bh, 1)) == -1)
+		{
+			*offset = (b_off - lbcount) >> inode->i_sb->s_blocksize_bits;
 			return -1;
+		}
 	}
-
 	*offset = (b_off - lbcount) >> inode->i_sb->s_blocksize_bits;
 
 	return etype;

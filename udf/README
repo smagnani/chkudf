@@ -13,6 +13,7 @@ INSTALLING:
 	type: "make install"
 
 TESTING:
+	type "depmod -a"
 	type "modprobe udf", 
 	then "mount -t udf /dev/scd0 /mnt"
 		(assuming /dev/scd0 is your scsi cdrom)

@@ -158,8 +158,46 @@ static void trunc(struct inode * inode)
 	}
 	else if (inode->i_size)
 	{
-		/* need to pad last extent to blocksize and add unallocated extent */
-		udf_debug("Unsupported: truncate > file length\n");
+		lb_addr e0loc = UDF_I_LOCATION(inode);
+		Uint32 ext0offset = udf_file_entry_alloc_offset(inode);
+		char tetype;
+
+		if (offset)
+		{
+			extoffset -= adsize;
+			tetype = udf_next_aext(inode, &bloc, &extoffset, &eloc, &elen, &bh, 1);
+			if (tetype == EXTENT_NOT_RECORDED_NOT_ALLOCATED)
+			{
+				extoffset -= adsize;
+				elen = (EXTENT_NOT_RECORDED_NOT_ALLOCATED << 30) |
+					(elen + (offset << inode->i_sb->s_blocksize_bits));
+				if (ext0offset == extoffset && !memcmp(&e0loc, &bloc, sizeof(lb_addr)))
+					UDF_I_EXT0LEN(inode) = elen;
+				udf_write_aext(inode, bloc, &extoffset, eloc, elen, &bh, 0);
+			}
+			else
+			{
+				if (elen & (inode->i_sb->s_blocksize - 1))
+				{
+					extoffset -= adsize;
+					elen = (EXTENT_RECORDED_ALLOCATED << 30) |
+						((elen + inode->i_sb->s_blocksize - 1) &
+						~(inode->i_sb->s_blocksize - 1));
+					if (ext0offset == extoffset && !memcmp(&e0loc, &bloc, sizeof(lb_addr)))
+						UDF_I_EXT0LEN(inode) = elen;
+					udf_write_aext(inode, bloc, &extoffset, eloc, elen, &bh, 1);
+				}
+				memset(&eloc, 0x00, sizeof(lb_addr));
+				elen = (EXTENT_NOT_RECORDED_NOT_ALLOCATED << 30) |
+					(offset << inode->i_sb->s_blocksize_bits);
+				if (ext0offset == extoffset && !memcmp(&e0loc, &bloc, sizeof(lb_addr)))
+				{
+					UDF_I_EXT0LOC(inode) = eloc;
+					UDF_I_EXT0LEN(inode) = elen;
+				}
+				udf_add_aext(inode, &bloc, &extoffset, eloc, elen, &bh, 1);
+			}
+		}
 	}
 
 	udf_release_data(bh);

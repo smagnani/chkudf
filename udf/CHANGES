@@ -96,3 +96,13 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
 				that enables a ".B=xxx" filename syntax, useful for recovering 
 				files from damaged discs.  Modified ./patch/Makefile to 
 				assist in building kernel patches.
+
+6/16/99 blf		(Hopefully) fixed rename for versions <= 2.2.5
+				Fixed sparse files
+				Fixed block allocation algorithm to function properly
+
+7/15/99	blf		Fixed deletes (truncate problems)
+				Fixed various write bugs
+				Add block extension to truncate routine
+				Recalculate crc on udf_insert_aext
+				Changes to mkudf
