@@ -1,10 +1,10 @@
 /* ------------------------------------------------------------------
  * Linux(r) UDF Filesystem Driver
- * Version: 0.9.5
+ * Version: 0.9.6
  * --------------------------------------------------------------- */
 
 REQUIRED:
-	Linux version 2.1.70 or higher
+	Linux version 2.2.0 or higher
 	
 COMPILING:
 	type: "make udf.o"
