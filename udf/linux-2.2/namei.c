@@ -186,7 +186,7 @@ udf_find_entry(struct inode *dir, struct dentry *dentry,
 		else
 			offset = 0;
 
-		if (!(fibh->sbh = fibh->ebh = udf_tread(dir->i_sb, block, dir->i_sb->s_blocksize)))
+		if (!(fibh->sbh = fibh->ebh = udf_tread(dir->i_sb, block)))
 		{
 			udf_release_data(bh);
 			return NULL;
@@ -442,7 +442,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 		else
 			offset = 0;
 
-		if (!(fibh->sbh = fibh->ebh = udf_tread(dir->i_sb, block, dir->i_sb->s_blocksize)))
+		if (!(fibh->sbh = fibh->ebh = udf_tread(dir->i_sb, block)))
 		{
 			udf_release_data(bh);
 			*err = -EIO;
@@ -887,7 +887,7 @@ static int empty_dir(struct inode *dir)
 		else
 			offset = 0;
 
-		if (!(fibh.sbh = fibh.ebh = udf_tread(dir->i_sb, block, dir->i_sb->s_blocksize)))
+		if (!(fibh.sbh = fibh.ebh = udf_tread(dir->i_sb, block)))
 		{
 			udf_release_data(bh);
 			return 0;
@@ -1106,7 +1106,7 @@ int udf_symlink(struct inode * dir, struct dentry * dentry, const char * symname
 	else
 		block = udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0);
 
-	bh = udf_tread(inode->i_sb, block, inode->i_sb->s_blocksize);
+	bh = udf_tread(inode->i_sb, block);
 	ea = bh->b_data + udf_ext0_offset(inode);
 
 	eoffset = inode->i_sb->s_blocksize - udf_ext0_offset(inode);

@@ -178,7 +178,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 		else
 			offset = 0;
 
-		if (!(fibh.sbh = fibh.ebh = udf_tread(dir->i_sb, block, dir->i_sb->s_blocksize)))
+		if (!(fibh.sbh = fibh.ebh = udf_tread(dir->i_sb, block)))
 		{
 			udf_release_data(bh);
 			return -EIO;
@@ -192,7 +192,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 			for (num=0; i>0; i--)
 			{
 				block = udf_get_lb_pblock(dir->i_sb, eloc, offset+i);
-				tmp = udf_tgetblk(dir->i_sb, block, dir->i_sb->s_blocksize);
+				tmp = udf_tgetblk(dir->i_sb, block);
 				if (tmp && !buffer_uptodate(tmp) && !buffer_locked(tmp))
 					bha[num++] = tmp;
 				else

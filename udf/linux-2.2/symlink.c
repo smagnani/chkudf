@@ -86,7 +86,7 @@ static struct dentry * udf_follow_link(struct dentry * dentry,
 		symlink = UDF_I_DATA(inode) + UDF_I_LENALLOC(inode);
 	else
 	{
-		bh = bread(inode->i_dev, udf_bmap(inode, 0), inode->i_sb->s_blocksize);
+		bh = sb_bread(inode->i_sb, udf_bmap(inode, 0));
 
 		if (!bh)
 			return 0;
@@ -119,7 +119,7 @@ static int udf_readlink(struct dentry * dentry, char * buffer, int buflen)
 		symlink = UDF_I_DATA(inode) + UDF_I_LENALLOC(inode);
 	else
 	{
-		bh = bread(inode->i_dev, udf_bmap(inode, 0), inode->i_sb->s_blocksize);
+		bh = sb_bread(inode->i_sb, udf_bmap(inode, 0));
 
 		if (!bh)
 			return 0;

@@ -376,11 +376,7 @@ struct buffer_head * udf_getblk(struct inode * inode, long block,
 	if (!*err && buffer_mapped(&dummy))
 	{
 		struct buffer_head *bh;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,18)
 		bh = sb_getblk(inode->i_sb, dummy.b_blocknr);
-#else
-		bh = getblk(dummy.b_dev, dummy.b_blocknr, inode->i_sb->s_blocksize);
-#endif
 		if (buffer_new(&dummy))
 		{
 			lock_buffer(bh);

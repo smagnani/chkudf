@@ -90,12 +90,7 @@ static int udf_symlink_filler(struct file *file, struct page *page)
 		symlink = UDF_I_DATA(inode) + UDF_I_LENALLOC(inode);
 	else
 	{
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,18)
 		bh = sb_bread(inode->i_sb, udf_block_map(inode, 0));
-#else
-		bh = bread(inode->i_dev, udf_block_map(inode, 0),
-				inode->i_sb->s_blocksize);
-#endif
 
 		if (!bh)
 			goto out;

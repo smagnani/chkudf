@@ -96,7 +96,7 @@ static int read_block_bitmap(struct super_block * sb,
 	loc.logicalBlockNum = bitmap->s_extPosition;
 	loc.partitionReferenceNum = UDF_SB_PARTITION(sb);
 
-	bh = udf_tread(sb, udf_get_lb_pblock(sb, loc, block), sb->s_blocksize);
+	bh = udf_tread(sb, udf_get_lb_pblock(sb, loc, block));
 	if (!bh)
 	{
 		retval = -EIO;
@@ -405,7 +405,7 @@ got_block:
 	}
 
 	mark_buffer_dirty(bh, 1);
-	if (!(bh = getblk(sb->s_dev, tmp, sb->s_blocksize)))
+	if (!(bh = sb_getblk(sb, tmp)))
 	{
 		udf_debug("cannot get block %d\n", tmp);
 		unlock_super(sb);
@@ -579,8 +579,7 @@ static void udf_table_free_blocks(struct super_block * sb,
 			elen -= sb->s_blocksize;
 
 			if (!(nbh = udf_tread(sb,
-				udf_get_lb_pblock(sb, nbloc, 0),
-				sb->s_blocksize)))
+				udf_get_lb_pblock(sb, nbloc, 0))))
 			{
 				udf_release_data(obh);
 				goto error_return;
@@ -846,7 +845,7 @@ static int udf_table_new_block(struct super_block * sb,
 	}
 
 	tmp = udf_get_pblock(sb, newblock, partition, 0);
-	if (!(bh = getblk(sb->s_dev, tmp, sb->s_blocksize)))
+	if (!(bh = sb_getblk(sb, tmp)))
 	{
 		udf_debug("cannot get block %d\n", tmp);
 		udf_release_data(bh);

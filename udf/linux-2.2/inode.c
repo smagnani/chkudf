@@ -150,7 +150,7 @@ void udf_expand_file_adinicb(struct inode * inode, int newsize, int * err)
 		UDF_I_LOCATION(inode).partitionReferenceNum, 0);
 	if (!newblock)
 		return;
-	dbh = udf_tread(inode->i_sb, newblock, inode->i_sb->s_blocksize);
+	dbh = udf_tread(inode->i_sb, newblock);
 	if (!dbh)
 		return;
 
@@ -219,7 +219,7 @@ struct buffer_head * udf_expand_dir_adinicb(struct inode *inode, int *block, int
 		UDF_I_LOCATION(inode).partitionReferenceNum, 0);
 	if (!newblock)
 		return NULL;
-	dbh = udf_tread(inode->i_sb, newblock, inode->i_sb->s_blocksize);
+	dbh = udf_tread(inode->i_sb, newblock);
 	if (!dbh)
 		return NULL;
 
@@ -370,7 +370,7 @@ static struct buffer_head * inode_getblk(struct inode * inode, long block,
 		udf_release_data(cbh);
 		udf_release_data(nbh);
 		newblock = udf_get_lb_pblock(inode->i_sb, eloc, offset);
-		return getblk(inode->i_dev, newblock, inode->i_sb->s_blocksize);
+		return sb_getblk(inode->i_sb, newblock);
 	}
 
 	if (etype == -1)
@@ -496,7 +496,7 @@ dont_create:
 	{
 		return NULL;
 	}
-	if ((result = getblk(inode->i_dev, newblock, inode->i_sb->s_blocksize)))
+	if ((result = sb_getblk(inode->i_sb, newblock)))
 	{
 		memset(result->b_data, 0x00, inode->i_sb->s_blocksize);
 		mark_buffer_uptodate(result, 1);
@@ -1245,8 +1245,7 @@ udf_update_inode(struct inode *inode, int do_sync)
 		udf_discard_prealloc(inode);
 
 	bh = udf_tread(inode->i_sb,
-		udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0),
-		inode->i_sb->s_blocksize);
+		udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0));
 
 	if (!bh)
 	{
@@ -1569,7 +1568,7 @@ int8_t udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 			return -1;
 		}
 		if (!(nbh = udf_tread(inode->i_sb, udf_get_lb_pblock(inode->i_sb,
-			*bloc, 0), inode->i_sb->s_blocksize)))
+			*bloc, 0))))
 		{
 			return -1;
 		}

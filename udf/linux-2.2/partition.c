@@ -76,7 +76,7 @@ uint32_t udf_get_pblock_virt15(struct super_block *sb, uint32_t block, uint16_t 
 
 	loc = udf_bmap(UDF_SB_VAT(sb), newblock);
 
-	if (!(bh = bread(sb->s_dev, loc, sb->s_blocksize)))
+	if (!(bh = sb_bread(sb, loc)))
 	{
 		udf_debug("get_pblock(UDF_VIRTUAL_MAP:%p,%d,%d) VAT: %d[%d]\n",
 			sb, block, partition, loc, index);

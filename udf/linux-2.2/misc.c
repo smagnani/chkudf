@@ -64,21 +64,21 @@ gid_t udf_convert_gid(int gidin)
 }
 
 extern struct buffer_head *
-udf_tgetblk(struct super_block *sb, int block, int size)
+udf_tgetblk(struct super_block *sb, int block)
 {
 	if (UDF_QUERY_FLAG(sb, UDF_FLAG_VARCONV))
-		return getblk(sb->s_dev, udf_fixed_to_variable(block), size);
+		return sb_getblk(sb, udf_fixed_to_variable(block));
 	else
-		return getblk(sb->s_dev, block, size);
+		return sb_getblk(sb, block);
 }
 
 extern struct buffer_head *
-udf_tread(struct super_block *sb, int block, int size)
+udf_tread(struct super_block *sb, int block)
 {
 	if (UDF_QUERY_FLAG(sb, UDF_FLAG_VARCONV))
-		return bread(sb->s_dev, udf_fixed_to_variable(block), size);
+		return sb_bread(sb, udf_fixed_to_variable(block));
 	else
-		return bread(sb->s_dev, block, size);
+		return sb_bread(sb, block);
 }
 
 extern struct genericFormat *
@@ -89,7 +89,7 @@ udf_add_extendedattr(struct inode * inode, uint32_t size, uint32_t type,
 	long_ad eaicb;
 	int offset;
 
-	*bh = udf_tread(inode->i_sb, inode->i_ino, inode->i_sb->s_blocksize);
+	*bh = udf_tread(inode->i_sb, inode->i_ino);
 
 	if (UDF_I_EFE(inode) == 0)
 	{
@@ -205,7 +205,7 @@ udf_get_extendedattr(struct inode * inode, uint32_t type, uint8_t subtype,
 	long_ad eaicb;
 	uint32_t offset;
 
-	*bh = udf_tread(inode->i_sb, inode->i_ino, inode->i_sb->s_blocksize);
+	*bh = udf_tread(inode->i_sb, inode->i_ino);
 
 	if (UDF_I_EFE(inode) == 0)
 	{
@@ -286,7 +286,7 @@ udf_read_tagged(struct super_block *sb, uint32_t block, uint32_t location, uint1
 	if (block == 0xFFFFFFFF)
 		return NULL;
 
-	bh = udf_tread(sb, block, sb->s_blocksize);
+	bh = udf_tread(sb, block);
 	if (!bh)
 	{
 		udf_debug("block=%d, location=%d: read failed\n", block, location);

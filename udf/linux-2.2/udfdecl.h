@@ -13,10 +13,6 @@
 #include <linux/version.h>
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,1,70)
-#error "The UDF Module Current Requires Kernel Version 2.1.70 or greater"
-#endif
-
 #if !defined(CONFIG_UDF_FS) && !defined(CONFIG_UDF_FS_MODULE)
 #define CONFIG_UDF_FS_MODULE
 #include <linux/udf_fs_i.h>
@@ -143,8 +139,8 @@ extern void udf_discard_prealloc(struct inode *);
 
 /* misc.c */
 extern int udf_read_tagged_data(char *, int size, int fd, int block, int partref);
-extern struct buffer_head *udf_tgetblk(struct super_block *, int, int);
-extern struct buffer_head *udf_tread(struct super_block *, int, int);
+extern struct buffer_head *udf_tgetblk(struct super_block *, int);
+extern struct buffer_head *udf_tread(struct super_block *, int);
 extern struct genericFormat *udf_add_extendedattr(struct inode *, uint32_t, uint32_t, uint8_t, struct buffer_head **);
 extern struct genericFormat *udf_get_extendedattr(struct inode *, uint32_t, uint8_t, struct buffer_head **);
 extern struct buffer_head *udf_read_tagged(struct super_block *, uint32_t, uint32_t, uint16_t *);
@@ -221,5 +217,14 @@ extern extent_ad * udf_get_fileextent(void * buffer, int bufsize, int * offset);
 extern long_ad * udf_get_filelongad(uint8_t *, int, int *, int);
 extern short_ad * udf_get_fileshortad(uint8_t *, int, int *, int);
 extern uint8_t * udf_get_filead(struct fileEntry *, uint8_t *, int, int, int, int *);
+
+static inline struct buffer_head * sb_bread(struct super_block *sb, int block)
+{
+	return bread(sb->s_dev, block, sb->s_blocksize);
+}
+static inline struct buffer_head * sb_getblk(struct super_block *sb, int block)
+{
+	return getblk(sb->s_dev, block, sb->s_blocksize);
+}
 
 #endif /* __UDF_DECL_H */

@@ -216,4 +216,15 @@ extern long_ad * udf_get_filelongad(uint8_t *, int, int *, int);
 extern short_ad * udf_get_fileshortad(uint8_t *, int, int *, int);
 extern uint8_t * udf_get_filead(struct fileEntry *, uint8_t *, int, int, int, int *);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,18)
+static inline struct buffer_head * sb_bread(struct super_block *sb, int block)
+{
+	return bread(sb->s_dev, block, sb->s_blocksize);
+}
+static inline struct buffer_head * sb_getblk(struct super_block *sb, int block)
+{
+	return getblk(sb->s_dev, block, sb->s_blocksize);
+}
+#endif
+
 #endif /* __UDF_DECL_H */

@@ -48,7 +48,7 @@ uint8_t * udf_filead_read(struct inode *dir, uint8_t *tmpad, uint8_t ad_size,
 		block = udf_get_lb_pblock(dir->i_sb, fe_loc, ++*pos);
 		if (!block)
 			return NULL;
-		if (!(*bh = udf_tread(dir->i_sb, block, dir->i_sb->s_blocksize)))
+		if (!(*bh = udf_tread(dir->i_sb, block)))
 			return NULL;
 	}
 	else if (*offset > dir->i_sb->s_blocksize)
@@ -62,7 +62,7 @@ uint8_t * udf_filead_read(struct inode *dir, uint8_t *tmpad, uint8_t ad_size,
 		block = udf_get_lb_pblock(dir->i_sb, fe_loc, ++*pos);
 		if (!block)
 			return NULL;
-		if (!((*bh) = udf_tread(dir->i_sb, block, dir->i_sb->s_blocksize)))
+		if (!((*bh) = udf_tread(dir->i_sb, block)))
 			return NULL;
 
 		memcpy((uint8_t *)ad + remainder, (*bh)->b_data, ad_size - remainder);
@@ -120,7 +120,7 @@ udf_fileident_read(struct inode *dir, loff_t *nf_pos,
 			*extoffset = lextoffset;
 
 		udf_release_data(fibh->sbh);
-		if (!(fibh->sbh = fibh->ebh = udf_tread(dir->i_sb, block, dir->i_sb->s_blocksize)))
+		if (!(fibh->sbh = fibh->ebh = udf_tread(dir->i_sb, block)))
 			return NULL;
 		fibh->soffset = fibh->eoffset = 0;
 
@@ -132,7 +132,7 @@ udf_fileident_read(struct inode *dir, loff_t *nf_pos,
 			for (num=0; i>0; i--)
 			{
 				block = udf_get_lb_pblock(dir->i_sb, *eloc, *offset+i);
-				tmp = udf_tgetblk(dir->i_sb, block, dir->i_sb->s_blocksize);
+				tmp = udf_tgetblk(dir->i_sb, block);
 				if (tmp && !buffer_uptodate(tmp) && !buffer_locked(tmp))
 					bha[num++] = tmp;
 				else
@@ -186,7 +186,7 @@ udf_fileident_read(struct inode *dir, loff_t *nf_pos,
 		fibh->soffset -= dir->i_sb->s_blocksize;
 		fibh->eoffset -= dir->i_sb->s_blocksize;
 
-		if (!(fibh->ebh = udf_tread(dir->i_sb, block, dir->i_sb->s_blocksize)))
+		if (!(fibh->ebh = udf_tread(dir->i_sb, block)))
 			return NULL;
 
 		if (sizeof(struct fileIdentDesc) > - fibh->soffset)

@@ -49,34 +49,18 @@ extern struct buffer_head *
 udf_tgetblk(struct super_block *sb, int block)
 {
 	if (UDF_QUERY_FLAG(sb, UDF_FLAG_VARCONV))
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,18)
 		return sb_getblk(sb, udf_fixed_to_variable(block));
-#else
-		return getblk(sb->s_dev, udf_fixed_to_variable(block), sb->s_blocksize);
-#endif
 	else
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,18)
 		return sb_getblk(sb, block);
-#else
-		return getblk(sb->s_dev, block, sb->s_blocksize);
-#endif
 }
 
 extern struct buffer_head *
 udf_tread(struct super_block *sb, int block)
 {
 	if (UDF_QUERY_FLAG(sb, UDF_FLAG_VARCONV))
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,18)
 		return sb_bread(sb, udf_fixed_to_variable(block));
-#else
-		return bread(sb->s_dev, udf_fixed_to_variable(block), sb->s_blocksize);
-#endif
 	else
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,18)
 		return sb_bread(sb, block);
-#else
-		return bread(sb->s_dev, block, sb->s_blocksize);
-#endif
 }
 
 extern struct genericFormat *
