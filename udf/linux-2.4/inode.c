@@ -76,6 +76,7 @@ void udf_put_inode(struct inode * inode)
 {
 	lock_kernel();
 	udf_discard_prealloc(inode);
+	write_inode_now(inode);
 	unlock_kernel();
 }
 
@@ -99,11 +100,17 @@ void udf_delete_inode(struct inode * inode)
 {
 	lock_kernel();
 
+	if (is_bad_inode(inode))
+	{
+		clear_inode(inode);
+		goto out;
+	}
+
 	inode->i_size = 0;
 	if (inode->i_blocks)
 		udf_truncate(inode);
 	udf_free_inode(inode);
-
+out:
 	unlock_kernel();
 }
 
@@ -1485,11 +1492,10 @@ int udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 		char *sptr, *dptr;
 		struct buffer_head *nbh;
 		int err, loffset;
-		Uint32	lblock = bloc->logicalBlockNum;
-		Uint16  lpart = bloc->partitionReferenceNum;
+		lb_addr obloc = *bloc;
 
 		if (!(bloc->logicalBlockNum = udf_new_block(inode,
-			lpart, lblock, &err)))
+			obloc.partitionReferenceNum, obloc.logicalBlockNum, &err)))
 		{
 			return -1;
 		}
@@ -1499,7 +1505,7 @@ int udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 			return -1;
 		}
 		aed = (struct AllocExtDesc *)(nbh->b_data);
-		aed->previousAllocExtLocation = cpu_to_le32(lblock);
+		aed->previousAllocExtLocation = cpu_to_le32(obloc.logicalBlockNum);
 		if (*extoffset + adsize > inode->i_sb->s_blocksize)
 		{
 			loffset = *extoffset;
@@ -1516,13 +1522,16 @@ int udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 			sptr = (*bh)->b_data + *extoffset;
 			*extoffset = sizeof(struct AllocExtDesc);
 
-			if (UDF_I_LOCATION(inode).logicalBlockNum == lblock)
-				UDF_I_LENALLOC(inode) += adsize;
-			else
+			if (memcmp(&UDF_I_LOCATION(inode), &obloc, sizeof(lb_addr)))
 			{
 				aed = (struct AllocExtDesc *)(*bh)->b_data;
 				aed->lengthAllocDescs =
 					cpu_to_le32(le32_to_cpu(aed->lengthAllocDescs) + adsize);
+			}
+			else
+			{
+				UDF_I_LENALLOC(inode) += adsize;
+				mark_inode_dirty(inode);
 			}
 		}
 		udf_new_tag(nbh->b_data, TID_ALLOC_EXTENT_DESC, 2, 1,
@@ -1578,7 +1587,7 @@ int udf_write_aext(struct inode *inode, lb_addr bloc, int *extoffset,
 	short_ad *sad = NULL;
 	long_ad *lad = NULL;
 
-    if (!(*bh))
+	if (!(*bh))
 	{
 		if (!(*bh = udf_tread(inode->i_sb,
 			udf_get_lb_pblock(inode->i_sb, bloc, 0),
@@ -1621,6 +1630,8 @@ int udf_write_aext(struct inode *inode, lb_addr bloc, int *extoffset,
 		udf_update_tag((*bh)->b_data,
 			le32_to_cpu(aed->lengthAllocDescs) + sizeof(struct AllocExtDesc));
 	}
+	else
+		mark_inode_dirty(inode);
 
 	mark_buffer_dirty(*bh, 1);
 
