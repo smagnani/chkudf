@@ -18,12 +18,11 @@ UDF_INC = -I../include -I../linux-$(UTS_SHORT) -I$(LINUX)/include
 
 CFLAGS	= $(UDF_INC)\
 	-O2 -Wall -Wstrict-prototypes -I..  -g -D_LARGEFILE64_SOURCE
-LIBS		= ../lib/libudf.a
 
 CHKUDFDIR	= src/chkudf
 CHKUDFDEP	= $(CHKUDFDIR)/chkudf
 
-EXE=dumpsect dumpfe taglist cdinfo mkudf chkudf dumpea checkdisk bmap dumpdisc cdrwtool pktsetup pdumpsect
+EXE=dumpsect dumpfe taglist cdinfo chkudf dumpea checkdisk bmap dumpdisc pdumpsect
 
 all: ../.prereq.ok $(EXE)
 
@@ -57,27 +56,6 @@ dumpdisc: src/dumpdisc.c
 
 bmap: src/bmap.c
 	$(CC) $< $(CFLAGS) -o $@
-
-mkudf:	src/mkudf_main.c src/mkudf.c $(LIBS)
-	@echo "* ------------------------------ *"
-	@echo "* Making Ben Fennema's mkudf ... *"
-	@echo "* ------------------------------ *"
-	$(CC) -I.. src/mkudf_main.c src/mkudf.c $(CFLAGS) $(LIBS) -o $@
-
-cdrwtool:	src/mkudf.c src/cdrwtool.c $(LIBS)
-	@echo "* -------------------------------- *"
-	@echo "* Making Jens Axboe's cdrwtool ... *"
-	@echo "* -------------------------------- *"
-	$(CC) -I.. src/mkudf.c src/cdrwtool.c $(CFLAGS) $(LIBS) -o $@
-
-pktsetup:	src/pktsetup.c
-	@echo "* -------------------------------------------------------- *"
-	@echo "* Making Jens Axboe's pktsetup                         ... *"
-	@echo "* major=97, minor=0-15                                 ... *"
-	@echo "* ftp.kernel.org/pub/linux/kernel/people/axboe/packet/ ... *"
-	@echo "* -------------------------------------------------------- *"
-	$(CC) $< $(CFLAGS) -o $@
-	@if [ ! -b /dev/pktcdvd0 ]; then mknod /dev/pktcdvd0 b 97 0; fi
 
 chkudf: $(CHKUDFDEP)
 	cp $(CHKUDFDEP) .

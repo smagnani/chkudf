@@ -6,7 +6,7 @@ help all:
 	@echo "Pick one of the following targets:"
 	@echo -e "\tmake config\t\t- configure and check system setup"
 	@echo -e "\tmake clean\t\t- clean up the directory"
-	@echo -e "\tmake udftools\t\t- build udf tools"
+	@echo -e "\tmake devtools\t\t- build udf devtools"
 	@echo -e "Module:"
 	@echo -e "\tmake udf.o (or module)\t\t- build Udf module"
 	@echo -e "\tmake install\t\t- install Udf module in /lib"
@@ -19,7 +19,7 @@ help all:
 
 # alternate names
 .PHONY : tools module
-tools: udftools
+tools: devtools
 module: udf.o
 
 .PHONY : config
@@ -60,7 +60,7 @@ update:  .prereq.ok
 remove:  .prereq.ok
 	@$(MAKE) -C patch remove
 
-udftools: .prereq.ok
+devtools: .prereq.ok
 	@$(MAKE) -C tools
 
 install: .prereq.ok
