@@ -7,7 +7,11 @@
 #
 include ../config.mk
 
-MODDIR	= $(PREFIX)/lib/modules/$(UTS_RELEASE)
+ifeq ($(UTS_SHORT),2.2)
+MODDIR	= $(PREFIX)/lib/modules/$(UTS_RELEASE)/fs
+else
+MODDIR	= $(PREFIX)/lib/modules/$(UTS_RELEASE)/kernel/fs/udf
+endif
 
 ifndef CFLAGS
 KFLAGS	= -O2 -Wall -Wstrict-prototypes -pipe
@@ -42,8 +46,8 @@ clean:
 	-rmdir .depfiles
 
 install: $(MODULES) ../.prereq.ok kcheck
-	-mkdir -p $(MODDIR)/fs
-	install -o root -g root -m 644 $(MODULES) $(MODDIR)/fs
+	-mkdir -p $(MODDIR)
+	install -o root -g root -m 644 $(MODULES) $(MODDIR)
 
 # Stuff to automatically maintain dependency files
 
