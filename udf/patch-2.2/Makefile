@@ -181,7 +181,7 @@ kernel.patch.applied: unapply.help2
 patch.update: 
 	@rm -rf $(LINUX)/fs/udf
 	@mkdir $(LINUX)/fs/udf
-	@cp ../src/* $(LINUX)/fs/udf
+	@cp ../src/*.[ch] $(LINUX)/fs/udf
 	@cp Makefile.udf $(LINUX)/fs/udf/Makefile
 	@cp ../include/linux/*.h $(LINUX)/include/linux
 	@cp ../doc/udf.txt $(LINUX)/Documentation/filesystems

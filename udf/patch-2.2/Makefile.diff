@@ -57,7 +57,7 @@ MAINTAIN.diff: builddir
 
 FS.diff: builddir
 	@cp ../Makefile.udf linux/fs/udf/Makefile
-	@cp ../../linux-$(UTS_SHORT)/* linux/fs/udf
+	@cp ../../linux-$(UTS_SHORT)/*.[ch] linux/fs/udf
 	@cp $(LINUX)/fs/Makefile linux.old/linux/fs/Makefile
 	@cp $(LINUX)/fs/Makefile linux/fs/Makefile
 	@/bin/echo -e $(FSMAKESCRIPT1) | $(ED) linux/fs/Makefile  >>ed.log 2>&1
@@ -78,7 +78,7 @@ INCLUDE.diff: builddir
 	@/bin/echo -e $(FSHSCRIPT2) | $(ED) linux/include/linux/fs.h  >>ed.log 2>&1
 	@/bin/echo -e $(FSHSCRIPT3) | $(ED) linux/include/linux/fs.h  >>ed.log 2>&1
 	@/bin/echo -e $(FSHSCRIPT4) | $(ED) linux/include/linux/fs.h  >>ed.log 2>&1
-	@cp ../../include/linux/udf* linux/include/linux
+	@cp ../../include/linux/udf_*.h linux/include/linux
 	@-diff -u --recursive --new-file linux.old/linux/include linux/include > INCLUDE.diff
 
 #
