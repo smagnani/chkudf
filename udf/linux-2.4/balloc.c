@@ -96,7 +96,7 @@ static int read_block_bitmap(struct super_block * sb,
 	loc.logicalBlockNum = bitmap->s_extPosition;
 	loc.partitionReferenceNum = UDF_SB_PARTITION(sb);
 
-	bh = udf_tread(sb, udf_get_lb_pblock(sb, loc, block), sb->s_blocksize);
+	bh = udf_tread(sb, udf_get_lb_pblock(sb, loc, block));
 	if (!bh)
 	{
 		retval = -EIO;
@@ -144,7 +144,7 @@ static inline int load_block_bitmap(struct super_block * sb,
 }
 
 static void udf_bitmap_free_blocks(struct super_block * sb,
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 	struct inode * inode,
 #else
 	const struct inode * inode,
@@ -199,7 +199,7 @@ do_more:
 		else
 		{
 			if (inode)
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 				DQUOT_FREE_BLOCK(inode, 1);
 #else
 				DQUOT_FREE_BLOCK(sb, inode, 1);
@@ -227,7 +227,7 @@ error_return:
 }
 
 static int udf_bitmap_prealloc_blocks(struct super_block * sb,
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 	struct inode * inode,
 #else
 	const struct inode * inode,
@@ -266,7 +266,7 @@ repeat:
 	{
 		if (!udf_test_bit(bit, bh->b_data))
 			goto out;
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 		else if (DQUOT_PREALLOC_BLOCK(inode, 1))
 #else
 		else if (DQUOT_PREALLOC_BLOCK(sb, inode, 1))
@@ -275,7 +275,7 @@ repeat:
 		else if (!udf_clear_bit(bit, bh->b_data))
 		{
 			udf_debug("bit already cleared for block %d\n", bit);
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 			DQUOT_FREE_BLOCK(inode, 1);
 #else
 			DQUOT_FREE_BLOCK(sb, inode, 1);
@@ -303,7 +303,7 @@ out:
 }
 
 static int udf_bitmap_new_blocks(struct super_block * sb,
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 	struct inode * inode,
 #else
 	const struct inode * inode,
@@ -420,7 +420,7 @@ got_block:
 	/*
 	 * Check quota for allocation of this block.
 	 */
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 	if (inode && DQUOT_ALLOC_BLOCK(inode, blocks))
 #else
 	if (inode && DQUOT_ALLOC_BLOCK(sb, inode, blocks))
@@ -460,7 +460,7 @@ error_return:
 }
 
 static void udf_table_free_blocks(struct super_block * sb,
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 	struct inode * inode,
 #else
 	const struct inode * inode,
@@ -487,7 +487,7 @@ static void udf_table_free_blocks(struct super_block * sb,
 	/* We do this up front - There are some error conditions that could occure,
 	   but.. oh well */
 	if (inode)
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 		DQUOT_FREE_BLOCK(inode, count);
 #else
 		DQUOT_FREE_BLOCK(sb, inode, count);
@@ -506,7 +506,7 @@ static void udf_table_free_blocks(struct super_block * sb,
 	elen = 0;
 	obloc = nbloc = UDF_I_LOCATION(table);
 
-	obh = nbh = udf_tread(sb, udf_get_lb_pblock(sb, nbloc, 0), sb->s_blocksize);
+	obh = nbh = udf_tread(sb, udf_get_lb_pblock(sb, nbloc, 0));
 	atomic_inc(&nbh->b_count);
 
 	while (count && (etype =
@@ -614,8 +614,7 @@ static void udf_table_free_blocks(struct super_block * sb,
 			elen -= sb->s_blocksize;
 
 			if (!(nbh = udf_tread(sb,
-				udf_get_lb_pblock(sb, nbloc, 0),
-				sb->s_blocksize)))
+				udf_get_lb_pblock(sb, nbloc, 0))))
 			{
 				udf_release_data(obh);
 				goto error_return;
@@ -711,7 +710,7 @@ error_return:
 }
 
 static int udf_table_prealloc_blocks(struct super_block * sb,
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 	struct inode * inode,
 #else
 	const struct inode * inode,
@@ -740,7 +739,7 @@ static int udf_table_prealloc_blocks(struct super_block * sb,
 	extoffset = sizeof(struct unallocSpaceEntry);
 	bloc = UDF_I_LOCATION(table);
 
-	bh = udf_tread(sb, udf_get_lb_pblock(sb, bloc, 0), sb->s_blocksize);
+	bh = udf_tread(sb, udf_get_lb_pblock(sb, bloc, 0));
 	eloc.logicalBlockNum = 0xFFFFFFFF;
 
 	while (first_block != eloc.logicalBlockNum && (etype =
@@ -756,7 +755,7 @@ static int udf_table_prealloc_blocks(struct super_block * sb,
 		extoffset -= adsize;
 
 		alloc_count = (elen >> sb->s_blocksize_bits);
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 		if (inode && DQUOT_PREALLOC_BLOCK(inode, alloc_count > block_count ? block_count : alloc_count))
 #else
 		if (inode && DQUOT_PREALLOC_BLOCK(sb, inode, alloc_count > block_count ? block_count : alloc_count))
@@ -789,7 +788,7 @@ static int udf_table_prealloc_blocks(struct super_block * sb,
 }
 
 static int udf_table_new_blocks(struct super_block * sb,
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 	struct inode * inode,
 #else
 	const struct inode * inode,
@@ -826,7 +825,7 @@ static int udf_table_new_blocks(struct super_block * sb,
 	extoffset = sizeof(struct unallocSpaceEntry);
 	bloc = UDF_I_LOCATION(table);
 
-	goal_bh = bh = udf_tread(sb, udf_get_lb_pblock(sb, bloc, 0), sb->s_blocksize);
+	goal_bh = bh = udf_tread(sb, udf_get_lb_pblock(sb, bloc, 0));
 	atomic_inc(&goal_bh->b_count);
 
 	while (spread && (etype =
@@ -880,7 +879,7 @@ static int udf_table_new_blocks(struct super_block * sb,
 	goal_eloc.logicalBlockNum += blocks;
 	goal_elen -= (sb->s_blocksize * blocks);
 
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 	if (inode && DQUOT_ALLOC_BLOCK(inode, blocks))
 #else
 	if (inode && DQUOT_ALLOC_BLOCK(sb, inode, blocks))
@@ -912,7 +911,7 @@ static int udf_table_new_blocks(struct super_block * sb,
 }
 
 inline void udf_free_blocks(struct super_block * sb,
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 	struct inode * inode,
 #else
 	const struct inode * inode,
@@ -950,7 +949,7 @@ inline void udf_free_blocks(struct super_block * sb,
 }
 
 inline int udf_prealloc_blocks(struct super_block * sb,
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 	struct inode * inode,
 #else
 	const struct inode * inode,
@@ -986,7 +985,7 @@ inline int udf_prealloc_blocks(struct super_block * sb,
 }
 
 inline int udf_new_blocks(struct super_block * sb,
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 	struct inode * inode,
 #else
 	const struct inode * inode,
