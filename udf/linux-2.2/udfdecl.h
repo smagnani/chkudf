@@ -1,16 +1,15 @@
 #ifndef __UDF_DECL_H
 #define __UDF_DECL_H
 
-#define UDF_VERSION_NOTICE "v0.9.0"
-
 #include <linux/udf_167.h>
 #include <linux/udf_udf.h>
 #include "udfend.h"
 
+#include <linux/udf_fs.h>
+
 #ifdef __KERNEL__
 
 #include <linux/fs.h>
-#include <linux/udf_fs.h>
 #include <linux/types.h>
 #include <linux/config.h>
 
