@@ -2052,7 +2052,7 @@ Sint8 udf_delete_aext(struct inode *inode, lb_addr nbloc, int nextoffset,
 	struct buffer_head *obh;
 	lb_addr obloc;
 	int oextoffset, adsize;
-	char etype;
+	Sint8 etype;
 	struct AllocExtDesc *aed;
 
 	if (!(nbh))
