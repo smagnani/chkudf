@@ -61,7 +61,7 @@ static int udf_adinicb_readpage(struct file *file, struct page * page)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,18)
 	bh = sb_bread(inode->i_sb, block);
 #else
-	bh = bread (inode->i_dev, block, inode->i_sb->s_blocksize);
+	bh = bread(inode->i_dev, block, inode->i_sb->s_blocksize);
 #endif
 	if (!bh)
 	{
@@ -96,7 +96,7 @@ static int udf_adinicb_writepage(struct page *page)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,18)
 	bh = sb_bread(inode->i_sb, block);
 #else
-	bh = bread (inode->i_dev, block, inode->i_sb->s_blocksize);
+	bh = bread(inode->i_dev, block, inode->i_sb->s_blocksize);
 #endif
 	if (!bh)
 	{
@@ -133,7 +133,7 @@ static int udf_adinicb_commit_write(struct file *file, struct page *page, unsign
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,18)
 	bh = sb_bread(inode->i_sb, block);
 #else
-	bh = bread (inode->i_dev, block, inode->i_sb->s_blocksize);
+	bh = bread(inode->i_dev, block, inode->i_sb->s_blocksize);
 #endif
 	if (!bh)
 	{
