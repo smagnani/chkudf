@@ -10,7 +10,7 @@ include ../config.mk
 MODDIR	= $(PREFIX)/lib/modules/$(UTS_RELEASE)
 
 ifndef CFLAGS
-KFLAGS	= -O2 -Wall -Wstrict-prototypes -Winline -pipe
+KFLAGS	= -O2 -Wall -Wstrict-prototypes -pipe
 endif
 
 CPPFLAGS= $(PCDEBUG) -D__KERNEL__ -DMODULE -I../include\
@@ -38,7 +38,8 @@ showvars:
 	@echo OBJS $(OBJS)
 
 clean:
-	rm -f core core.* *.o .*.o *.s *.a *~ .depend .depfiles/*.d
+	rm -f core core.* *.o .*.o *.s *.a *~ .depfiles/*.d
+	-rmdir .depfiles
 
 install: $(MODULES) ../.prereq.ok kcheck
 	-mkdir -p $(MODDIR)/fs
