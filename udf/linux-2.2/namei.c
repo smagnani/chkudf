@@ -1562,8 +1562,8 @@ int udf_rename (struct inode * old_dir, struct dentry * old_dentry,
 	if (dir_bh)
 	{
 		dir_fi->icb.extLocation = lelb_to_cpu(UDF_I_LOCATION(new_dir));
-		udf_update_tag((char *)dir_fi, sizeof(struct FileIdentDesc) +
-			cpu_to_le16(dir_fi->lengthOfImpUse));
+		udf_update_tag((char *)dir_fi, (sizeof(struct FileIdentDesc) +
+			cpu_to_le16(dir_fi->lengthOfImpUse) + 3) & ~3);
 		if (UDF_I_ALLOCTYPE(old_inode) == ICB_FLAG_AD_IN_ICB)
 		{
 			mark_inode_dirty(old_inode);
