@@ -77,7 +77,11 @@ static long long udf_file_llseek(struct file * file, long long offset, int origi
 	{
 		file->f_pos = offset;
 		file->f_reada = 0;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
 		file->f_version = ++event;
+#else
+		file->f_version = ++global_event;
+#endif
 	}
 	return offset;
 }
@@ -298,7 +302,7 @@ static ssize_t udf_file_write_adinicb(struct file * filp, const char * buf,
 	if (inode->i_sb->s_blocksize < (udf_file_entry_alloc_offset(inode) +
 		pos + count))
 	{
-		udf_expand_file_adinicb(inode, pos + count, &err);
+		udf_expand_file_adinicb(filp, pos + count, &err);
 		if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
 		{
 			udf_debug("udf_expand_adinicb: err=%d\n", err);
