@@ -546,8 +546,17 @@ static void udf_split_extents(struct inode *inode, int *c, int offset, int newbl
 
 		if (offset)
 		{
-			laarr[curr].extLength = type |
-				(offset << inode->i_sb->s_blocksize_bits);
+			if ((type >> 30) == EXTENT_NOT_RECORDED_ALLOCATED)
+			{
+				udf_free_blocks(inode->i_sb, inode, laarr[curr].extLocation, 0, offset);
+				laarr[curr].extLength = (EXTENT_NOT_RECORDED_NOT_ALLOCATED << 30) |
+					(offset << inode->i_sb->s_blocksize_bits);
+				laarr[curr].extLocation.logicalBlockNum = 0;
+				laarr[curr].extLocation.partitionReferenceNum = 0;
+			}
+			else
+				laarr[curr].extLength = type |
+					(offset << inode->i_sb->s_blocksize_bits);
 			curr ++;
 			(*c) ++;
 			(*endnum) ++;
