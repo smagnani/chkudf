@@ -1,11 +1,15 @@
-diff -u --recursive --new-file v2.2.1/linux/fs/Config.in linux/fs/Config.in
---- v2.2.1/linux/fs/Config.in	Tue Jan 19 14:07:53 1999
-+++ linux/fs/Config.in	Wed Feb 10 14:45:28 1999
-@@ -46,6 +46,7 @@
-   if [ "$CONFIG_QNX4FS_FS" != "n" ]; then
-     bool '   QNXFS read-write support (FOR TESTING ONLY)' CONFIG_QNX4FS_RW
-   fi    
-+  tristate 'UDF filesystem support (read only) (EXPERIMENTAL)' CONFIG_UDF_FS
+--- linux-2.2.3/fs/Config.in	Fri Mar 12 15:51:44 1999
++++ linux/fs/Config.in	Fri Mar 12 15:57:29 1999
+@@ -26,6 +26,12 @@
+   # needed by nls/Config.in
+   define_bool CONFIG_JOLIET n
  fi
- tristate 'ROM filesystem support' CONFIG_ROMFS_FS
- tristate 'Second extended fs support' CONFIG_EXT2_FS
++if [ "$CONFIG_EXPERIMENTAL" = "y" ]; then
++  tristate 'UDF filesystem support (EXPERIMENTAL)' CONFIG_UDF_FS
++  if [ "$CONFIG_UDF_FS" != "n"]; then
++    bool '   UDF read-write support (FOR TESTING ONLY)' CONFIG_UDF_RW
++  fi
++fi
+ 
+ tristate 'Minix fs support' CONFIG_MINIX_FS
+ tristate 'NTFS filesystem support (read only)' CONFIG_NTFS_FS

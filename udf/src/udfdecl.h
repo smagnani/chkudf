@@ -1,7 +1,7 @@
 #ifndef __UDF_DECL_H
 #define __UDF_DECL_H
 
-#define UDF_VERSION_NOTICE "v0.8"
+#define UDF_VERSION_NOTICE "v0.8.0.1"
 
 #ifdef __KERNEL__
 
@@ -15,10 +15,6 @@
 
 #if LINUX_VERSION_CODE < 0x020170
 #error "The UDF Module Current Requires Kernel Version 2.1.70 or greater"
-#endif
-
-#ifndef UDF_COMPILING
-#define UDF_COMPILING
 #endif
 
 /* if we're not defined, we must be compiling outside of the kernel tree */

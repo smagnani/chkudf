@@ -61,7 +61,7 @@ int udf_build_ustr_exact(struct ustr *dest, dstring *ptr, int exactsize)
 
     memset(dest, 0, sizeof(struct ustr));
     dest->u_cmpID=ptr[0];
-    dest->u_len=exactsize;
+    dest->u_len=exactsize-1;
     memcpy(dest->u_name, ptr+1, exactsize-1);
     return 0;
 }
@@ -278,7 +278,7 @@ int udf_get_filename(char *sname, char *dname, int flen)
 		return 0;
 	}
 
-	if ((len = udf_translate_to_linux(dname, filename.u_name, filename.u_len-1,
+	if ((len = udf_translate_to_linux(dname, filename.u_name, filename.u_len,
 		unifilename.u_name, unifilename.u_len)))
 	{
 		return len;

@@ -1,6 +1,5 @@
-diff -u --recursive --new-file v2.2.1/linux/fs/filesystems.c linux/fs/filesystems.c
---- v2.2.1/linux/fs/filesystems.c	Tue Jan 19 14:07:53 1999
-+++ linux/fs/filesystems.c	Wed Feb 10 14:45:28 1999
+--- linux-2.2.3/fs/filesystems.c	Fri Mar 12 15:50:38 1999
++++ linux/fs/filesystems.c	Fri Mar 12 15:59:56 1999
 @@ -25,6 +25,7 @@
  #include <linux/romfs_fs.h>
  #include <linux/auto_fs.h>
@@ -9,14 +8,14 @@ diff -u --recursive --new-file v2.2.1/linux/fs/filesystems.c linux/fs/filesystem
  #include <linux/ntfs_fs.h>
  #include <linux/hfs_fs.h>
  #include <linux/devpts_fs.h>
-@@ -145,6 +146,10 @@
+@@ -143,6 +144,10 @@
+ 
+ #ifdef CONFIG_QNX4FS_FS
  	init_qnx4_fs();
- #endif
-    
-+#ifdef CONFIG_UDF_FS
-+	init_udf_fs();
 +#endif
 +
- #ifdef CONFIG_NLS
- 	init_nls();
++#ifdef CONFIG_UDF_FS
++	init_udf_fs();
  #endif
+    
+ #ifdef CONFIG_NLS

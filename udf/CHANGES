@@ -66,3 +66,5 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
 03/07/99 blf	Beginnings of write support.. chmod + rm of files.
 				New implementation of udf_bmap			
 				Updates to mkudf
+
+03/12/99 blf	Bug fixes. Support for reading length on MMC-3 drives.

@@ -1,12 +1,11 @@
-diff -u --recursive --new-file v2.2.1/linux/Documentation/Configure.help linux/Documentation/Configure.help
---- v2.2.1/linux/Documentation/Configure.help	Tue Jan 19 14:07:53 1999
-+++ linux/Documentation/Configure.help	Wed Feb 10 14:45:28 1999
-@@ -7016,6 +7016,19 @@
+--- linux-2.2.3/Documentation/Configure.help	Fri Mar 12 15:51:43 1999
++++ linux/Documentation/Configure.help	Fri Mar 12 16:01:52 1999
+@@ -6797,6 +6797,23 @@
+   like lynx or netscape). Say Y here if you want to be able to read
+   Joliet CDROMs under Linux.
  
-   If unsure, say N.
- 
-+UDF filesystem support (EXPERIMENTAL)
-+CONFIG_UDF_FS  
++UDF Filesystem support (EXPERIMENTAL)
++CONFIG_UDF_FS
 +  This is the new filesystem used by some CDROMS and DVD drivers. 
 +  Say Y if you intend to mount DVD discs or CDRWs written in packet mode,
 +  or if written to by other UDF utilities, such as DirectCD.
@@ -18,6 +17,10 @@ diff -u --recursive --new-file v2.2.1/linux/Documentation/Configure.help linux/D
 +
 +  If unsure, say N.
 +
- Kernel automounter support
- CONFIG_AUTOFS_FS
-   The automounter is a tool to automatically mount remote filesystems
++UDF read-write support (FOR TESTING ONLY)
++CONFIG_UDF_RW
++  Say Y if you want to test write support for UDF filesystems.
++
+ fat fs support
+ CONFIG_FAT_FS
+   If you want to use one of the FAT-based filesystems (the MS-DOS,

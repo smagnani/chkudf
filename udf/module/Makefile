@@ -16,15 +16,16 @@ UDF_INC		= ../include
 UDF_CONFIG	= $(UDF_INC)/config/udf.h
 CFLAGS_DEBUG = -DDEBUG -g
 
-CFLAGS		= -D__KERNEL__=1 $(KERNH) -DUDF_COMPILING\
-	-DMODULE -O2 -Wall -Wstrict-prototypes -I$(UDF_INC) 
+CFLAGS		= -D__KERNEL__=1 $(KERNH)\
+	-DMODULE -DCONFIG_UDF_FS_EXT -O2 -Wall -Wstrict-prototypes -I$(UDF_INC) 
 
 CFLAGS += $(CFLAGS_DEBUG)
 #
-# comment out following if you add our include files to linux/fs.h!
+# comment out following if you don't want experimental write support
 #
-CFLAGS += -DCONFIG_UDF_FS_EXT
+CFLAGS += -DCONFIG_UDF_RW
 #
+
 # ---------------------------------------------------------
 # you shouldn't need to change (much) below this
 #

@@ -1,5 +1,3 @@
-#if !defined(_LINUX_UDF_FS_I_H)
-#define _LINUX_UDF_FS_I_H
 /*
  * udf_fs_i.h
  *
@@ -17,14 +15,18 @@
  *	Each contributing author retains all rights to their own work.
  */
 
+#if !defined(_LINUX_UDF_FS_I_H)
+#define _LINUX_UDF_FS_I_H
+
 #ifdef __KERNEL__
 
-#if !defined(UDF_COMPILING)
-struct udf_inode_info {
-    __u32 reserved[16];
-};
-
-#else
+#ifndef _LINUX_UDF_167_H
+typedef struct
+{
+	__u32 logicalBlockNum;
+	__u16 partitionReferenceNum;
+} lb_addr;
+#endif
 
 struct udf_inode_info
 {
@@ -32,14 +34,13 @@ struct udf_inode_info
 	__u32 i_alloc_type;
 		/* next 3 are shortcuts to first extent */
 	lb_addr i_ext0Location;	/* partition relative */
+	lb_addr i_location;
 	__u32 i_ext0Length;  	/* in blocks */
 	__u32 i_ext0Offset;	/* for short directories */
-	lb_addr i_location;
 	__u32 i_partref;
 	__u64 i_fileLength;
 	__u64 i_unique;
 };
-#endif
 
 #endif
 

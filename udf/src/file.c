@@ -569,7 +569,6 @@ static int udf_mknod(struct inode *, struct dentry *, ints, int);
 static int udf_rename(struct inode *, struct dentry *, struct inode *,
 	struct dentry *);
 static int udf_writepage(struct inode *, struct page *);
-static void udf_truncate(struct inode *);
 static int udf_updatepage(struct inode *, struct page *, const char *,
 	unsigned long, unsigned int, int);
 static int udf_revalidate(struct inode *);
@@ -625,7 +624,11 @@ struct inode_operations udf_file_inode_operations= {
 #endif
 	NULL,			/* writepage */
 	udf_bmap,		/* bmap */
+#ifdef CONFIG_UDF_RW
+	udf_truncate,	/* truncate */
+#else
 	NULL,			/* truncate */
+#endif
 #ifdef CONFIG_UDF_FULL_FS
 	udf_permission,		/* permission */
 #else
@@ -722,30 +725,6 @@ udf_writepage(struct inode *inode, struct page *)
 	return -1;
 }
 
-/*
- * udf_truncate
- *
- * PURPOSE
- *	Truncate a file.
- *
- * DESCRIPTION
- *	This routine is called by sys_truncate() to reduce the size of a file.
- *
- * PRE-CONDITIONS
- *	inode			Pointer to inode of file to truncate.
- *
- * POST-CONDITIONS
- *	None.
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static void
-udf_truncate(struct inode *inode)
-{
-	return -1;
-}
 #endif
 
 #ifdef CONFIG_UDF_FULL_FS

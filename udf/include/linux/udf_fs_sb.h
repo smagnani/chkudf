@@ -1,5 +1,3 @@
-#if !defined(_LINUX_UDF_FS_SB_H)
-#define _LINUX_UDF_FS_SB_H
 /*
  * udf_fs_sb.h
  * 
@@ -17,17 +15,8 @@
  *	Each contributing author retains all rights to their own work.
  */
 
-#define UDF_SB_APPROX_SIZE	40
-
-#if !defined(UDF_COMPILING)
-
-/* make things easier for the kernel when we're not compiled in ... */
-struct udf_sb_info {
-	__u32 reserved[UDF_SB_APPROX_SIZE]; 
-			/* ... but leave enough room for the module! */
-};
-
-#else
+#if !defined(_LINUX_UDF_FS_SB_H)
+#define _LINUX_UDF_FS_SB_H
 
 #pragma pack(1)
 
@@ -107,7 +96,5 @@ struct udf_sb_info
 	/* VAT inode */
 	struct inode    *s_vat;
 };
-
-#endif  /* !defined(CONFIG_UDF_FS) */
 
 #endif /* !defined(_LINUX_UDF_FS_SB_H) */

@@ -119,9 +119,17 @@ static struct file_system_type udf_fstype =
 static struct super_operations udf_sb_ops =
 {
 	udf_read_inode,		/* read_inode */
+#ifdef CONFIG_UDF_RW
 	udf_write_inode,	/* write_inode */
+#else
+	NULL,				/* write_inode */
+#endif
 	udf_put_inode,		/* put_inode */
+#ifdef CONFIG_UDF_RW
 	udf_delete_inode,	/* delete_inode */
+#else
+	NULL,				/* delete_inode */
+#endif
 	NULL,				/* notify_change */
 	udf_put_super,		/* put_super */
 	NULL,				/* write_super */
@@ -135,7 +143,7 @@ static struct super_operations udf_sb_ops =
 {
 	udf_read_inode,		/* read_inode */
 	NULL,				/* notify_change */
-#ifdef CONFIG_UDF_WRITE
+#ifdef CONFIG_UDF_RW
 	udf_write_inode,	/* write_inode */
 #else
 	NULL,				/* write_inode */
@@ -402,7 +410,7 @@ udf_remount_fs(struct super_block *sb, int *flags, char *options)
 	UDF_SB(sb)->s_umask =   uopt.umask;
 	UDF_SB(sb)->s_utf8 =    uopt.utf8;
 
-	if ((*flags & MS_RDONLY) == (sb->s_flags * MS_RDONLY))
+	if ((*flags & MS_RDONLY) == (sb->s_flags & MS_RDONLY))
 		return 0;
 	if (*flags & MS_RDONLY)
 		udf_close_lvid(sb);
@@ -519,11 +527,82 @@ udf_get_last_session(kdev_t dev)
 	return vol_desc_start;
 }
 
+int do_scsi(kdev_t dev, struct inode *inode_fake, Uint8 *command, int cmd_len,
+	Uint8 *buffer, Uint32 in_len, Uint32 out_len)
+{
+	extern struct file_operations * get_blkfops(unsigned int);
+	Uint32 *ip;
+
+	ip = (Uint32 *)buffer;
+	ip[0] = out_len;
+	ip[1] = in_len;
+	memcpy(buffer + 8, command, cmd_len);
+	return get_blkfops(MAJOR(dev))->ioctl(inode_fake, NULL, 1, (unsigned long)buffer);
+}
+
+static unsigned int
+udf_get_last_rti(kdev_t dev, struct inode *inode_fake)
+{
+	char buffer[128];
+	int result = 0;
+	int *ip;
+	int track_no;
+	Uint32 trackstart, tracklength, freeblocks;
+	Uint8 cdb[12];
+	unsigned long lastsector = 0;
+
+	ip = (int *)(buffer + 8);
+	memset(cdb, 0, 12);
+	cdb[0] = 0x51;
+	cdb[8] = 32;
+	result = do_scsi(dev, inode_fake, cdb, 10, buffer, 32, 0);
+	if (!result)
+	{
+		track_no = buffer[14];
+		printk(KERN_DEBUG "udf: Generic Read Disc Info worked; last track is %d.\n", track_no);
+		memset(buffer, 0, 128);
+		cdb[0] = 0x52;
+		cdb[1] = 1;
+		cdb[5] = track_no;
+		cdb[8] = 36;
+		result = do_scsi(dev, inode_fake, cdb, 10, buffer, 36, 0);
+		if (!result)
+		{
+			if (buffer[14] & 0x40)
+			{
+				cdb[5] = track_no - 1;
+				result = do_scsi(dev, inode_fake, cdb, 10, buffer, 36, 0);
+			}
+			if (!result)
+			{
+				trackstart = be32_to_cpu(ip[2]);
+				tracklength = be32_to_cpu(ip[6]);
+				freeblocks = be32_to_cpu(ip[4]);
+				printk(KERN_DEBUG "udf: Start %d, length %d, freeblocks %d.\n", trackstart, tracklength, freeblocks);
+				if (buffer[14] & 0x10)
+				{
+					printk(KERN_DEBUG "udf: Packet size %d.\n", be32_to_cpu(ip[5]));
+					lastsector = trackstart + tracklength - 1;
+				}
+				else
+				{
+					printk(KERN_DEBUG "udf: Variable packet written track.\n");
+					lastsector = trackstart + tracklength - 2;
+					if (freeblocks)
+					{
+						lastsector = lastsector - freeblocks - 6;
+					}
+				}
+			}
+		}
+	}
+	return lastsector;
+}
+
 static unsigned int
 udf_get_last_block(kdev_t dev)
 {
 	extern int *blksize_size[];
-	struct cdrom_tocentry toc;
 	struct inode inode_fake;
 	extern struct file_operations * get_blkfops(unsigned int);
 	int i;
@@ -561,9 +640,20 @@ udf_get_last_block(kdev_t dev)
 			lblock *= mult;
 		else if (div)
 			lblock /= div;
+		lblock --;
 
 		if (i != 0)
 		{
+			if ((lblock = udf_get_last_rti(dev, &inode_fake)))
+				i = 0;
+			else
+				i = 1;
+		}
+
+		if (i != 0)
+		{
+			struct cdrom_tocentry toc;
+
 			toc.cdte_format=CDROM_LBA;
 			toc.cdte_track = 0xAA;
 	
@@ -576,11 +666,11 @@ udf_get_last_block(kdev_t dev)
 				lblock = 32 * ((toc.cdte_addr.lba +37)/39);
 #else
 			if (i == 0)
-				lblock = toc.cdte_addr.lba;
+				lblock = toc.cdte_addr.lba - 1;
 #endif
 		}
 		set_fs(old_fs);
-		return lblock - 1;
+		return lblock;
 	}
 	else
 		printk(KERN_DEBUG "udf: device doesn't know how to ioctl?\n");
@@ -1241,6 +1331,7 @@ udf_load_partition(struct super_block *sb, struct AnchorVolDescPtr *anchor, lb_a
 
 static void udf_open_lvid(struct super_block *sb)
 {
+#ifdef CONFIG_UDF_RW
 	if (UDF_SB_LVIDBH(sb))
 	{
 		int i;
@@ -1264,10 +1355,12 @@ static void udf_open_lvid(struct super_block *sb)
 
 		mark_buffer_dirty(UDF_SB_LVIDBH(sb), 1);
 	}
+#endif
 }
 
 static void udf_close_lvid(struct super_block *sb)
 {
+#ifdef CONFIG_UDF_RW
 	if (UDF_SB_LVIDBH(sb) &&
 		UDF_SB_LVID(sb)->integrityType == INTEGRITY_TYPE_OPEN)
 	{
@@ -1292,6 +1385,7 @@ static void udf_close_lvid(struct super_block *sb)
 
 		mark_buffer_dirty(UDF_SB_LVIDBH(sb), 1);
 	}
+#endif
 }
 
 /*
@@ -1444,7 +1538,7 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 		printk(KERN_NOTICE "udf: mounting volume '%s', timestamp %u/%02u/%u %02u:%02u\n",
 			UDF_SB_VOLIDENT(sb), ts.year, ts.month, ts.day, ts.hour, ts.minute);
 	}
-	if (!(UDF_SB(sb)->s_flags & MS_RDONLY))
+	if (!(sb->s_flags & MS_RDONLY))
 		udf_open_lvid(sb);
 	unlock_super(sb);
 

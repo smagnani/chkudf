@@ -253,7 +253,6 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 
 #ifdef CONFIG_UDF_WRITE
 static int udf_link(struct inode *, struct inode *, struct dentry *);
-static int udf_unlink(struct inode *, struct dentry *);
 static int udf_symlink(struct inode *, struct dentry *, const char *);
 static int udf_mkdir(struct inode *, struct dentry *, int);
 static int udf_rmdir(struct inode *, struct dentry *);
@@ -294,32 +293,6 @@ static int udf_smap(struct inode *, int);
  */
 static int
 udf_link(struct inode *inode, struct inode *dir, struct dentry *dentry)
-{
-	return -1;
-}
-
-/*
- * udf_unlink
- *
- * PURPOSE
- *	Unlink (remove) an inode.
- *
- * DESCRIPTION
- *	Call d_delete(dentry) when ready to delete the dentry and inode.
- *
- * PRE-CONDITIONS
- *	dir			Pointer to inode of parent directory.
- *	dentry			Pointer to dentry to unlink.
- *
- * POST-CONDITIONS
- *	<return>		Zero on success.
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static int
-udf_unlink(struct inode *dir, struct dentry *dentry)
 {
 	return -1;
 }
@@ -530,7 +503,6 @@ udf_follow_link(struct inode *inode, struct dentry *dentry)
 #ifdef CONFIG_UDF_WRITE
 static int udf_create(struct inode *, struct dentry *, int);
 static int udf_link(struct inode *, struct inode *, struct dentry *);
-static int udf_unlink(struct inode *, struct dentry *);
 static int udf_symlink(struct inode *, struct dentry *, const char *);
 static int udf_mkdir(struct inode *, struct dentry *, int);
 static int udf_rmdir(struct inode *, struct dentry *);
@@ -579,7 +551,11 @@ struct inode_operations udf_dir_inode_operations= {
 	NULL,			/* create */
 	udf_lookup,		/* lookup */
 	NULL,			/* link */
+#ifdef CONFIG_UDF_RW
 	udf_unlink,		/* unlink */
+#else
+	NULL,			/* unlink */
+#endif
 	NULL,			/* symlink */
 	NULL,			/* mkdir */
 	NULL,			/* rmdir */
