@@ -898,9 +898,9 @@ static int udf_table_new_block(struct super_block * sb,
 
 inline void udf_free_blocks(struct super_block * sb,
 #ifdef QUOTA_CHANGE
-	 struct inode * inode,
+	struct inode * inode,
 #else
-	 const struct inode * inode,
+	const struct inode * inode,
 #endif
 	lb_addr bloc, Uint32 offset, Uint32 count)
 {
