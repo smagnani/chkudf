@@ -56,82 +56,92 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
                 (we really need support for unallocated space tables +
                 freed space tables/bitmaps...)
 
-2/9/99 dgb		Tested with Kernel 2.2.1. 
-				Added some ioctl's for extended attributes and volume ident.
-				Added UDF_COMPILING define to udf_fs_i.h to allow kernel to
-				compile without gagging on lb_addr.
-				Minor change to mkudf so it gives help w/'mkudf' and nothing
-				else. Changed 'dump' to 'dumpsect' to avoid conflict.
+2/9/99 dgb        Tested with Kernel 2.2.1. 
+                Added some ioctl's for extended attributes and volume ident.
+                Added UDF_COMPILING define to udf_fs_i.h to allow kernel to
+                compile without gagging on lb_addr.
+                Minor change to mkudf so it gives help w/'mkudf' and nothing
+                else. Changed 'dump' to 'dumpsect' to avoid conflict.
 
-03/07/99 blf	Beginnings of write support.. chmod + rm of files.
-				New implementation of udf_bmap			
-				Updates to mkudf
+03/07/99 blf    Beginnings of write support.. chmod + rm of files.
+                New implementation of udf_bmap            
+                Updates to mkudf
 
-03/12/99 blf	Bug fixes. Support for reading length on MMC-3 drives.
+03/12/99 blf    Bug fixes. Support for reading length on MMC-3 drives.
 
-03/30/99 blf	Continuation of write support. creation of files. (minus the
-				case where a new block needs to be allocated to fit the FID
-				in the block)
-				Moved all the code that bangs on the CDROM to lowlevel.c
-				Added code to do variable -> fixed block translation for
-				reading CDRW's on drives that only support variable packet
-				reading.
-				Futzed with the debugging code a bunch. Added udf_debug and
-				udf_info.
+03/30/99 blf    Continuation of write support. creation of files. (minus the
+                case where a new block needs to be allocated to fit the FID
+                in the block)
+                Moved all the code that bangs on the CDROM to lowlevel.c
+                Added code to do variable -> fixed block translation for
+                reading CDRW's on drives that only support variable packet
+                reading.
+                Futzed with the debugging code a bunch. Added udf_debug and
+                udf_info.
 
-04/09/99 blf	Added Configure script
+04/09/99 blf    Added Configure script
 
-04/19/99 blf	Support for link, symlink, and mknod
+04/19/99 blf    Support for link, symlink, and mknod
 
-05/12/99 blf	Initial support for writing (no sparse files)
+05/12/99 blf    Initial support for writing (no sparse files)
 
-05/28/99 blf	Fixed various directory entry writing bugs. Added rename
-				for files and directories. Add fsync support (untested)
-				Handle VAT's that are in the ICB.
+05/28/99 blf    Fixed various directory entry writing bugs. Added rename
+                for files and directories. Add fsync support (untested)
+                Handle VAT's that are in the ICB.
 
-06/03/99 blf	Fixed writing for files > 1 block
-				Started spliting out support for AD_IN_ICB files.
+06/03/99 blf    Fixed writing for files > 1 block
+                Started spliting out support for AD_IN_ICB files.
 
-06/11/99 dgb	Added a UDF_RECOVERY compile option and update to ./src/namei.c
-				that enables a ".B=xxx" filename syntax, useful for recovering 
-				files from damaged discs.  Modified ./patch/Makefile to 
-				assist in building kernel patches.
+06/11/99 dgb    Added a UDF_RECOVERY compile option and update to ./src/namei.c
+                that enables a ".B=xxx" filename syntax, useful for recovering 
+                files from damaged discs.  Modified ./patch/Makefile to 
+                assist in building kernel patches.
 
-06/16/99 blf	(Hopefully) fixed rename for versions <= 2.2.5
-				Fixed sparse files
-				Fixed block allocation algorithm to function properly
+06/16/99 blf    (Hopefully) fixed rename for versions <= 2.2.5
+                Fixed sparse files
+                Fixed block allocation algorithm to function properly
 
-07/15/99 blf	Fixed deletes (truncate problems)
-				Fixed various write bugs
-				Add block extension to truncate routine
-				Recalculate crc on udf_insert_aext
-				Changes to mkudf
+07/15/99 blf    Fixed deletes (truncate problems)
+                Fixed various write bugs
+                Add block extension to truncate routine
+                Recalculate crc on udf_insert_aext
+                Changes to mkudf
 
-08/19/99 blf	Ported to linux 2.3.7+
-				Rewrote inode_getblk
+08/19/99 blf    Ported to linux 2.3.7+
+                Rewrote inode_getblk
 
-09/02/99 blf	Fixed unicode and anchor location bugs
+09/02/99 blf    Fixed unicode and anchor location bugs
 
-09/16/99 dgb	Fixed Configure to handle RedHat 6.0's kernel (which reports 
-		"UTS_RELEASE 2.2.5-15".) Fixed Configure to make symlinks for 
-		patch and src directories. Modified patch system to dynamically 
-		create diff files, instead of using pre-build diffs, and to 
-		better handle the apply/unapply. First draft of a FAQ.
-		Modified "make lib" to make both static and shared libraries.
+09/16/99 dgb    Fixed Configure to handle RedHat 6.0's kernel (which reports 
+        "UTS_RELEASE 2.2.5-15".) Fixed Configure to make symlinks for 
+        patch and src directories. Modified patch system to dynamically 
+        create diff files, instead of using pre-build diffs, and to 
+        better handle the apply/unapply. First draft of a FAQ.
+        Modified "make lib" to make both static and shared libraries.
 
-09/18/99 dgb	Updated patch system to properly apply/unapply from kernel 2.2,
-		And updated patch-2.3 to only do updates, since the driver
-		is now in the kernel (2.3.17+).
+09/18/99 dgb    Updated patch system to properly apply/unapply from kernel 2.2,
+        And updated patch-2.3 to only do updates, since the driver
+        is now in the kernel (2.3.17+).
 
-09/27/99 blf	Fixed bug in long directories. Fixed time hour problems.
-				Coped ioctl changes from 2.2 to 2.3 tree. Added 2.3.18 changes
-				to 2.2 tree.
+09/27/99 blf    Fixed bug in long directories. Fixed time hour problems.
+                Coped ioctl changes from 2.2 to 2.3 tree. Added 2.3.18 changes
+                to 2.2 tree.
 
-10/29/99 blf	Some read fixes and lots of write fixes.
-				Fixed mkudf so it hopefully correctly detects the size of
-				media.
+10/29/99 blf    Some read fixes and lots of write fixes.
+                Fixed mkudf so it hopefully correctly detects the size of
+                media.
 
-11/18/99 blf	Re-orgranized udfdecl.h
-				Fixed extent generation for continuous files > 2^30 - blocksize
-				Fixed FileIdent location for FileIdents starting on a block boundary.
-				mkudf updates
+11/18/99 blf    Re-orgranized udfdecl.h
+                Fixed extent generation for continuous files > 2^30 - blocksize
+                Fixed FileIdent location for FileIdents starting on a block boundary.
+                mkudf updates
+
+01/17/00 blf    Fix UTS_SHORT to handle non numeric extraversions
+                Tested/Fixed UTF-8 <-> Wide character handling
+                Rewrote partition handling
+                Read sparing table into RAM to allow for adding entries to it
+                removed UDF_I_EXT0... info from the inode
+                Changing write code to only expand ADINICB files when we have to
+                Added code to allow ADINICB files to be mmap'd
+                Sync'd changes with 2.3 development
+                Got rid of the semaphore in udf_iget
