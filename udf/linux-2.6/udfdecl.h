@@ -109,7 +109,6 @@ extern int8_t udf_insert_aext(struct inode *, lb_addr, int, lb_addr, uint32_t, s
 extern int8_t udf_delete_aext(struct inode *, lb_addr, int, lb_addr, uint32_t, struct buffer_head *);
 extern int8_t udf_next_aext(struct inode *, lb_addr *, int *, lb_addr *, uint32_t *, struct buffer_head **, int);
 extern int8_t udf_current_aext(struct inode *, lb_addr *, int *, lb_addr *, uint32_t *, struct buffer_head **, int);
-extern void udf_discard_prealloc(struct inode *);
 
 /* misc.c */
 extern int udf_read_tagged_data(char *, int size, int fd, int block, int partref);
@@ -145,6 +144,7 @@ extern void udf_free_inode(struct inode *);
 extern struct inode * udf_new_inode (struct inode *, int, int *);
 
 /* truncate.c */
+extern void udf_discard_prealloc(struct inode *);
 extern void udf_truncate_extents(struct inode *);
 
 /* balloc.c */
