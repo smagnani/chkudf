@@ -1,15 +1,11 @@
 #ifndef __LINUX_UDF_I_H
 #define __LINUX_UDF_I_H
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,3)
 #include <linux/udf_fs_i.h>
 static inline struct udf_inode_info *UDF_I(struct inode *inode)
 {
 	return list_entry(inode, struct udf_inode_info, vfs_inode);
 }
-#else
-#define UDF_I(X)		(&((X)->u.udf_i))
-#endif
 
 #define UDF_I_LOCATION(X)	( UDF_I(X)->i_location )
 #define UDF_I_LENEATTR(X)	( UDF_I(X)->i_lenEAttr )

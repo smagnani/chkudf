@@ -33,8 +33,8 @@
 #include <linux/mm.h>
 #include <linux/slab.h>
 #include <linux/quotaops.h>
-#include <linux/locks.h>
 #include <linux/smp_lock.h>
+#include <linux/buffer_head.h>
 
 static inline int udf_match(int len, const char * const name, struct qstr *qs)
 {
@@ -304,7 +304,8 @@ udf_lookup(struct inode *dir, struct dentry *dentry)
 	{
 		lb_addr lb = { 0, simple_strtoul(dentry->d_name.name+3, NULL, 0) };
 		inode = udf_iget(dir->i_sb, lb);
-		if (!inode) {
+		if (!inode)
+		{
 			unlock_kernel();
 			return ERR_PTR(-EACCES);
 		}
@@ -319,7 +320,8 @@ udf_lookup(struct inode *dir, struct dentry *dentry)
 		udf_release_data(fibh.sbh);
 
 		inode = udf_iget(dir->i_sb, lelb_to_cpu(cfi.icb.extLocation));
-		if ( !inode ) {
+		if ( !inode )
+		{
 			unlock_kernel();
 			return ERR_PTR(-EACCES);
 		}
@@ -635,7 +637,8 @@ static int udf_create(struct inode *dir, struct dentry *dentry, int mode)
 
 	lock_kernel();
 	inode = udf_new_inode(dir, mode, &err);
-	if (!inode) {
+	if (!inode)
+	{
 		unlock_kernel();
 		return err;
 	}
@@ -990,7 +993,7 @@ static int udf_symlink(struct inode * dir, struct dentry * dentry, const char * 
 		bh = udf_tread(inode->i_sb, block);
 		lock_buffer(bh);
 		memset(bh->b_data, 0x00, inode->i_sb->s_blocksize);
-		mark_buffer_uptodate(bh, 1);
+		set_buffer_uptodate(bh);
 		unlock_buffer(bh);
 		mark_buffer_dirty_inode(bh, inode);
 	}
@@ -1120,12 +1123,14 @@ static int udf_link(struct dentry * old_dentry, struct inode * dir,
 	struct fileIdentDesc cfi, *fi;
 
 	lock_kernel();
-	if (inode->i_nlink >= (256<<sizeof(inode->i_nlink))-1) {
+	if (inode->i_nlink >= (256<<sizeof(inode->i_nlink))-1)
+	{
 		unlock_kernel();
 		return -EMLINK;
 	}
 
-	if (!(fi = udf_add_entry(dir, dentry, &fibh, &cfi, &err))) {
+	if (!(fi = udf_add_entry(dir, dentry, &fibh, &cfi, &err)))
+	{
 		unlock_kernel();
 		return err;
 	}

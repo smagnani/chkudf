@@ -35,6 +35,8 @@
 #include <linux/errno.h>
 #include <linux/mm.h>
 #include <linux/slab.h>
+#include <linux/smp_lock.h>
+#include <linux/buffer_head.h>
 
 #include "udf_i.h"
 #include "udf_sb.h"
@@ -83,15 +85,21 @@ int udf_readdir(struct file *filp, void *dirent, filldir_t filldir)
 	struct inode *dir = filp->f_dentry->d_inode;
 	int result;
 
+	lock_kernel();
+
 	if ( filp->f_pos == 0 ) 
 	{
 		if (filldir(dirent, ".", 1, filp->f_pos, dir->i_ino, DT_DIR) < 0)
+		{
+			unlock_kernel();
 			return 0;
+		}
 		filp->f_pos ++;
 	}
  
 	result = do_udf_readdir(dir, filp, filldir, dirent);
 	UPDATE_ATIME(dir);
+	unlock_kernel();
  	return result;
 }
 
@@ -221,11 +229,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 
 		if ( cfi.fileCharacteristics & FID_FILE_CHAR_PARENT )
 		{
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,5)
 			iblock = parent_ino(filp->f_dentry);
-#else
-			iblock = udf_get_lb_pblock(dir->i_sb, UDF_I_LOCATION(filp->f_dentry->d_parent->d_inode), 0);
-#endif
 			flen = 2;
 			memcpy(fname, "..", flen);
 			dt_type = DT_DIR;

@@ -35,6 +35,7 @@
 #include <linux/slab.h>
 #include <linux/pagemap.h>
 #include <linux/smp_lock.h>
+#include <linux/buffer_head.h>
 #include "udf_i.h"
 
 static void udf_pc_to_char(char *from, int fromlen, char *to)
@@ -107,17 +108,12 @@ static int udf_symlink_filler(struct file *file, struct page *page)
 
 	udf_pc_to_char(symlink, inode->i_size, p);
 	udf_release_data(bh);
-
-	unlock_kernel();
-	SetPageUptodate(page);
-	kunmap(page);
-	UnlockPage(page);
-	return 0;
+	err = 0;
 out:
 	unlock_kernel();
 	SetPageError(page);
 	kunmap(page);
-	UnlockPage(page);
+	unlock_page(page);
 	return err;
 }
 

@@ -37,8 +37,9 @@
 #include <linux/kernel.h>
 #include <linux/string.h> /* memset */
 #include <linux/errno.h>
-#include <linux/locks.h>
 #include <linux/smp_lock.h>
+#include <linux/pagemap.h>
+#include <linux/buffer_head.h>
 
 #include "udf_i.h"
 #include "udf_sb.h"
@@ -71,7 +72,7 @@ static int udf_adinicb_readpage(struct file *file, struct page * page)
 	SetPageUptodate(page);
 out:
 	kunmap(page);
-	UnlockPage(page);
+	unlock_page(page);
 	return err;
 }
 
@@ -102,7 +103,7 @@ static int udf_adinicb_writepage(struct page *page)
 	SetPageUptodate(page);
 out:
 	kunmap(page);
-	UnlockPage(page);
+	unlock_page(page);
 	return err;
 }
 

@@ -8,15 +8,12 @@
 #include <linux/fs.h>
 #include <linux/config.h>
 #include <linux/types.h>
+#include <linux/buffer_head.h>
+#include <linux/udf_fs_i.h>
+#include <linux/udf_fs_sb.h>
 
 #ifndef LINUX_VERSION_CODE
 #include <linux/version.h>
-#endif
-
-#if !defined(CONFIG_UDF_FS) && !defined(CONFIG_UDF_FS_MODULE)
-#define CONFIG_UDF_FS_MODULE
-#include <linux/udf_fs_i.h>
-#include <linux/udf_fs_sb.h>
 #endif
 
 #include "udfend.h"
