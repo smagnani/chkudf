@@ -137,7 +137,7 @@ extern int udf_ioctl(struct inode *, struct file *, unsigned int, unsigned long)
 /* inode.c */
 extern struct inode *udf_iget(struct super_block *, lb_addr);
 extern int udf_sync_inode(struct inode *);
-extern void udf_expand_file_adinicb(struct inode *, int, int *);
+extern void udf_expand_file_adinicb(struct file *, int, int *);
 extern struct buffer_head * udf_expand_dir_adinicb(struct inode *, int *, int *);
 extern struct buffer_head * udf_getblk(struct inode *, long, int, int *);
 extern struct buffer_head * udf_bread(struct inode *, int, int, int *);
