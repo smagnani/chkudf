@@ -632,7 +632,6 @@ static void udf_prealloc_extents(struct inode *inode, int c, int lastblock,
 
 		if (numalloc)
 		{
-			UDF_I_LENEXTENTS(inode) += numalloc << inode->i_sb->s_blocksize_bits;
 			if (start == (c+1))
 				laarr[start].extLength +=
 					(numalloc << inode->i_sb->s_blocksize_bits);
@@ -656,7 +655,7 @@ static void udf_prealloc_extents(struct inode *inode, int c, int lastblock,
 
 				if (elen > numalloc)
 				{
-					laarr[c+1].extLength -=
+					laarr[i].extLength -=
 						(numalloc << inode->i_sb->s_blocksize_bits);
 					numalloc = 0;
 				}
@@ -670,6 +669,7 @@ static void udf_prealloc_extents(struct inode *inode, int c, int lastblock,
 					(*endnum) --;
 				}
 			}
+			UDF_I_LENEXTENTS(inode) += numalloc << inode->i_sb->s_blocksize_bits;
 		}
 	}
 }
@@ -1243,6 +1243,9 @@ udf_update_inode(struct inode *inode, int do_sync)
 	int i;
 	timestamp cpu_time;
 	int err = 0;
+
+	if (inode->i_count == 0)
+		udf_discard_prealloc(inode);
 
 	bh = udf_tread(inode->i_sb,
 		udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0),
