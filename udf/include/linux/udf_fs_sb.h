@@ -18,7 +18,9 @@
 #if !defined(_LINUX_UDF_FS_SB_H)
 #define _LINUX_UDF_FS_SB_H
 
+#ifndef LINUX_VERSION_CODE
 #include <linux/version.h>
+#endif
 
 #pragma pack(1)
 
