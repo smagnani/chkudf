@@ -242,7 +242,7 @@ udf_parse_options(char *options, struct udf_options *uopt)
 	char *opt, *val;
 
 	uopt->novrs = 0;
-	uopt->blocksize = 2048;
+	uopt->blocksize = 512;
 	uopt->partition = 0xFFFF;
 	uopt->session = 0xFFFFFFFF;
 	uopt->lastblock = 0xFFFFFFFF;
@@ -377,8 +377,8 @@ static  int
 udf_set_blocksize(struct super_block *sb, int bsize)
 {
 	/* Use specified block size if specified */
-	sb->s_blocksize = get_hardblocksize(sb->s_dev);
-	sb->s_blocksize = sb->s_blocksize ? sb->s_blocksize : 2048;
+	if (!(sb->s_blocksize = get_hardblocksize(sb->s_dev)))
+		sb->s_blocksize = 2048;
 	if (bsize > sb->s_blocksize)
 		sb->s_blocksize = bsize;
 
@@ -424,7 +424,7 @@ udf_vrs(struct super_block *sb, int silent)
 	for (;!nsr02 && !nsr03; sector += 2048)
 	{
 		/* Read a block */
-		bh = udf_tread(sb, sector >> sb->s_blocksize_bits, 2048);
+		bh = udf_tread(sb, sector >> sb->s_blocksize_bits, sb->s_blocksize);
 		if (!bh)
 			break;
 
@@ -775,7 +775,7 @@ udf_load_pvoldesc(struct super_block *sb, struct buffer_head *bh)
 
 	if ( !udf_build_ustr(&instr, pvoldesc->volIdent, 32) )
 	{
-		if (!udf_CS0toUTF8(&outstr, &instr))
+		if (udf_CS0toUTF8(&outstr, &instr))
 		{
 			udf_debug("volIdent[] = '%s'\n", outstr.u_name);
 			strncpy( UDF_SB_VOLIDENT(sb), outstr.u_name, outstr.u_len);
@@ -784,7 +784,7 @@ udf_load_pvoldesc(struct super_block *sb, struct buffer_head *bh)
 
 	if ( !udf_build_ustr(&instr, pvoldesc->volSetIdent, 128) )
 	{
-		if (!udf_CS0toUTF8(&outstr, &instr))
+		if (udf_CS0toUTF8(&outstr, &instr))
 			udf_debug("volSetIdent[] = '%s'\n", outstr.u_name);
 	}
 }
@@ -1347,7 +1347,7 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	udf_debug("Multi-session=%d\n", UDF_SB_SESSION(sb));
 
 	if ( uopt.lastblock == 0xFFFFFFFF )
-		UDF_SB_LASTBLOCK(sb) = udf_get_last_block(sb, &(UDF_SB(sb)->s_flags));
+		UDF_SB_LASTBLOCK(sb) = udf_get_last_block(sb);
 	else
 		UDF_SB_LASTBLOCK(sb) = uopt.lastblock;
 
