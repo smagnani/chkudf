@@ -1213,10 +1213,21 @@ static int udf_rename (struct inode * old_dir, struct dentry * old_dentry,
 				goto end_rename;
 		}
 		retval = -EIO;
-		dir_bh = udf_bread(old_inode, 0, 0, &retval);
-		if (!dir_bh)
-			goto end_rename;
-		dir_fi = udf_get_fileident(dir_bh->b_data, old_inode->i_sb->s_blocksize, &offset);
+		if (UDF_I_ALLOCTYPE(old_inode) == ICBTAG_FLAG_AD_IN_ICB)
+		{
+			dir_fi = udf_get_fileident(UDF_I_DATA(old_inode) -
+			        (UDF_I_EFE(old_inode) ?
+					sizeof(struct extendedFileEntry) :
+					sizeof(struct fileEntry)),
+				old_inode->i_sb->s_blocksize, &offset);
+		}
+		else
+		{
+			dir_bh = udf_bread(old_inode, 0, 0, &retval);
+			if (!dir_bh)
+				goto end_rename;
+			dir_fi = udf_get_fileident(dir_bh->b_data, old_inode->i_sb->s_blocksize, &offset);
+		}
 		if (!dir_fi)
 			goto end_rename;
 		if (udf_get_lb_pblock(old_inode->i_sb, cpu_to_lelb(dir_fi->icb.extLocation), 0) !=
@@ -1266,7 +1277,7 @@ static int udf_rename (struct inode * old_dir, struct dentry * old_dentry,
 	UDF_I_UCTIME(old_dir) = UDF_I_UMTIME(old_dir) = CURRENT_UTIME;
 	mark_inode_dirty(old_dir);
 
-	if (dir_bh)
+	if (dir_fi)
 	{
 		dir_fi->icb.extLocation = lelb_to_cpu(UDF_I_LOCATION(new_dir));
 		udf_update_tag((char *)dir_fi, (sizeof(struct fileIdentDesc) +
