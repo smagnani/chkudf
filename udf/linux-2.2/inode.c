@@ -384,6 +384,14 @@ static struct buffer_head * inode_getblk(struct inode * inode, long block,
 	if (etype == -1)
 	{
 		endnum = startnum = ((count > 1) ? 1 : count);
+		if (laarr[c].extLength & (inode->i_sb->s_blocksize - 1))
+		{
+			laarr[c].extLength =
+				(laarr[c].extLength & UDF_EXTENT_FLAG_MASK) |
+				(((laarr[c].extLength & UDF_EXTENT_LENGTH_MASK) +
+					inode->i_sb->s_blocksize - 1) &
+				~(inode->i_sb->s_blocksize - 1));
+		}
 		c = !c;
 		laarr[c].extLength = (EXTENT_NOT_RECORDED_NOT_ALLOCATED << 30) |
 			((offset + 1) << inode->i_sb->s_blocksize_bits);

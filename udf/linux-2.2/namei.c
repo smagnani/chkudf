@@ -534,7 +534,14 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 		if (!(fibh->sbh = fibh->ebh = udf_expand_dir_adinicb(dir, &block, err)))
 			return NULL;
 		bloc = UDF_I_LOCATION(dir);
+		eloc.logicalBlockNum = block;
+		eloc.partitionReferenceNum = UDF_I_LOCATION(dir).partitionReferenceNum;
+		elen = dir->i_sb->s_blocksize;
 		extoffset = udf_file_entry_alloc_offset(dir);
+		if (UDF_I_ALLOCTYPE(dir) == ICB_FLAG_AD_SHORT)
+			extoffset += sizeof(short_ad);
+		else if (UDF_I_ALLOCTYPE(dir) == ICB_FLAG_AD_LONG)
+			extoffset += sizeof(long_ad);
 	}
 
 	if (sb->s_blocksize - fibh->eoffset >= nfidlen)
