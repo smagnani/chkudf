@@ -270,7 +270,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 		else
 		{
 			iblock = udf_get_lb_pblock(dir->i_sb, lelb_to_cpu(cfi.icb.extLocation), 0);
-			flen = udf_get_filename(nameptr, fname, lfi);
+			flen = udf_get_filename(dir->i_sb, nameptr, fname, lfi);
 		}
 
 		if (flen)
