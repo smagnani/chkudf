@@ -152,6 +152,7 @@ void udf_expand_file_adinicb(struct file * filp, int newsize, int * err)
 		0, UDF_I_LENALLOC(inode));
 	UDF_I_LENALLOC(inode) = 0;
 	UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_LONG;
+	inode->i_blocks = inode->i_sb->s_blocksize / 512;
 	mark_buffer_dirty(bh, 1);
 	udf_release_data(bh);
 
@@ -242,7 +243,7 @@ struct buffer_head * udf_expand_dir_adinicb(struct inode *inode, int *block, int
 
 	UDF_I_LENALLOC(inode) = sizeof(newad);
 	UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_LONG;
-	inode->i_blocks += inode->i_sb->s_blocksize / 512;
+	inode->i_blocks = inode->i_sb->s_blocksize / 512;
 	mark_buffer_dirty(sbh, 1);
 	udf_release_data(sbh);
 	mark_inode_dirty(inode);
