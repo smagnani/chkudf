@@ -1,4 +1,4 @@
---- linux-2.2.3/include/linux/fs.h	Fri Mar 12 15:51:45 1999
+--- linux-2.2.5/include/linux/fs.h	Fri Mar 12 15:51:45 1999
 +++ linux/include/linux/fs.h	Fri Mar 12 16:02:54 1999
 @@ -281,6 +281,7 @@
  #include <linux/hfs_fs_i.h>

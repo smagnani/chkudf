@@ -1,11 +1,15 @@
 *
 * ./Documentation/filesystems/udf.txt
 *
-UDF Filesystem version 0.8	(Experimental isn't kidding!)
+UDF Filesystem version 0.8.1	(Experimental isn't kidding!)
 
 If you encounter problems with reading UDF discs using this driver,
 please report them to linux_udf@hootie.lvld.hp.com, which is the
 developer's list.
+
+The following is not necessarily up to date.
+
+Ben
 
 The driver is known to work 'ok' for discs written with Adaptec's
 DirectCD 2.5, although there's a problem with mis-reported file

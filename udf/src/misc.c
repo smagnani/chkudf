@@ -26,6 +26,7 @@
 
 #include <linux/fs.h>
 #include <linux/string.h>
+#include <linux/udf_fs.h>
 
 #else
 
@@ -98,13 +99,23 @@ gid_t udf_convert_gid(int gidin)
 }
 
 #if defined(__linux__) && defined(__KERNEL__)
+
+extern struct buffer_head *
+udf_bread(struct super_block *sb, int block, int size)
+{
+	if (UDF_SB(sb)->s_flags & UDF_FLAG_VARCONV)
+		return bread(sb->s_dev, udf_fixed_to_variable(block), size);
+	else
+		return bread(sb->s_dev, block, size);
+}
+
 extern struct buffer_head *
 udf_read_untagged(struct super_block *sb, Uint32 block, Uint32 offset)
 {
 	struct buffer_head *bh;
 
 	/* Read the block */
-	bh = bread(sb->s_dev, block+offset, sb->s_blocksize);
+	bh = udf_bread(sb, block+offset, sb->s_blocksize);
 	if (!bh)
 	{
 		printk(KERN_ERR "udf: udf_read_untagged(%p,%d,%d) failed\n",
@@ -134,17 +145,15 @@ udf_read_tagged(struct super_block *sb, Uint32 block, Uint32 location, Uint16 *i
 
 	/* Read the block */
 #ifdef VDEBUG
-	printk(KERN_DEBUG "udf: udf_read_tagged(%p,%d,%d)\n",
-		sb, block, offset);
+	udf_debug("block=%d, location=%d\n", block, location);
 #endif
 	if (block == 0xFFFFFFFF)
 		return NULL;
 
-	bh = bread(sb->s_dev, block, sb->s_blocksize);
+	bh = udf_bread(sb, block, sb->s_blocksize);
 	if (!bh)
 	{
-		printk(KERN_ERR "udf: udf_read_tagged(%p,%d,%p) failed\n",
-			sb, block, ident);
+		udf_debug("block=%d, location=%d: read failed\n", block, location);
 		return NULL;
 	}
 
@@ -154,7 +163,7 @@ udf_read_tagged(struct super_block *sb, Uint32 block, Uint32 location, Uint16 *i
 
 	if ( location != le32_to_cpu(tag_p->tagLocation) )
 	{
-		printk(KERN_DEBUG "udf: location mismatch block %d, tag %d != %d\n",
+		udf_debug("location mismatch block %d, tag %d != %d\n",
 			block, le32_to_cpu(tag_p->tagLocation), location);
 		goto error_out;
 	}
@@ -174,7 +183,7 @@ udf_read_tagged(struct super_block *sb, Uint32 block, Uint32 location, Uint16 *i
 	if (le16_to_cpu(tag_p->descVersion) != 0x0002U &&
 		le16_to_cpu(tag_p->descVersion) != 0x0003U)
 	{
-		printk(KERN_ERR "udf: tag version 0x%04x != 0x0002 || 0x0003 block %d\n",
+		udf_debug("tag version 0x%04x != 0x0002 || 0x0003 block %d\n",
 			le16_to_cpu(tag_p->descVersion), block);
 		goto error_out;
 	}
@@ -186,7 +195,7 @@ udf_read_tagged(struct super_block *sb, Uint32 block, Uint32 location, Uint16 *i
 	{
 		return bh;
 	}
-	printk(KERN_ERR "udf: crc failure in udf_read_tagged block %d:crc = %d, crclen = %d\n",
+	udf_debug("Crc failure block %d:crc = %d, crclen = %d\n",
 		block, le16_to_cpu(tag_p->descCRC), le16_to_cpu(tag_p->descCRCLength));
 
 error_out:
@@ -198,9 +207,8 @@ extern struct buffer_head *
 udf_read_ptagged(struct super_block *sb, lb_addr loc, Uint32 offset, Uint16 *ident)
 {
 #ifdef VDEBUG
-	printk(KERN_DEBUG "udf: udf_read_ptagged(%p,%d,%d,%d) block=%d\n",
-		sb, loc.logicalBlockNum, loc.partitionReferenceNum, ident,
-		udf_get_lb_pblock(sb, loc, offset));
+	udf_debug("loc: block=%d, partition=%d, offset=%d\n",
+		loc.logicalBlockNum, loc.partitionReferenceNum, offset);
 #endif
 	return udf_read_tagged(sb, udf_get_lb_pblock(sb, loc, offset),
 		loc.logicalBlockNum + offset, ident);

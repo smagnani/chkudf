@@ -226,7 +226,7 @@ struct SparingTable {
 #define UDF_OS_ID_MKLINUX	0x06U
 #define UDF_OS_ID_FREEBSD	0x07U
 
-#define UDF_NAME_LEN	254
+#define UDF_NAME_LEN	255
 #define UDF_PATH_LEN	1023
 
 #ifdef __linux__

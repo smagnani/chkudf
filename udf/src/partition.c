@@ -27,6 +27,7 @@
 
 #include <linux/fs.h>
 #include <linux/string.h>
+#include <linux/udf_fs.h>
 
 extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partition, Uint32 offset)
 {
@@ -34,14 +35,14 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 
 	if (partition >= UDF_SB_NUMPARTS(sb))
 	{
-		printk(KERN_DEBUG "udf: udf_get_pblock(%p,%d,%d,%d) invalid partition\n",
-			sb, block, partition, offset);
+		udf_debug("block=%d, partition=%d, offset=%d: invalid partition\n",
+			block, partition, offset);
 		return 0xFFFFFFFF;
 	}
 #ifdef VDEBUG
 	else
-		printk(KERN_DEBUG "udf: udf_get_pblock(%p,%d,%d,%d) type %d\n",
-			sb, block, partition, offset, UDF_SB_PARTTYPE(sb, partition));
+		udf_debug("block=%d, partition=%d, offset=%d type=%d\n",
+			 block, partition, offset, UDF_SB_PARTTYPE(sb, partition));
 #endif
 	switch (UDF_SB_PARTTYPE(sb, partition))
 	{
@@ -62,13 +63,10 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 
 			if (block > UDF_SB_TYPEVIRT(sb,partition).s_num_entries)
 			{
-				printk(KERN_DEBUG "udf: trying to access block beyond end of VAT (%d max %d)\n",
+				udf_debug("Trying to access block beyond end of VAT (%d max %d)\n",
 					block, UDF_SB_TYPEVIRT(sb,partition).s_num_entries);
 				return 0xFFFFFFFF;
 			}
-#ifdef VDEBUG
-			printk(KERN_DEBUG "udf: block == %d, index == %d\n", block, index);
-#endif
 
 			if (block >= index)
 			{
@@ -84,14 +82,9 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 
 			loc = udf_bmap(UDF_SB_VAT(sb), newblock);
 
-#ifdef VDEBUG
-			printk(KERN_DEBUG "udf: udf_get_pblock(VAT: (%d,%d)+%d start = %d, newblock = %d, loc = %d, index = %d\n",
-				block, partition, offset, UDF_SB_TYPEVIRT(sb,partition).s_start_offset, newblock, loc, index);
-#endif
-
-			if (!(bh = bread(sb->s_dev, loc, sb->s_blocksize)))
+			if (!(bh = udf_bread(sb, loc, sb->s_blocksize)))
 			{
-				printk(KERN_DEBUG "udf: get_pblock(UDF_VIRTUAL_MAP:%p,%d,%d) VAT: %d[%d]\n",
+				udf_debug("get_pblock(UDF_VIRTUAL_MAP:%p,%d,%d) VAT: %d[%d]\n",
 					sb, block, partition, loc, index);
 				return 0xFFFFFFFF;
 			}
@@ -102,7 +95,7 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 
 			if (UDF_I_LOCATION(UDF_SB_VAT(sb)).partitionReferenceNum == partition)
 			{
-				printk(KERN_DEBUG "udf: recursive call to udf_get_pblock!\n");
+				udf_debug("recursive call to udf_get_pblock!\n");
 				return 0xFFFFFFFF;
 			}
 
@@ -152,7 +145,7 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 							do
 							{
 								udf_release_data(bh);
-								bh = bread(sb->s_dev, spartable, sb->s_blocksize);
+								bh = udf_bread(sb, spartable, sb->s_blocksize);
 								if (!bh)
 									return 0xFFFFFFFF;
 								se = (SparingEntry *)bh->b_data;

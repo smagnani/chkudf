@@ -332,7 +332,7 @@ udf_converttime (struct ktm *tp)
 
   *tp = tm;
 #ifdef __KERNEL__
-  printk(KERN_ERR "udf: udf_converttime() returning %ld\n", t);
+  udf_debug("returning %ld\n", t);
 #endif
   return t;
 }
@@ -343,7 +343,7 @@ static void
 print_ktm (struct ktm *tp)
 {
 #ifdef __KERNEL__
-  printk(KERN_DEBUG  
+  udf_debug(
 #else
   printf(
 #endif

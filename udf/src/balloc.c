@@ -24,13 +24,12 @@
 #include "udfdecl.h"
 #include <linux/fs.h>
 #include <linux/locks.h>
+#include <linux/udf_fs.h>
 
 #include <asm/bitops.h>
 
 #include "udf_i.h"
 #include "udf_sb.h"
-
-#define udf_set_bit(nr,addr) ext2_set_bit(nr,addr)
 
 static int read_block_bitmap(struct super_block * sb, unsigned int block,
 	unsigned long bitmap_nr)
@@ -42,7 +41,7 @@ static int read_block_bitmap(struct super_block * sb, unsigned int block,
 	loc.logicalBlockNum = UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_uspace_bitmap;
 	loc.partitionReferenceNum = UDF_SB_PARTITION(sb);
 
-	bh = bread(sb->s_dev, udf_get_lb_pblock(sb, loc, block), sb->s_blocksize);
+	bh = udf_bread(sb, udf_get_lb_pblock(sb, loc, block), sb->s_blocksize);
 	if (!bh)
 	{
 		retval = -EIO;
@@ -57,18 +56,19 @@ static int load__block_bitmap(struct super_block * sb, unsigned int block)
 	int i, j, retval = 0;
 	unsigned long block_bitmap_number;
 	struct buffer_head * block_bitmap;
-	int sbd_len = (UDF_SB_PARTLEN(sb, UDF_SB_PARTITION(sb)) + sizeof(struct SpaceBitmapDesc)) >> (sb->s_blocksize_bits + 3);
+    int nr_groups = (UDF_SB_PARTLEN(sb, UDF_SB_PARTITION(sb)) +
+        (sizeof(struct SpaceBitmapDesc) << 3) + sb->s_blocksize - 1) / sb->s_blocksize;
 
 #ifdef VDEBUG
-	printk(KERN_DEBUG "udf: load__block_bitmap: %d,%d\n", block, sbd_len);
+	udf_debug("block=%d, nr_groups=%d\n", block, nr_groups);
 #endif
 
-	if (block > sbd_len)
+	if (block >= nr_groups)
 	{
-		printk(KERN_DEBUG "udf: ack!\n");
+		udf_debug("block (%d) > nr_groups (%d)\n", block, nr_groups);
 	}
 
-	if (sbd_len <= UDF_MAX_BLOCK_LOADED)
+	if (nr_groups <= UDF_MAX_BLOCK_LOADED)
 	{
 		if (UDF_SB_BLOCK_BITMAP(sb, block))
 		{
@@ -121,10 +121,11 @@ static int load__block_bitmap(struct super_block * sb, unsigned int block)
 static inline int load_block_bitmap(struct super_block *sb, unsigned int block)
 {
 	int slot;
-	int sbd_len = (UDF_SB_PARTLEN(sb, UDF_SB_PARTITION(sb)) + sizeof(struct SpaceBitmapDesc)) >> (sb->s_blocksize_bits + 3);
+    int nr_groups = (UDF_SB_PARTLEN(sb, UDF_SB_PARTITION(sb)) +
+        (sizeof(struct SpaceBitmapDesc) << 3) + sb->s_blocksize - 1) / sb->s_blocksize;
 
 #ifdef VDEBUG
-	printk(KERN_DEBUG "udf: load_block_bitmap: %d,%d\n", block, sbd_len);
+	udf_debug("block=%d, nr_groups=%d\n", block, nr_groups);
 #endif
 
 	if (UDF_SB_LOADED_BLOCK_BITMAPS(sb) > 0 &&
@@ -133,7 +134,7 @@ static inline int load_block_bitmap(struct super_block *sb, unsigned int block)
 	{
 		return 0;
 	}
-	else if (sbd_len <= UDF_MAX_BLOCK_LOADED &&
+	else if (nr_groups <= UDF_MAX_BLOCK_LOADED &&
 		UDF_SB_BLOCK_BITMAP_NUMBER(sb, block) == block &&
 		UDF_SB_BLOCK_BITMAP(sb, block))
 	{
@@ -166,14 +167,14 @@ void udf_free_blocks(const struct inode * inode, lb_addr bloc, Uint32 offset,
 	struct super_block * sb;
 
 #ifdef VDEBUG
-	printk(KERN_DEBUG "udf: udf_free_blocks: %ld,(%d,%d)+%d,%d\n", inode->i_ino,
+	udf_debug("ino=%ld,(block=%d,partition=%d)+offset=%d,count=%d\n", inode->i_ino,
 		bloc.logicalBlockNum, bloc.partitionReferenceNum, offset, count);
 #endif
 
 	sb = inode->i_sb;
 	if (!sb)
 	{
-		printk(KERN_DEBUG "udf_free_blocks: nonexistent device");
+		udf_debug("nonexistent device");
 		return;
 	}
 
@@ -184,7 +185,7 @@ void udf_free_blocks(const struct inode * inode, lb_addr bloc, Uint32 offset,
 	if (bloc.logicalBlockNum < 0 ||
 		(bloc.logicalBlockNum + count) > UDF_SB_PARTLEN(sb, bloc.partitionReferenceNum))
 	{
-		printk(KERN_DEBUG "udf: udf_free_blocks: %d < %d || %d + %d > %d\n",
+		udf_debug("%d < %d || %d + %d > %d\n",
 			bloc.logicalBlockNum, 0, bloc.logicalBlockNum, count,
 			UDF_SB_PARTLEN(sb, bloc.partitionReferenceNum));
 		goto error_return;
@@ -198,7 +199,7 @@ do_more:
 	bit = block % (sb->s_blocksize << 3);
 
 #ifdef VDEBUG
-	printk(KERN_DEBUG "udf: group = %ld, bit = %ld\n", block_group, bit);
+	udf_debug("group = %ld, bit = %ld\n", block_group, bit);
 #endif
 
 	/*
@@ -218,8 +219,8 @@ do_more:
 	{
 		if (udf_set_bit(bit + i, bh->b_data))
 		{
-			printk(KERN_DEBUG "udf: bit %ld already set\n", bit + i);
-			printk(KERN_DEBUG "udf: byte=%2x\n", ((char *)bh->b_data)[(bit + i) >> 3]);
+			udf_debug("bit %ld already set\n", bit + i);
+			udf_debug("byte=%2x\n", ((char *)bh->b_data)[(bit + i) >> 3]);
 		}
 		else if (UDF_SB_LVIDBH(sb))
 		{
@@ -239,4 +240,161 @@ error_return:
 		mark_buffer_dirty(UDF_SB_LVIDBH(sb), 1);
 	unlock_super(sb);
 	return;
+}
+
+lb_addr udf_new_block(const struct inode * inode, lb_addr goal,
+				Uint32 *prealloc_count, Uint32 *prealloc_block, int *err)
+{
+	int tmp, newbit, bit, block, block_group, group_start;
+	int end_goal, nr_groups, bitmap_nr, i;
+	struct buffer_head *bh;
+	struct super_block *sb;
+	char *ptr;
+	lb_addr newblock = goal;
+
+#ifdef VDEBUG
+	udf_debug("ino=%ld, block=%d, partition=%d\n", inode->i_ino, goal.logicalBlockNum,
+		goal.partitionReferenceNum);
+#endif
+	
+	*err = -ENOSPC;
+	sb = inode->i_sb;
+	if (!sb)
+	{
+		udf_debug("nonexistent device\n");
+		return newblock;
+	}
+	lock_super(sb);
+
+repeat:
+	if (goal.logicalBlockNum < 0 ||
+		goal.logicalBlockNum >= UDF_SB_PARTLEN(sb, goal.partitionReferenceNum))
+	{
+		goal.logicalBlockNum = 0;
+	}
+	nr_groups = (UDF_SB_PARTLEN(sb, goal.partitionReferenceNum) +
+		(sizeof(struct SpaceBitmapDesc) << 3) + sb->s_blocksize - 1) / sb->s_blocksize;
+	block = goal.logicalBlockNum + (sizeof(struct SpaceBitmapDesc) << 3);
+	block_group = block >> (sb->s_blocksize_bits + 3);
+	group_start = block_group ? 0 : sizeof(struct SpaceBitmapDesc);
+
+#ifdef VDEBUG
+	udf_debug("nr_groups=%d, block=%d, block_group=%d, group_start=%d\n",
+		nr_groups, block, block_group, group_start);
+#endif
+
+	bitmap_nr = load_block_bitmap(sb, block_group);
+	if (bitmap_nr < 0)
+		goto error_return;
+	bh = UDF_SB_BLOCK_BITMAP(sb, bitmap_nr);
+	ptr = memscan((char *)bh->b_data + group_start, 0xFF, sb->s_blocksize - group_start);
+
+#ifdef VDEBUG
+	udf_debug("bitmap_nr: %d, group_start: %d, ptr=%p, b_data=%p\n",
+		bitmap_nr, group_start, ptr, bh->b_data);
+#endif
+
+	if ((ptr - ((char *)bh->b_data)) < sb->s_blocksize)
+	{
+		bit = block % (sb->s_blocksize << 3);
+
+		if (udf_test_bit(bit, bh->b_data))
+		{
+			goto got_block;
+		}
+		end_goal = (bit + 63) & ~63;
+		bit = udf_find_next_one_bit(bh->b_data, end_goal, bit);
+		if (bit < end_goal)
+			goto got_block;
+		ptr = memscan((char *)bh->b_data + (bit >> 3), 0xFF, sb->s_blocksize - ((bit + 7) >> 3));
+		newbit = (ptr - ((char *)bh->b_data)) << 3;
+		if (newbit < sb->s_blocksize << 3)
+		{
+			bit = newbit;
+			goto search_back;
+		}
+		newbit = udf_find_next_one_bit(bh->b_data, sb->s_blocksize << 3, bit);
+		if (newbit < sb->s_blocksize << 3)
+		{
+			bit = newbit;
+			goto got_block;
+		}
+	}
+
+	for (i=0; i<nr_groups; i++)
+	{
+		block_group ++;
+		if (block_group > nr_groups)
+			block_group = 0;
+		group_start = block_group ? 0 : sizeof(struct SpaceBitmapDesc);
+
+		bitmap_nr = load_block_bitmap(sb, block_group);
+		if (bitmap_nr < 0)
+			goto error_return;
+		bh = UDF_SB_BLOCK_BITMAP(sb, bitmap_nr);
+		ptr = memscan((char *)bh->b_data + group_start, 0xFF, sb->s_blocksize - group_start);
+		if ((ptr - ((char *)bh->b_data)) < sb->s_blocksize)
+			break;
+	}
+	if (i >= nr_groups)
+	{
+		unlock_super(sb);
+		return newblock;
+	}
+	ptr = memscan(bh->b_data + group_start, 0xFF, sb->s_blocksize - group_start);
+	bit = (ptr - ((char *)bh->b_data)) << 3;
+	if (bit < sb->s_blocksize << 3)
+		goto search_back;
+	else
+		bit = udf_find_next_one_bit(bh->b_data, sb->s_blocksize << 3, group_start << 3);
+	if (bit >= sb->s_blocksize << 3)
+	{
+		unlock_super(sb);
+		return newblock;
+	}
+
+search_back:
+	for (i=0; i<7 && bit > (group_start << 3) && udf_test_bit(bit - 1, bh->b_data); i++, bit--);
+
+got_block:
+	newblock.logicalBlockNum = bit + (block_group << (sb->s_blocksize_bits + 3)) -
+		(group_start << 3);
+	tmp = udf_get_lb_pblock(sb, newblock, 0);
+#ifdef VDEBUG
+	udf_debug("got block! bit=%d, block_group=%d, newblock=%d,%d, block=%d\n",
+		bit, block_group, newblock.logicalBlockNum, newblock.partitionReferenceNum, tmp);
+#endif
+	if (!udf_clear_bit(bit, bh->b_data))
+	{
+		udf_debug("bit already cleared for block %d\n", bit);
+		goto repeat;
+	}
+#ifdef UDF_PREALLOCATE
+	if (prealloc_block)
+	{
+	}
+#endif
+
+	mark_buffer_dirty(bh, 1);
+	if (!(bh = getblk(sb->s_dev, tmp, sb->s_blocksize)))
+	{
+		udf_debug("cannot get block %d\n", tmp);
+		unlock_super(sb);
+		return newblock;
+	}
+	memset(bh->b_data, 0, sb->s_blocksize);
+	mark_buffer_uptodate(bh, 1);
+	mark_buffer_dirty(bh, 1);
+	brelse(bh);
+
+	/* lower block count */
+
+	unlock_super(sb);
+	*err = 0;
+	return newblock;
+
+error_return:
+	*err = -EIO;
+	unlock_super(sb);
+	return newblock;
 }

@@ -1,5 +1,3 @@
-#if !defined(_LINUX_UDF_FS_H)
-#define _LINUX_UDF_FS_H
 /*
  * udf_fs.h
  *
@@ -25,6 +23,28 @@
  * 12/5/98 dgb  removed other includes to reduce kernel namespace pollution.
  *		This should only be included by the kernel now!
  */
+#if !defined(_LINUX_UDF_FS_H)
+#define _LINUX_UDF_FS_H
+
+#undef UDF_PREALLOCATE
+#define UDF_DEFAULT_PREALLOC_BLOCKS		8
+
+#define UDFFS_DATE		"99/03/29"
+#define UDFFS_VERSION	"0.8.1"
+
+#ifdef UDFFS_DEBUG
+#define udf_debug(f, a...) \
+	{ \
+		printk (KERN_DEBUG "UDF-fs DEBUG (%s, %d): %s: ", \
+			__FILE__, __LINE__, __FUNCTION__); \
+		printk (## f, ## a); \
+	}
+#else
+#define udf_debug(f, a...) /**/
+#endif
+
+#define udf_info(f, a...) \
+		printk (KERN_INFO "UDF-fs INFO " ## f, ## a);
 
 /* Prototype for fs/filesystem.c (the only thing really required in this file) */
 extern int init_udf_fs(void);

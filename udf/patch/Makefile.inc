@@ -1,4 +1,4 @@
---- linux-2.2.3/fs/Makefile	Fri Mar 12 15:50:38 1999
+--- linux-2.2.5/fs/Makefile	Fri Mar 12 15:50:38 1999
 +++ linux/fs/Makefile	Fri Mar 12 15:59:06 1999
 @@ -18,7 +18,7 @@
  MOD_LIST_NAME := FS_MODULES

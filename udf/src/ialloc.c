@@ -24,6 +24,7 @@
 #include "udfdecl.h"
 #include <linux/fs.h>
 #include <linux/locks.h>
+#include <linux/udf_fs.h>
 
 #include "udf_i.h"
 #include "udf_sb.h"
@@ -36,24 +37,22 @@ void udf_free_inode(struct inode * inode)
 
 	if (!inode->i_dev)
 	{
-		printk(KERN_DEBUG "udf: udf_free_inode: inode has no device\n");
+		udf_debug("inode has no device\n");
 		return;
 	}
 	if (inode->i_count > 1)
 	{
-		printk(KERN_DEBUG "udf: udf_free_inode: inode has count=%d\n",
-			inode->i_count);
+		udf_debug("inode has count=%d\n", inode->i_count);
 		return;
 	}
 	if (inode->i_nlink)
 	{
-		printk(KERN_DEBUG "udf: udf_free_inode: inode has nlink=%d\n",
-			inode->i_nlink);
+		udf_debug("inode has nlink=%d\n", inode->i_nlink);
 		return;
 	}
 	if (!sb)
 	{
-		printk(KERN_DEBUG "udf: udf_free_inode: inode on nonexistent device\n");
+		udf_debug("inode on nonexistent device\n");
 		return;
 	}
 
@@ -80,4 +79,85 @@ void udf_free_inode(struct inode * inode)
 	unlock_super(sb);
 
 	udf_free_blocks(inode, UDF_I_LOCATION(inode), 0, 1);
+}
+
+struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
+{
+	struct super_block *sb;
+	struct inode * inode;
+	lb_addr block;
+	lb_addr start = { 0, 0 };
+
+#ifdef VDEBUG
+	udf_debug("mode=%d\n", mode);
+#endif
+
+	inode = get_empty_inode();
+	if (!inode)
+	{
+		*err = -ENOMEM;
+		return NULL;
+	}
+	sb = dir->i_sb;
+	inode->i_sb = sb;
+	inode->i_flags = 0;
+	*err = -ENOSPC;
+	start.partitionReferenceNum = UDF_I_LOCATION(dir).partitionReferenceNum;
+
+	block = udf_new_block(dir, start, NULL, NULL, err);
+	if (*err)
+	{
+		iput(inode);
+		return NULL;
+	}
+	lock_super(sb);
+
+	if (UDF_SB_LVIDBH(sb))
+	{
+		struct LogicalVolHeaderDesc *lvhd;
+		Uint64 uniqueID;
+		lvhd = (struct LogicalVolHeaderDesc *)(UDF_SB_LVID(sb)->logicalVolContentsUse);
+		if (S_ISDIR(mode))
+			UDF_SB_LVIDIU(sb)->numDirs =
+				cpu_to_le32(le32_to_cpu(UDF_SB_LVIDIU(sb)->numDirs) + 1);
+		else
+			UDF_SB_LVIDIU(sb)->numFiles =
+				cpu_to_le32(le32_to_cpu(UDF_SB_LVIDIU(sb)->numFiles) + 1);
+		UDF_I_UNIQUE(inode) = uniqueID = le64_to_cpu(lvhd->uniqueID);
+		if (!(++uniqueID & 0x00000000FFFFFFFFUL))
+			uniqueID += 16;
+		lvhd->uniqueID = cpu_to_le64(uniqueID);
+		mark_buffer_dirty(UDF_SB_LVIDBH(sb), 1);
+	}
+	inode->i_mode = mode;
+	inode->i_sb = sb;
+	inode->i_nlink = 1;
+	inode->i_dev = sb->s_dev;
+	inode->i_uid = current->fsuid;
+	if (dir->i_mode & S_ISGID)
+	{
+		inode->i_gid = dir->i_gid;
+		if (S_ISDIR(mode))
+			mode |= S_ISGID;
+	}
+	else
+		inode->i_gid = current->fsgid;
+	UDF_I_LOCATION(inode) = block;
+	inode->i_ino = udf_get_lb_pblock(sb, block, 0);
+	inode->i_blksize = PAGE_SIZE;
+	inode->i_blocks = 0;
+	inode->i_size = 0;
+	UDF_I_LENEATTR(inode) = 0;
+	UDF_I_LENALLOC(inode) = 0;
+	memset(&UDF_I_EXT0LOC(inode), 0, sizeof(lb_addr));
+	UDF_I_EXT0LEN(inode) = 0;
+	UDF_I_EXT0OFFS(inode) = sizeof(struct FileEntry);
+	UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_IN_ICB;
+	inode->i_mtime = inode->i_atime = inode->i_ctime = CURRENT_TIME;
+	inode->i_op = NULL;
+	insert_inode_hash(inode);
+	mark_inode_dirty(inode);
+	unlock_super(sb);
+	*err = 0;
+	return inode;
 }

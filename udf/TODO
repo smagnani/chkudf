@@ -1,2 +1,17 @@
 remount support
   -- some things function, needs more work -- DGB
+
+support all the accepted options -- blf
+
+support extended attributes -- blf
+
+full write support -- blf
+
+make sure reading works on big endian and/or 64 bit machines -- blf
+
+find out whats causing mount failure on discs created with DirectCD 2.5c
+  (there has to be a specific chunk of data that its creating that we can't
+   handle for some situation, because I can read discs I created under
+   DCD 2.5c) -- blf
+
+support unallocatedSpaceTable, freedSpaceTable, and freedSpaceBitmap -- blf

@@ -27,11 +27,72 @@
 #ifdef __KERNEL__
 #include <linux/kernel.h>
 #include <linux/string.h>       /* for memset */
+#include <linux/udf_fs.h>
 #else
 #include <string.h>
 #endif
 
 #include "udfdecl.h"
+
+int udf_ustr_to_dchars(char *dest, const struct ustr *src, int strlen)
+{
+	if ( (!dest) || (!src) || (!strlen) || (src->u_len > strlen) )
+		return 0;
+	memcpy(dest+1, src->u_name, src->u_len-1);
+	dest[0] = src->u_cmpID;
+	return src->u_len;
+}
+
+int udf_ustr_to_char(char *dest, const struct ustr *src, int strlen)
+{
+	if ( (!dest) || (!src) || (!strlen) || (src->u_len >= strlen) )
+		return 0;
+	memcpy(dest, src->u_name, src->u_len-1);
+	return src->u_len - 1;
+}
+
+int udf_ustr_to_dstring(dstring *dest, const struct ustr *src, int dlength)
+{
+	if ( udf_ustr_to_dchars(dest, src, dlength-1) )
+	{
+		dest[dlength-1] = src->u_len;
+		return dlength;
+	}
+	else
+		return 0;
+}
+
+int udf_dchars_to_ustr(struct ustr *dest, const char *src, int strlen)
+{
+	if ( (!dest) || (!src) || (!strlen) || (strlen > UDF_NAME_LEN) )
+		return 0;
+	memset(dest, 0, sizeof(struct ustr));
+	memcpy(dest->u_name, src+1, strlen-1);
+	dest->u_cmpID = src[0];
+	dest->u_len = strlen;
+	return strlen;
+}
+
+int udf_char_to_ustr(struct ustr *dest, const char *src, int strlen)
+{
+	if ( (!dest) || (!src) || (!strlen) || (strlen >= UDF_NAME_LEN) )
+		return 0;
+	memset(dest, 0, sizeof(struct ustr));
+	memcpy(dest->u_name, src, strlen);
+	dest->u_cmpID = 0x08;
+	dest->u_len = strlen + 1;
+	return strlen + 1;
+}
+
+
+int udf_dstring_to_ustr(struct ustr *dest, const dstring *src, int dlength)
+{
+	if ( dlength && udf_dchars_to_ustr(dest, src, src[dlength-1]) )
+		return dlength;
+	else
+		return 0;
+
+}
 
 /*
  * udf_build_ustr
@@ -113,7 +174,7 @@ int udf_CS0toUTF8(struct ustr *utf_o, struct ustr *ocu_i)
 #ifdef __KERNEL__
 		printk(KERN_ERR "udf: unknown compression code (%d) stri=%s\n", cmp_id, ocu_i->u_name);
 #endif
-		return -1;
+		return 0;
 	}
 
 	for (i = 0; (i < ocu_len) && (utf_o->u_len < UDF_NAME_LEN) ;) {
@@ -125,7 +186,7 @@ int udf_CS0toUTF8(struct ustr *utf_o, struct ustr *ocu_i)
 			c = (c << 8) | ocu[i++];
 #ifdef __KERNEL__
 			if (c & 0xFF00)
-				printk(KERN_DEBUG "udf: udf_CS0toUTF8: cmd_id == 16 (0x%2x%2x)\n",
+				udf_debug("cmd_id == 16 (0x%2x%2x)\n",
 					((c >> 8) & 0xFF), (c & 0xFF));
 #endif
 		}
@@ -137,7 +198,7 @@ int udf_CS0toUTF8(struct ustr *utf_o, struct ustr *ocu_i)
 			utf_o->u_name[utf_o->u_len++] = (char)(0xc0 | (c >> 6));
 			utf_o->u_name[utf_o->u_len++] = (char)(0x80 | (c & 0x3f));
 #ifdef __KERNEL__
-			printk(KERN_DEBUG "udf: udf_CS0toUTF8 (0x%2x%2x) -> (%2x) (%2x)\n",
+			udf_debug("(0x%2x%2x) -> (%2x) (%2x)\n",
 				((c >> 8) & 0xFF), (c & 0xFF),
 				utf_o->u_name[utf_o->u_len-2],
 				utf_o->u_name[utf_o->u_len-1]);
@@ -147,7 +208,7 @@ int udf_CS0toUTF8(struct ustr *utf_o, struct ustr *ocu_i)
 			utf_o->u_name[utf_o->u_len++] = (char)(0x80 | ((c >> 6) & 0x3f));
 			utf_o->u_name[utf_o->u_len++] = (char)(0x80 | (c & 0x3f));
 #ifdef __KERNEL__
-			printk(KERN_DEBUG "udf: udf_CS0toUTF8 (0x%2x%2x) -> (%2x) (%2x) (%2x)\n",
+			udf_debug("(0x%2x%2x) -> (%2x) (%2x) (%2x)\n",
 				((c >> 8) & 0xFF), (c & 0xFF),
 				utf_o->u_name[utf_o->u_len-3],
 				utf_o->u_name[utf_o->u_len-2],
@@ -159,7 +220,7 @@ int udf_CS0toUTF8(struct ustr *utf_o, struct ustr *ocu_i)
 	utf_o->u_hash=0L;
 	utf_o->padding=0;
 
-	return 0;
+	return utf_o->u_len;
 }
 
 /*
@@ -253,18 +314,17 @@ error_out:
 #ifdef __KERNEL__
 		printk(KERN_ERR "udf: bad UTF-8 character\n");
 #endif
-		return -1;
+		return 0;
 	}
 
 	ocu[length - 1] = (Uint8)u_len;
-	return 0;
+	return u_len;
 }
 
 #ifdef __KERNEL__
 int udf_get_filename(char *sname, char *dname, int flen)
 {
-	struct ustr filename;
-	struct ustr unifilename;
+	struct ustr filename, unifilename;
 	int len;
 
 	if (udf_build_ustr_exact(&unifilename, sname, flen))
@@ -272,9 +332,9 @@ int udf_get_filename(char *sname, char *dname, int flen)
 		return 0;
 	}
 
-	if (udf_CS0toUTF8(&filename, &unifilename) )
+	if (!udf_CS0toUTF8(&filename, &unifilename) )
 	{
-		printk(KERN_DEBUG "udf: udf_CS0toUTF8 failed in udf_get_filename: sname = %s\n", sname);
+		udf_debug("Failed in udf_get_filename: sname = %s\n", sname);
 		return 0;
 	}
 

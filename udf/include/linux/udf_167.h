@@ -203,6 +203,7 @@ typedef struct {
 #define TID_UNALLOCATED_SPACE_ENTRY	0x0107U
 #define TID_SPACE_BITMAP_DESC		0x0108U
 #define TID_PARTITION_INTEGRITY_ENTRY	0x0109U
+#define TID_EXTENDED_FILE_ENTRY		0x010AU
 
 /* NSR Descriptor (ECMA 167 3/9.1) */
 struct NSRDesc {
@@ -531,28 +532,28 @@ struct TerminalEntry {
 
 /* File Entry (ECMA 167 4/14.9) */
 struct FileEntry {
-	tag descTag;
-	icbtag icbTag;
-	Uint32 uid;
-	Uint32 gid;
-	Uint32 permissions;
-	Uint16 fileLinkCount;
-	Uint8 recordFormat;
-	Uint8 recordDisplayAttr;
-	Uint32 recordLength;
-	Uint64 informationLength;
-	Uint64 logicalBlocksRecorded;
-	timestamp accessTime;
-	timestamp modificationTime;
-	timestamp attrTime;
-	Uint32 checkpoint;
-	long_ad extendedAttrICB;
-	EntityID impIdent;
-	Uint64 uniqueID; /* 0= root, 16- (2^32-1) */
-	Uint32 lengthExtendedAttr;
-	Uint32 lengthAllocDescs;
-	Uint8 extendedAttr[0];
-	Uint8 allocDescs[0];
+	tag			descTag;
+	icbtag		icbTag;
+	Uint32		uid;
+	Uint32		gid;
+	Uint32		permissions;
+	Uint16		fileLinkCount;
+	Uint8		recordFormat;
+	Uint8		recordDisplayAttr;
+	Uint32		recordLength;
+	Uint64		informationLength;
+	Uint64		logicalBlocksRecorded;
+	timestamp	accessTime;
+	timestamp	modificationTime;
+	timestamp	attrTime;
+	Uint32		checkpoint;
+	long_ad		extendedAttrICB;
+	EntityID	impIdent;
+	Uint64		uniqueID; /* 0= root, 16- (2^32-1) */
+	Uint32		lengthExtendedAttr;
+	Uint32		lengthAllocDescs;
+	Uint8		extendedAttr[0];
+	Uint8		allocDescs[0];
 };
 
 /* File Permissions (ECMA 167 4/14.9.5) */
@@ -723,7 +724,7 @@ typedef struct { /* ECMA 167 4/14.14.3 */
 
 /* Logical Volume Header Descriptor (ECMA 167 4/14.5) */
 struct LogicalVolHeaderDesc {
-	Uint64 uniqueId;
+	Uint64 uniqueID;
 	Uint8 reserved[24];
 };
 
@@ -737,7 +738,7 @@ struct PathComponent {
 
 /* File Entry (ECMA 167 4/14.17) */
 struct ExtendedFileEntry {
-	tag		descTag;
+	tag			descTag;
 	icbtag		icbTag;
 	Uint32		uid;
 	Uint32		gid;

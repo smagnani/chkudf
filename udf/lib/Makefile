@@ -12,7 +12,7 @@
 
 CC		= gcc
 UDF_INC		= ../include
-CFLAGS	= -DDEBUG $(KERNH)\
+CFLAGS	= $(KERNH)\
 	-O2 -Wall -Wstrict-prototypes -I$(UDF_INC) -g
 UDF_CONFIG=$(UDF_INC)/config/udf.h
 LD		= ld
@@ -22,7 +22,7 @@ LD_RFLAGS	=
 	$(CC) -c $(CFLAGS) -o $@ $<
 
 LIBUDF=libudf.a
-LIBUDFO=crc.o unicode.o udftime.o debug.o misc.o directory.o
+LIBUDFO=crc.o unicode.o udftime.o misc.o directory.o
 
 all: $(LIBUDF) 
 

@@ -31,15 +31,16 @@ typedef struct
 struct udf_inode_info
 {
 	/* Physical address of inode */
-	__u32 i_alloc_type;
-		/* next 3 are shortcuts to first extent */
 	lb_addr i_ext0Location;	/* partition relative */
 	lb_addr i_location;
 	__u32 i_ext0Length;  	/* in blocks */
 	__u32 i_ext0Offset;	/* for short directories */
-	__u32 i_partref;
-	__u64 i_fileLength;
 	__u64 i_unique;
+	__u32 i_lenEAttr;
+	__u32 i_lenAlloc;
+	int i_alloc_type : 3;
+	int i_extended_fe : 1;
+	int i_strat_4096 : 1;
 };
 
 #endif

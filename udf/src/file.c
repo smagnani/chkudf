@@ -30,12 +30,11 @@
 
 #include "udfdecl.h"
 #include <linux/fs.h>
-#ifdef __KERNEL__
+#include <linux/udf_fs.h>
 #include <asm/uaccess.h>
 #include <linux/kernel.h>
 #include <linux/string.h> /* memset */
 #include <linux/errno.h>
-#endif
 
 #include "udf_i.h"
 #include "udf_sb.h"
@@ -183,7 +182,10 @@ loff_t udf_llseek(struct file *filp, loff_t offset, int origin)
 static ssize_t udf_file_read(struct file * filp, char * buf, size_t bufsize, 
 	loff_t * loff)
 {
-        struct inode *inode = filp->f_dentry->d_inode;
+	struct inode *inode = filp->f_dentry->d_inode;
+
+	udf_debug("ino=%ld, offs=%d, bufsize=%d, loff=%Ld\n", inode->i_ino,
+		UDF_I_EXT0OFFS(inode), bufsize, *loff);
 
 	if (!UDF_I_EXT0OFFS(inode))
 		return generic_file_read(filp, buf, bufsize, loff);
@@ -205,7 +207,7 @@ static ssize_t udf_file_read(struct file * filp, char * buf, size_t bufsize,
 
 		pos = *loff + UDF_I_EXT0OFFS(inode);
 		block = udf_bmap(inode, 0);
-		if (!(bh = bread(inode->i_dev, block, inode->i_sb->s_blocksize)))
+		if (!(bh = udf_bread(inode->i_sb, block, inode->i_sb->s_blocksize)))
 			return 0;
 		if (!copy_to_user(buf, bh->b_data + pos, left))
 			*loff += left;
@@ -330,14 +332,14 @@ int udf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 
 	if ( permission(inode, MAY_READ) != 0 )
 	{
-		printk(KERN_DEBUG "udf: no permission to access inode %lu\n",
+		udf_debug("no permission to access inode %lu\n",
 						inode->i_ino);
 		return -EPERM;
 	}
 
 	if ( !arg )
 	{
-		printk(KERN_DEBUG "udf: invalid argument to udf_ioctl\n");
+		udf_debug("invalid argument to udf_ioctl\n");
 		return -EINVAL;
 	}
 
@@ -356,8 +358,8 @@ int udf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 
 	if (!bh || ident != TID_FILE_ENTRY)
 	{
-		printk(KERN_ERR "udf: udf_ioctl(ino %ld) failed !bh\n",
-			inode->i_ino);
+		udf_debug("bread failed (ino=%ld) or ident (%d) != TID_FILE_ENTRY",
+			inode->i_ino, ident);
 		return -EFAULT;
 	}
 
@@ -377,8 +379,7 @@ int udf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 			break;
 
 		default:
-			printk(KERN_DEBUG "udf: udf_ioctl(ino %lu,, %d,)\n",
-					inode->i_ino, cmd);
+			udf_debug("ino=%ld, cmd=%d\n", inode->i_ino, cmd);
 			break;
 	}
 

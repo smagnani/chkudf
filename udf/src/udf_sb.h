@@ -15,6 +15,7 @@
 #define UDF_FLAG_STRICT		0x00000001U
 #define UDF_FLAG_UNDELETE	0x00000002U
 #define UDF_FLAG_UNHIDE		0x00000004U
+#define UDF_FLAG_VARCONV	0x00000008U
 
 /* following is set only when compiling outside kernel tree */
 #ifndef CONFIG_UDF_FS_EXT

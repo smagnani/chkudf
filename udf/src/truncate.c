@@ -24,6 +24,7 @@
 #include "udfdecl.h"
 #include <linux/fs.h>
 #include <linux/mm.h>
+#include <linux/udf_fs.h>
 
 #include "udf_i.h"
 #include "udf_sb.h"
@@ -38,7 +39,7 @@ static int extent_trunc(struct inode * inode, lb_addr eloc, Uint32 elen,
 	int last_block = (elen + inode->i_sb->s_blocksize - 1) / inode->i_sb->s_blocksize;
 
 #ifdef VDEBUG
-	printk(KERN_DEBUG "extent_trunc: eloc=%d,%d, elen=%d, offset=%d\n",
+	udf_debug("eloc: block=%d, partition=%d, elen=%d, offset=%d\n",
 		eloc.logicalBlockNum, eloc.partitionReferenceNum, elen, offset);
 #endif
 
@@ -48,7 +49,7 @@ static int extent_trunc(struct inode * inode, lb_addr eloc, Uint32 elen,
 
 		if (!tmp)
 		{
-			printk(KERN_DEBUG "udf: extent_trunc, i=%d\n", i);
+			udf_debug("i=%d\n", i);
 			continue;
 		}
 
@@ -95,14 +96,14 @@ static int trunc(struct inode * inode)
 	if (block_bmap(inode, first_block, &bloc, &ext, &eloc, &elen, &offset))
 	{
 #ifdef VDEBUG
-		printk(KERN_DEBUG "udf: trunc: first_block = %d\n", first_block);
+		udf_debug("first_block = %d\n", first_block);
 #endif
 		retry |= extent_trunc(inode, eloc, elen, offset);
 
 		while (udf_next_aext(inode, &bloc, &ext, &eloc, &elen))
 		{
 #ifdef VDEBUG
-			printk(KERN_DEBUG "udf: block=%d,%d ext=%d eloc=%d,%d elen=%d\n",
+			udf_debug("bloc: block=%d, partition=%d, ext=%d, eloc: block=%d, partition=%d elen=%d\n",
 				bloc.logicalBlockNum, bloc.partitionReferenceNum, ext,
 				eloc.logicalBlockNum, eloc.partitionReferenceNum, elen);
 #endif
@@ -117,7 +118,7 @@ void udf_truncate(struct inode * inode)
 	int offset, retry;
 
 #ifdef VDEBUG
-	printk(KERN_DEBUG "udf: udf_truncate: inode = %ld\n", inode->i_ino);
+	udf_debug("ino=%ld\n", inode->i_ino);
 #endif
 
 	if (!(S_ISREG(inode->i_mode) || S_ISDIR(inode->i_mode) ||

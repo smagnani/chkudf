@@ -14,7 +14,7 @@ include ../Make.conf
 #
 UDF_INC		= ../include
 UDF_CONFIG	= $(UDF_INC)/config/udf.h
-CFLAGS_DEBUG = -DDEBUG -g
+CFLAGS_DEBUG = -DUDFFS_DEBUG -g
 
 CFLAGS		= -D__KERNEL__=1 $(KERNH)\
 	-DMODULE -DCONFIG_UDF_FS_EXT -O2 -Wall -Wstrict-prototypes -I$(UDF_INC) 
@@ -24,6 +24,11 @@ CFLAGS += $(CFLAGS_DEBUG)
 # comment out following if you don't want experimental write support
 #
 CFLAGS += -DCONFIG_UDF_RW
+#
+# uncomment one of the following if your kernel is compiled for module versioning
+#
+#CFLAGS += -DMODVERSIONS -include modversions.h
+#CFLAGS += -DMODVERSIONS -include $(KERNH)/linux/modversions.h
 #
 
 # ---------------------------------------------------------
@@ -45,9 +50,9 @@ make.log:
 UDFH    = $(INCDIR)/udf_fs.h  $(INCDIR)/udf_udf.h $(INCDIR)/udf_167.h
 UDFH   += $(INCDIR)/udf_fs_sb.h $(INCDIR)/udf_fs_i.h udfdecl.h udf_i.h udf_sb.h
 
-O_OBJS   := inode.o super.o dir.o crc.o debug.o directory.o file.o
+O_OBJS   := inode.o super.o dir.o crc.o directory.o file.o
 O_OBJS   += udftime.o unicode.o misc.o partition.o namei.o balloc.o
-O_OBJS   +=  ialloc.o truncate.o
+O_OBJS   += ialloc.o truncate.o lowlevel.o
 
 %.S:  	../src/%.c 
 	$(CC) -S -c $(CFLAGS) -o $@ $<

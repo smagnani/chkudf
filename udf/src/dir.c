@@ -34,6 +34,7 @@
 #include <linux/errno.h>
 #include <linux/mm.h>
 #include <linux/malloc.h>
+#include <linux/udf_fs.h>
 #endif
 
 
@@ -115,21 +116,19 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 {
 	struct buffer_head *sbh, *ebh;
 	struct FileIdentDesc *fi=NULL;
+	struct FileIdentDesc cfi;
 	int block, iblock;
 	int soffset, eoffset;
 	int nf_pos = filp->f_pos;
 	int flen;
 	char fname[255];
 	char *nameptr;
-	lb_addr ino;
-	Uint8 filechar;
 	Uint16 liu;
 	Uint8 lfi;
 	int size = (UDF_I_EXT0OFFS(dir) + dir->i_size) >> 2;
 
 #ifdef VDEBUG
-	printk(KERN_DEBUG "do_udf_readdir(%p,%p,%p,%p)\n",
-		dir, filp, filldir, dirent);
+	udf_debug("ino=%ld, size=%d, nf_pos=%d\n", dir->i_ino, size, nf_pos);
 #endif
 
 	if (nf_pos >= size)
@@ -143,50 +142,30 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 
 	if (!block)
 		return 0;
-	if (!(sbh = ebh = bread(dir->i_dev, block, dir->i_sb->s_blocksize)))
+	if (!(sbh = ebh = udf_bread(dir->i_sb, block, dir->i_sb->s_blocksize)))
 		return 0;
 
 	while ( nf_pos < size )
 	{
 		filp->f_pos = nf_pos;
 
-		fi = udf_fileident_read(dir, &nf_pos, &soffset, &sbh, &eoffset, &ebh, &lfi, &liu);
+		fi = udf_fileident_read(dir, &nf_pos, &soffset, &sbh, &eoffset, &ebh, &cfi);
+		liu = le16_to_cpu(cfi.lengthOfImpUse);
+		lfi = cfi.lengthFileIdent;
 
 		if (!fi)
 		{
-			udf_release_data(sbh);
 			if (sbh != ebh)
 				udf_release_data(ebh);
+			udf_release_data(sbh);
 			return 1;
 		}
 
 		if (sbh == ebh)
-		{
-			filechar = fi->fileCharacteristics;
 			nameptr = fi->fileIdent + liu;
-			ino = lelb_to_cpu(fi->icb.extLocation);
-		}
 		else
 		{
-			struct FileIdentDesc *nfi;
 			int poffset;	/* Unpaded ending offset */
-
-			nfi = (struct FileIdentDesc *)(ebh->b_data + soffset);
-
-			if (&(nfi->fileCharacteristics) < (Uint8 *)ebh->b_data)
-				filechar = fi->fileCharacteristics;
-			else
-				filechar = nfi->fileCharacteristics;
-
-			if (&(nfi->icb.extLocation.logicalBlockNum) < (Uint32 *)ebh->b_data)
-				ino.logicalBlockNum = le32_to_cpu(fi->icb.extLocation.logicalBlockNum);
-			else
-				ino.logicalBlockNum = le32_to_cpu(nfi->icb.extLocation.logicalBlockNum);
-
-			if (&(nfi->icb.extLocation.partitionReferenceNum) < (Uint16 *)ebh->b_data)
-				ino.partitionReferenceNum = le16_to_cpu(fi->icb.extLocation.partitionReferenceNum);
-			else
-				ino.partitionReferenceNum = le16_to_cpu(nfi->icb.extLocation.partitionReferenceNum);
 
 			poffset = soffset + sizeof(struct FileIdentDesc) + liu + lfi;
 
@@ -200,27 +179,27 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 			}
 		}
 
-		if ( (filechar & FILE_DELETED) != 0 )
+		if ( (cfi.fileCharacteristics & FILE_DELETED) != 0 )
 		{
 			if ( !IS_UNDELETE(dir->i_sb) )
 				continue;
 		}
 		
-		if ( (filechar & FILE_HIDDEN) != 0 )
+		if ( (cfi.fileCharacteristics & FILE_HIDDEN) != 0 )
 		{
 			if ( !IS_UNHIDE(dir->i_sb) )
 				continue;
 		}
 
-		iblock = udf_get_lb_pblock(dir->i_sb, ino, 0);
+		iblock = udf_get_lb_pblock(dir->i_sb, lelb_to_cpu(cfi.icb.extLocation), 0);
  
  		if (!lfi) /* parent directory */
  		{
 			if (filldir(dirent, "..", 2, filp->f_pos, filp->f_dentry->d_parent->d_inode->i_ino) < 0)
 			{
-				udf_release_data(sbh);
 				if (sbh != ebh)
 					udf_release_data(ebh);
+				udf_release_data(sbh);
  				return 1;
 			}
  		}
@@ -229,9 +208,9 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 		{
 			if (filldir(dirent, fname, flen, filp->f_pos, iblock) < 0)
 			{
-				udf_release_data(sbh);
 				if (sbh != ebh)
 					udf_release_data(ebh);
+				udf_release_data(sbh);
 	 			return 1; /* halt enum */
 			}
 		}
@@ -239,9 +218,9 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 
 	filp->f_pos = nf_pos;
 
-	udf_release_data(sbh);
 	if (sbh != ebh)
 		udf_release_data(ebh);
+	udf_release_data(sbh);
 
 	if ( filp->f_pos >= size)
 		return 1;
@@ -548,7 +527,11 @@ struct inode_operations udf_dir_inode_operations= {
 	NULL,			/* updatepage */
 	NULL,			/* revalidate */
 #else
+#ifdef CONFIG_UDF_RW
+	udf_create, 	/* create */
+#else
 	NULL,			/* create */
+#endif
 	udf_lookup,		/* lookup */
 	NULL,			/* link */
 #ifdef CONFIG_UDF_RW

@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------
  * Linux(r) UDF Filesystem Driver
- * Version: 0.8.0.1
+ * Version: 0.8.1
  *
  * This is Andrew's second "patch" vs kernel 2.1.62, 
  * converted to a standalone package. Then many changes made. :-)

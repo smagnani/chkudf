@@ -68,3 +68,13 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
 				Updates to mkudf
 
 03/12/99 blf	Bug fixes. Support for reading length on MMC-3 drives.
+
+03/30/99 blf	Continuation of write support. creation of files. (minus the
+				case where a new block needs to be allocated to fit the FID
+				in the block)
+				Moved all the code that bangs on the CDROM to lowlevel.c
+				Added code to do variable -> fixed block translation for
+				reading CDRW's on drives that only support variable packet
+				reading.
+				Futzed with the debugging code a bunch. Added udf_debug and
+				udf_info.
