@@ -115,7 +115,7 @@ static inline struct udf_sb_info *UDF_SB(struct super_block *sb)
 #define UDF_SB_PARTFUNC(X,Y)			( UDF_SB_PARTMAPS(X)[(Y)].s_partition_func )
 #define UDF_SB_PARTFLAGS(X,Y)			( UDF_SB_PARTMAPS(X)[(Y)].s_partition_flags )
 #define UDF_SB_BITMAP(X,Y,Z,I)			( UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap->s_block_bitmap[I] )
-#define UDF_SB_BITMAP_NR_GROUPS(X,Y,Z)	( UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap->s_nr_groups )
+#define UDF_SB_BITMAP_NR_GROUPS(X,Y,Z)		( UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap->s_nr_groups )
 
 #define UDF_SB_VOLIDENT(X)			( UDF_SB(X)->s_volident )
 #define UDF_SB_NUMPARTS(X)			( UDF_SB(X)->s_partitions )
