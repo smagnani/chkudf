@@ -412,7 +412,7 @@ udf_vrs(struct super_block *sb, int silent)
 	for (;!nsr02 && !nsr03; sector += sectorsize)
 	{
 		/* Read a block */
-		bh = udf_tread(sb, sector >> sb->s_blocksize_bits, sb->s_blocksize);
+		bh = udf_tread(sb, sector >> sb->s_blocksize_bits);
 		if (!bh)
 			break;
 
@@ -525,7 +525,11 @@ udf_find_anchor(struct super_block *sb)
 
 		for (i=0; (!lastblock && i<sizeof(last)/sizeof(int)); i++)
 		{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,18)
+			if (last[i] < 0 || !(bh = sb_bread(sb, last[i])))
+#else
 			if (last[i] < 0 || !(bh = bread(sb->s_dev, last[i], sb->s_blocksize)))
+#endif
 			{
 				ident = location = 0;
 			}
@@ -560,7 +564,11 @@ udf_find_anchor(struct super_block *sb)
 			}
 			else
 			{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,18)
+				if (last[i] < 256 || !(bh = sb_bread(sb, last[i] - 256)))
+#else
 				if (last[i] < 256 || !(bh = bread(sb->s_dev, last[i] - 256, sb->s_blocksize)))
+#endif
 				{
 					ident = location = 0;
 				}
@@ -579,8 +587,12 @@ udf_find_anchor(struct super_block *sb)
 				}
 				else
 				{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,18)
+					if (last[i] < 312 + UDF_SB_SESSION(sb) || !(bh = sb_bread(sb, last[i] - 312 - UDF_SB_SESSION(sb))))
+#else
 					if (last[i] < 312 + UDF_SB_SESSION(sb) || !(bh = bread(sb->s_dev, last[i] - 312 - UDF_SB_SESSION(sb),
 						sb->s_blocksize)))
+#endif
 					{
 						ident = location = 0;
 					}
@@ -606,7 +618,11 @@ udf_find_anchor(struct super_block *sb)
 	if (!lastblock)
 	{
 		/* We havn't found the lastblock. check 312 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,18)
+		if ((bh = sb_bread(sb, 312 + UDF_SB_SESSION(sb))))
+#else
 		if ((bh = bread(sb->s_dev, 312 + UDF_SB_SESSION(sb), sb->s_blocksize)))
+#endif
 		{
 			ident = le16_to_cpu(((tag *)bh->b_data)->tagIdent);
 			location = le32_to_cpu(((tag *)bh->b_data)->tagLocation);
@@ -1266,7 +1282,11 @@ udf_load_partition(struct super_block *sb, lb_addr *fileset)
 					uint32_t pos;
 
 					pos = udf_block_map(UDF_SB_VAT(sb), 0);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,18)
+					bh = sb_bread(sb, pos);
+#else
 					bh = bread(sb->s_dev, pos, sb->s_blocksize);
+#endif
 					UDF_SB_TYPEVIRT(sb,i).s_start_offset =
 						le16_to_cpu(((struct virtualAllocationTable20 *)bh->b_data + udf_ext0_offset(UDF_SB_VAT(sb)))->lengthHeader) +
 							udf_ext0_offset(UDF_SB_VAT(sb));
@@ -1738,7 +1758,7 @@ udf_count_free_bitmap(struct super_block *sb, struct udf_bitmap *bitmap)
 		{
 			udf_release_data(bh);
 			newblock = udf_get_lb_pblock(sb, loc, ++block);
-			bh = udf_tread(sb, newblock, sb->s_blocksize);
+			bh = udf_tread(sb, newblock);
 			if (!bh)
 			{
 				udf_debug("read failed\n");
