@@ -104,11 +104,11 @@ static struct super_block *udf_get_sb(struct file_system_type *fs_type,
 }
 
 static struct file_system_type udf_fstype = {
-	owner:		THIS_MODULE,
-	name:		"udf",
-	get_sb:		udf_get_sb,
-	kill_sb:	kill_block_super,
-	fs_flags:	FS_REQUIRES_DEV,
+	.owner		= THIS_MODULE,
+	.name		= "udf",
+	.get_sb		= udf_get_sb,
+	.kill_sb	= kill_block_super,
+	.fs_flags	= FS_REQUIRES_DEV,
 };
 
 static kmem_cache_t * udf_inode_cachep;
@@ -155,16 +155,16 @@ static void destroy_inodecache(void)
 
 /* Superblock operations */
 static struct super_operations udf_sb_ops = {
-	alloc_inode:		udf_alloc_inode,
-	destroy_inode:		udf_destroy_inode,
-	read_inode:		udf_read_inode,
-	write_inode:		udf_write_inode,
-	put_inode:		udf_put_inode,
-	delete_inode:		udf_delete_inode,
-	put_super:		udf_put_super,
-	write_super:		udf_write_super,
-	statfs:			udf_statfs,
-	remount_fs:		udf_remount_fs,
+	.alloc_inode		= udf_alloc_inode,
+	.destroy_inode		= udf_destroy_inode,
+	.read_inode		= udf_read_inode,
+	.write_inode		= udf_write_inode,
+	.put_inode		= udf_put_inode,
+	.delete_inode		= udf_delete_inode,
+	.put_super		= udf_put_super,
+	.write_super		= udf_write_super,
+	.statfs			= udf_statfs,
+	.remount_fs		= udf_remount_fs,
 };
 
 struct udf_options
@@ -588,14 +588,14 @@ udf_find_anchor(struct super_block *sb)
 			{
 				if (location == last[i] - UDF_SB_SESSION(sb))
 				{
-					lastblock = UDF_SB_ANCHOR(sb)[0] = last[i];
-					UDF_SB_ANCHOR(sb)[1] = last[i] - 256;
+					lastblock = UDF_SB_ANCHOR(sb)[0] = last[i] - UDF_SB_SESSION(sb);
+					UDF_SB_ANCHOR(sb)[1] = last[i] - 256 - UDF_SB_SESSION(sb);
 				}
 				else if (location == udf_variable_to_fixed(last[i]) - UDF_SB_SESSION(sb))
 				{
 					UDF_SET_FLAG(sb, UDF_FLAG_VARCONV);
-					lastblock = UDF_SB_ANCHOR(sb)[0] = udf_variable_to_fixed(last[i]);
-					UDF_SB_ANCHOR(sb)[1] = lastblock - 256;
+					lastblock = UDF_SB_ANCHOR(sb)[0] = udf_variable_to_fixed(last[i]) - UDF_SB_SESSION(sb);
+					UDF_SB_ANCHOR(sb)[1] = lastblock - 256 - UDF_SB_SESSION(sb);
 				}
 				else
 					udf_debug("Anchor found at block %d, location mismatch %d.\n",
@@ -604,7 +604,7 @@ udf_find_anchor(struct super_block *sb)
 			else if (ident == TAG_IDENT_FE || ident == TAG_IDENT_EFE)
 			{
 				lastblock = last[i];
-				UDF_SB_ANCHOR(sb)[3] = 512 + UDF_SB_SESSION(sb);
+				UDF_SB_ANCHOR(sb)[3] = 512;
 			}
 			else
 			{
@@ -849,7 +849,7 @@ udf_load_partdesc(struct super_block *sb, struct buffer_head *bh)
 		if (UDF_SB_PARTMAPS(sb)[i].s_partition_num == le16_to_cpu(p->partitionNumber))
 		{
 			UDF_SB_PARTLEN(sb,i) = le32_to_cpu(p->partitionLength); /* blocks */
-			UDF_SB_PARTROOT(sb,i) = le32_to_cpu(p->partitionStartingLocation) + UDF_SB_SESSION(sb);
+			UDF_SB_PARTROOT(sb,i) = le32_to_cpu(p->partitionStartingLocation);
 			if (le32_to_cpu(p->accessType) == PD_ACCESS_TYPE_READ_ONLY)
 				UDF_SB_PARTFLAGS(sb,i) |= UDF_PART_FLAG_READ_ONLY;
 			if (le32_to_cpu(p->accessType) == PD_ACCESS_TYPE_WRITE_ONCE)
@@ -1422,7 +1422,7 @@ static int udf_fill_super(struct super_block *sb, void *options, int silent)
 	sbi = kmalloc(sizeof(struct udf_sb_info), GFP_KERNEL);
 	if (!sbi)
 		return -ENOMEM;
-	sb->u.generic_sbp = sbi;
+	sb->s_fs_info = sbi;
 	memset(UDF_SB(sb), 0x00, sizeof(struct udf_sb_info));
 
 	if (!udf_parse_options((char *)options, &uopt))
@@ -1471,7 +1471,7 @@ static int udf_fill_super(struct super_block *sb, void *options, int silent)
 	UDF_SB_LASTBLOCK(sb) = uopt.lastblock;
 	UDF_SB_ANCHOR(sb)[0] = UDF_SB_ANCHOR(sb)[1] = 0;
 	UDF_SB_ANCHOR(sb)[2] = uopt.anchor;
-	UDF_SB_ANCHOR(sb)[3] = UDF_SB_SESSION(sb) + 256;
+	UDF_SB_ANCHOR(sb)[3] = 256;
 
 	if (udf_check_valid(sb, uopt.novrs, silent)) /* read volume recognition sequences */
 	{
@@ -1608,7 +1608,7 @@ error_out:
 	udf_release_data(UDF_SB_LVIDBH(sb));
 	UDF_SB_FREE(sb);
 	kfree(sbi);
-	sb->u.generic_sbp = NULL;
+	sb->s_fs_info = NULL;
 	return -EINVAL;
 }
 
@@ -1699,8 +1699,8 @@ udf_put_super(struct super_block *sb)
 		udf_close_lvid(sb);
 	udf_release_data(UDF_SB_LVIDBH(sb));
 	UDF_SB_FREE(sb);
-	kfree(sb->u.generic_sbp);
-	sb->u.generic_sbp = NULL;
+	kfree(sb->s_fs_info);
+	sb->s_fs_info = NULL;
 }
 
 /*
