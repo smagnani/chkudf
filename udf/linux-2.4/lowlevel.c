@@ -15,7 +15,7 @@
  *		ftp://prep.ai.mit.edu/pub/gnu/GPL
  *	Each contributing author retains all rights to their own work.
  *
- *  (C) 1999-2000 Ben Fennema
+ *  (C) 1999-2001 Ben Fennema
  *
  * HISTORY
  *
@@ -67,7 +67,7 @@ udf_get_last_session(struct super_block *sb)
 	return vol_desc_start;
 }
 
-unsigned int
+unsigned long
 udf_get_last_block(struct super_block *sb)
 {
 	struct block_device *bdev = sb->s_bdev;
