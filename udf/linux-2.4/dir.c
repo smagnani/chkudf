@@ -94,7 +94,7 @@ int udf_readdir(struct file *filp, void *dirent, filldir_t filldir)
 
 	if ( filp->f_pos == 0 ) 
 	{
-		if (filldir(dirent, ".", 1, filp->f_pos, dir->i_ino))
+		if (filldir(dirent, ".", 1, filp->f_pos, dir->i_ino, DT_DIR))
 			return 0;
 	}
  
@@ -121,9 +121,10 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 	lb_addr bloc, eloc;
 	Uint32 extoffset, elen, offset;
 	int i, num;
+	unsigned int dt_type;
 
 	if (nf_pos >= size)
-		return 1;
+		return 0;
 
 	if (nf_pos == 0)
 		nf_pos = (udf_ext0_offset(dir) >> 2);
@@ -146,13 +147,13 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 	else
 	{
 		udf_release_data(bh);
-		return 0;
+		return -ENOENT;
 	}
 
 	if (!(fibh.sbh = fibh.ebh = udf_tread(dir->i_sb, block, dir->i_sb->s_blocksize)))
 	{
 		udf_release_data(bh);
-		return 0;
+		return -EIO;
 	}
 
 	if (!(offset & ((16 >> (dir->i_sb->s_blocksize_bits - 9))-1)))
@@ -189,7 +190,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 				udf_release_data(fibh.ebh);
 			udf_release_data(fibh.sbh);
 			udf_release_data(bh);
-			return 1;
+			return -ENOENT;
 		}
 
 		liu = le16_to_cpu(cfi.lengthOfImpUse);
@@ -225,31 +226,30 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 				continue;
 		}
 
-		iblock = udf_get_lb_pblock(dir->i_sb, lelb_to_cpu(cfi.icb.extLocation), 0);
- 
- 		if (!lfi) /* parent directory */
+
+		if ( cfi.fileCharacteristics & FILE_PARENT )
  		{
-			if (filldir(dirent, "..", 2, filp->f_pos, filp->f_dentry->d_parent->d_inode->i_ino))
+			iblock = udf_get_lb_pblock(dir->i_sb, UDF_I_LOCATION(filp->f_dentry->d_parent->d_inode), 0);
+			flen = 2;
+			memcpy(fname, "..", flen);
+			dt_type = DT_DIR;
+		}
+		else
+		{
+			iblock = udf_get_lb_pblock(dir->i_sb, lelb_to_cpu(cfi.icb.extLocation), 0);
+			flen = udf_get_filename(nameptr, fname, lfi);
+			dt_type = DT_UNKNOWN;
+		}
+
+		if (flen)
+		{
+			if (filldir(dirent, fname, flen, filp->f_pos, iblock, dt_type))
 			{
 				if (fibh.sbh != fibh.ebh)
 					udf_release_data(fibh.ebh);
 				udf_release_data(fibh.sbh);
 				udf_release_data(bh);
- 				return 1;
-			}
-		}
-		else
-		{
-			if ((flen = udf_get_filename(nameptr, fname, lfi)))
-			{
-				if (filldir(dirent, fname, flen, filp->f_pos, iblock))
-				{
-					if (fibh.sbh != fibh.ebh)
-						udf_release_data(fibh.ebh);
-					udf_release_data(fibh.sbh);
-					udf_release_data(bh);
-		 			return 1; /* halt enum */
-				}
+	 			return 0;
 			}
 		}
 	} /* end while */
@@ -261,8 +261,5 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 	udf_release_data(fibh.sbh);
 	udf_release_data(bh);
 
-	if ( filp->f_pos >= size)
-		return 1;
-	else
-		return 0;
+	return 0;
 }
