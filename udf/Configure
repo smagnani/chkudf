@@ -350,7 +350,7 @@ if [ -f $LINUX/include/linux/compile.h ] ; then
 	fi
     fi
 fi
-if [ $src -eq 1 ] ; then UTS_VERSION=`uname -v` ; fi
+if [ $src -eq 1 ] ; then UTS_VERSION=`uname -r` ; fi
 
 case "$VERSION.$PATCHLEVEL" in
 2.2|2.4|2.5)
@@ -369,7 +369,7 @@ if [ ! "`grep "DQUOT_ALLOC_INODE(struct inode \*inode)" $LINUX/include/linux/quo
 fi
 
 UTS_RELEASE=`grep UTS_RELEASE $LINUX/include/linux/version.h | grep -v BOOT | awk '{print $3}' | sed 's/"//g'`
-if [ ! $UTS_RELEASE ] ; then
+if [ "`echo $UTS_RELEASE | wc -w | sed 's/ //g'`" != "1" -o "$UTS_RELEASE" == "" ] ; then
 	echo "Cannot determine version from version.h. Using Makefile."
 	UTS_RELEASE=$CUR_RELEASE
 fi
