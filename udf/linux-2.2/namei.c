@@ -1091,7 +1091,7 @@ int udf_symlink(struct inode * dir, struct dentry * dentry, const char * symname
 	bh = udf_tread(inode->i_sb, block, inode->i_sb->s_blocksize);
 	ea = bh->b_data + udf_ext0_offset(inode);
 
-	eoffset = inode->i_sb->s_blocksize - (ea - bh->b_data);
+	eoffset = inode->i_sb->s_blocksize - udf_ext0_offset(inode);
 	pc = (struct PathComponent *)ea;
 
 	if (*symname == '/')
@@ -1163,12 +1163,7 @@ int udf_symlink(struct inode * dir, struct dentry * dentry, const char * symname
 	mark_inode_dirty(inode);
 
 	if (!(fi = udf_add_entry(dir, dentry, &fibh, &cfi, &err)))
-	{
-		inode->i_nlink --;
-		mark_inode_dirty(inode);
-		iput(inode);
-		goto out;
-	}
+		goto out_no_entry;
 	cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize);
 	cfi.icb.extLocation = cpu_to_lelb(UDF_I_LOCATION(inode));
 	if (UDF_SB_LVIDBH(inode->i_sb))
@@ -1502,9 +1497,7 @@ int udf_rename (struct inode * old_dir, struct dentry * old_dentry,
 		}
 		else
 		{
-/*
 			DQUOT_INIT(new_inode);
-*/
 		}
 	}
 	if (S_ISDIR(old_inode->i_mode))
