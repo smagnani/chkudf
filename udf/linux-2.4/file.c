@@ -31,7 +31,6 @@
  */
 
 #include "udfdecl.h"
-#include <linux/config.h>
 #include <linux/fs.h>
 #include <linux/udf_fs.h>
 #include <asm/uaccess.h>

@@ -11,7 +11,6 @@
 
 #include <linux/fs.h>
 #include <linux/types.h>
-#include <linux/config.h>
 
 #ifndef LINUX_VERSION_CODE
 #include <linux/version.h>
