@@ -1241,10 +1241,9 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 	}
 	if (S_ISCHR(inode->i_mode) || S_ISBLK(inode->i_mode))
 	{
-		struct buffer_head *tbh = NULL;
 		struct deviceSpec *dsea =
 			(struct deviceSpec *)
-				udf_get_extendedattr(inode, 12, 1, &tbh);
+				udf_get_extendedattr(inode, 12, 1);
 
 		if (dsea)
 		{
@@ -1252,7 +1251,6 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 				((le32_to_cpu(dsea->majorDeviceIdent)) << 8) |
 				(le32_to_cpu(dsea->minorDeviceIdent) & 0xFF));
 			/* Developer ID ??? */
-			udf_release_data(tbh);
 		}
 		else
 		{
@@ -1384,17 +1382,16 @@ udf_update_inode(struct inode *inode, int do_sync)
 	if (S_ISCHR(inode->i_mode) || S_ISBLK(inode->i_mode))
 	{
 		regid *eid;
-		struct buffer_head *tbh = NULL;
 		struct deviceSpec *dsea =
 			(struct deviceSpec *)
-				udf_get_extendedattr(inode, 12, 1, &tbh);	
+				udf_get_extendedattr(inode, 12, 1);	
 
 		if (!dsea)
 		{
 			dsea = (struct deviceSpec *)
 				udf_add_extendedattr(inode,
 					sizeof(struct deviceSpec) +
-					sizeof(regid), 12, 0x3, &tbh);
+					sizeof(regid), 12, 0x3);
 			dsea->attrType = 12;
 			dsea->attrSubtype = 1;
 			dsea->attrLength = sizeof(struct deviceSpec) +
@@ -1408,8 +1405,6 @@ udf_update_inode(struct inode *inode, int do_sync)
 		eid->identSuffix[1] = UDF_OS_ID_LINUX;
 		dsea->majorDeviceIdent = kdev_t_to_nr(inode->i_rdev) >> 8;
 		dsea->minorDeviceIdent = kdev_t_to_nr(inode->i_rdev) & 0xFF;
-		mark_buffer_dirty_inode(tbh, inode);
-		udf_release_data(tbh);
 	}
 
 	if (UDF_I_EFE(inode) == 0)
