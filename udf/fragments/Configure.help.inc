@@ -1,4 +1,4 @@
-UDF Filesystem support (EXPERIMENTAL)
+UDF File System support (read only)
 CONFIG_UDF_FS
   This is the new file system used on some CDROMs and DVDs. Say Y if
   you intend to mount DVD discs or CDRW's written in packet mode, or
@@ -16,9 +16,8 @@ CONFIG_UDF_FS
 
   If unsure, say N.
 
-UDF read-write support (DANGEROUS)
-CONFIG_UDF_FS_WRITE
-  Say Y if you want to test write support for UDF filesystems.
+UDF write support (DANGEROUS)
+CONFIG_UDF_RW
+  Say Y if you want to test write support for UDF file systems.
   Due to lack of support for writing to CDR/CDRW's, this option
-  is only supported for Hard Discs, DVD-RAM, and loopback files.
-
+  is only supported for hard discs, DVD-RAM, and loopback files.
