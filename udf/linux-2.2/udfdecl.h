@@ -137,7 +137,7 @@ extern int udf_ioctl(struct inode *, struct file *, unsigned int, unsigned long)
 /* inode.c */
 extern struct inode *udf_iget(struct super_block *, lb_addr);
 extern int udf_sync_inode(struct inode *);
-extern void udf_expand_file_adinicb(struct file *, int, int *);
+extern void udf_expand_file_adinicb(struct inode *, int, int *);
 extern struct buffer_head * udf_expand_dir_adinicb(struct inode *, int *, int *);
 extern struct buffer_head * udf_getblk(struct inode *, long, int, int *);
 extern struct buffer_head * udf_bread(struct inode *, int, int, int *);
@@ -167,8 +167,8 @@ extern struct buffer_head *udf_read_untagged(struct super_block *, Uint32, Uint3
 extern void udf_release_data(struct buffer_head *);
 
 /* lowlevel.c */
-extern unsigned int udf_get_last_session(kdev_t);
-extern unsigned int udf_get_last_block(kdev_t, int *);
+extern unsigned int udf_get_last_session(struct super_block *);
+extern unsigned int udf_get_last_block(struct super_block *);
 
 /* partition.c */
 extern Uint32 udf_get_pblock(struct super_block *, Uint32, Uint16, Uint32);
@@ -185,6 +185,7 @@ extern void udf_free_inode(struct inode *);
 extern struct inode * udf_new_inode (const struct inode *, int, int *);
 
 /* truncate.c */
+extern void udf_trunc(struct inode *);
 extern void udf_truncate(struct inode *);
 extern void udf_truncate_adinicb(struct inode *);
 
