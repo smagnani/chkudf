@@ -264,8 +264,8 @@ try_again:
 	if (utf_cnt)
 	{
 error_out:
-		printk(KERN_ERR "udf: bad UTF-8 character\n");
-		return 0;
+		ocu[++u_len] = '?';
+		printk(KERN_DEBUG "udf: bad UTF-8 character\n");
 	}
 
 	ocu[length - 1] = (uint8_t)u_len + 1;

@@ -36,11 +36,11 @@
 #include <linux/locks.h>
 #include <linux/smp_lock.h>
 
-static inline int udf_match(int len, const char * const name, struct qstr *qs)
+static inline int udf_match(int len1, const char *name1, int len2, const char *name2)
 {
-	if (len != qs->len)
+	if (len1 != len2)
 		return 0;
-	return !memcmp(name, qs->name, len);
+	return !memcmp(name1, name2, len1);
 }
 
 int udf_write_fi(struct inode *inode, struct fileIdentDesc *cfi,
@@ -154,8 +154,8 @@ udf_find_entry(struct inode *dir, struct dentry *dentry,
 {
 	struct fileIdentDesc *fi=NULL;
 	loff_t f_pos;
-	int block, flen;
-	char fname[UDF_NAME_LEN];
+	int block, namelen;
+	char name[UDF_NAME_LEN], fname[UDF_NAME_LEN];
 	char *nameptr;
 	uint8_t lfi;
 	uint16_t liu;
@@ -165,6 +165,9 @@ udf_find_entry(struct inode *dir, struct dentry *dentry,
 	struct buffer_head *bh = NULL;
 
 	if (!dir)
+		return NULL;
+
+	if ( !(namelen = udf_put_filename(dir->i_sb, dentry->d_name.name, name, dentry->d_name.len)))
 		return NULL;
 
 	f_pos = (udf_ext0_offset(dir) >> 2);
@@ -250,13 +253,10 @@ udf_find_entry(struct inode *dir, struct dentry *dentry,
 		if (!lfi)
 			continue;
 
-		if ((flen = udf_get_filename(dir->i_sb, nameptr, fname, lfi)))
+		if (udf_match(namelen, name, lfi, nameptr))
 		{
-			if (udf_match(flen, fname, &(dentry->d_name)))
-			{
-				udf_release_data(bh);
-				return fi;
-			}
+			udf_release_data(bh);
+			return fi;
 		}
 	}
 	if (fibh->sbh != fibh->ebh)
@@ -344,7 +344,6 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 	char name[UDF_NAME_LEN], fname[UDF_NAME_LEN];
 	int namelen;
 	loff_t f_pos;
-	int flen;
 	char *nameptr;
 	loff_t size = (udf_ext0_offset(dir) + dir->i_size) >> 2;
 	int nfidlen;
@@ -472,8 +471,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 		if (!lfi || !dentry)
 			continue;
 
-		if ((flen = udf_get_filename(dir->i_sb, nameptr, fname, lfi)) &&
-			udf_match(flen, fname, &(dentry->d_name)))
+		if (udf_match(namelen, name, lfi, nameptr))
 		{
 			if (fibh->sbh != fibh->ebh)
 				udf_release_data(fibh->ebh);
