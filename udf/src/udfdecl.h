@@ -1,7 +1,7 @@
 #ifndef __UDF_DECL_H
 #define __UDF_DECL_H
 
-#define UDF_VERSION_NOTICE "v0.8.5.1"
+#define UDF_VERSION_NOTICE "v0.8.6"
 
 #ifdef __KERNEL__
 
@@ -77,9 +77,11 @@ extern void udf_delete_inode(struct inode *);
 extern void udf_write_inode(struct inode *);
 extern int udf_bmap(struct inode *, int);
 extern int inode_bmap(struct inode *, int, lb_addr *, Uint32 *, lb_addr *, Uint32 *, Uint32 *, struct buffer_head **);
-extern int udf_add_aext(struct inode *, lb_addr *, int *, lb_addr, Uint32, struct buffer_head **);
-extern int udf_write_aext(struct inode *, lb_addr *, int *, lb_addr, Uint32, struct buffer_head **);
-extern int udf_next_aext(struct inode *, lb_addr *, int *, lb_addr *, Uint32 *, struct buffer_head **);
+extern int udf_add_aext(struct inode *, lb_addr *, int *, lb_addr, Uint32, struct buffer_head **, int);
+extern int udf_write_aext(struct inode *, lb_addr *, int *, lb_addr, Uint32, struct buffer_head **, int);
+extern int udf_insert_aext(struct inode *, lb_addr, int, lb_addr, Uint32, struct buffer_head *);
+extern int udf_delete_aext(struct inode *, lb_addr, int, lb_addr, Uint32, struct buffer_head *, int);
+extern int udf_next_aext(struct inode *, lb_addr *, int *, lb_addr *, Uint32 *, struct buffer_head **, int);
 
 extern int udf_read_tagged_data(char *, int size, int fd, int block, int partref);
 
@@ -278,8 +280,8 @@ udf_fileident_read(struct inode *, int *,
 extern struct FileIdentDesc * 
 udf_get_fileident(void * buffer, int bufsize, int * offset);
 extern extent_ad * udf_get_fileextent(void * buffer, int bufsize, int * offset);
-extern long_ad * udf_get_filelongad(void * buffer, int bufsize, int * offset);
-extern short_ad * udf_get_fileshortad(void * buffer, int bufsize, int * offset);
+extern long_ad * udf_get_filelongad(void * buffer, int bufsize, int * offset, int);
+extern short_ad * udf_get_fileshortad(void * buffer, int bufsize, int * offset, int);
 extern Uint8 * udf_get_filead(struct FileEntry *, Uint8 *, int, int, int, int *);
 
 extern void udf_update_tag(char *, int);

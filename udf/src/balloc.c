@@ -53,43 +53,43 @@ static int read_block_bitmap(struct super_block * sb, unsigned int block,
 	return retval;
 }
 
-static int load__block_bitmap(struct super_block * sb, unsigned int block)
+static int load__block_bitmap(struct super_block * sb, unsigned int block_group)
 {
 	int i, j, retval = 0;
 	unsigned long block_bitmap_number;
 	struct buffer_head * block_bitmap = NULL;
     int nr_groups = (UDF_SB_PARTLEN(sb, UDF_SB_PARTITION(sb)) +
-        (sizeof(struct SpaceBitmapDesc) << 3) + sb->s_blocksize - 1) / sb->s_blocksize;
+        (sizeof(struct SpaceBitmapDesc) << 3) + (sb->s_blocksize * 8) - 1) / (sb->s_blocksize * 8);
 
 #ifdef VDEBUG
-	udf_debug("block=%d, nr_groups=%d\n", block, nr_groups);
+	udf_debug("block_group=%d, nr_groups=%d\n", block_group, nr_groups);
 #endif
 
-	if (block >= nr_groups)
+	if (block_group >= nr_groups)
 	{
-		udf_debug("block (%d) > nr_groups (%d)\n", block, nr_groups);
+		udf_debug("block_group (%d) > nr_groups (%d)\n", block_group, nr_groups);
 	}
 
 	if (nr_groups <= UDF_MAX_BLOCK_LOADED)
 	{
-		if (UDF_SB_BLOCK_BITMAP(sb, block))
+		if (UDF_SB_BLOCK_BITMAP(sb, block_group))
 		{
-			if (UDF_SB_BLOCK_BITMAP_NUMBER(sb, block) == block)
-				return block;
+			if (UDF_SB_BLOCK_BITMAP_NUMBER(sb, block_group) == block_group)
+				return block_group;
 		}
-		retval = read_block_bitmap(sb, block, block);
+		retval = read_block_bitmap(sb, block_group, block_group);
 		if (retval < 0)
 			return retval;
-		return block;
+		return block_group;
 	}
 
 	for (i=0; i<UDF_SB_LOADED_BLOCK_BITMAPS(sb) &&
-		UDF_SB_BLOCK_BITMAP_NUMBER(sb, i) != block; i++)
+		UDF_SB_BLOCK_BITMAP_NUMBER(sb, i) != block_group; i++)
 	{
 		;
 	}
 	if (i < UDF_SB_LOADED_BLOCK_BITMAPS(sb) &&
-		UDF_SB_BLOCK_BITMAP_NUMBER(sb, i) == block)
+		UDF_SB_BLOCK_BITMAP_NUMBER(sb, i) == block_group)
 	{
 		block_bitmap_number = UDF_SB_BLOCK_BITMAP_NUMBER(sb, i);
 		block_bitmap = UDF_SB_BLOCK_BITMAP(sb, i);
@@ -102,7 +102,7 @@ static int load__block_bitmap(struct super_block * sb, unsigned int block)
 		UDF_SB_BLOCK_BITMAP(sb, 0) = block_bitmap;
 
 		if (!block_bitmap)
-			retval = read_block_bitmap(sb, block, 0);
+			retval = read_block_bitmap(sb, block_group, 0);
 	}
 	else
 	{
@@ -115,36 +115,37 @@ static int load__block_bitmap(struct super_block * sb, unsigned int block)
 			UDF_SB_BLOCK_BITMAP_NUMBER(sb, j) = UDF_SB_BLOCK_BITMAP_NUMBER(sb, j-1);
 			UDF_SB_BLOCK_BITMAP(sb, j) = UDF_SB_BLOCK_BITMAP(sb, j-1);
 		}
-		retval = read_block_bitmap(sb, block, 0);
+		retval = read_block_bitmap(sb, block_group, 0);
 	}
 	return retval;
 }
 
-static inline int load_block_bitmap(struct super_block *sb, unsigned int block)
+static inline int load_block_bitmap(struct super_block *sb,
+	unsigned int block_group)
 {
 	int slot;
     int nr_groups = (UDF_SB_PARTLEN(sb, UDF_SB_PARTITION(sb)) +
-        (sizeof(struct SpaceBitmapDesc) << 3) + sb->s_blocksize - 1) / sb->s_blocksize;
+        (sizeof(struct SpaceBitmapDesc) << 3) + (sb->s_blocksize * 8) - 1) / (sb->s_blocksize * 8);
 
 #ifdef VDEBUG
-	udf_debug("block=%d, nr_groups=%d\n", block, nr_groups);
+	udf_debug("block_group=%d, nr_groups=%d\n", block_group, nr_groups);
 #endif
 
 	if (UDF_SB_LOADED_BLOCK_BITMAPS(sb) > 0 &&
-		UDF_SB_BLOCK_BITMAP_NUMBER(sb, 0) == block &&
-		UDF_SB_BLOCK_BITMAP(sb, block))
+		UDF_SB_BLOCK_BITMAP_NUMBER(sb, 0) == block_group &&
+		UDF_SB_BLOCK_BITMAP(sb, block_group))
 	{
 		return 0;
 	}
 	else if (nr_groups <= UDF_MAX_BLOCK_LOADED &&
-		UDF_SB_BLOCK_BITMAP_NUMBER(sb, block) == block &&
-		UDF_SB_BLOCK_BITMAP(sb, block))
+		UDF_SB_BLOCK_BITMAP_NUMBER(sb, block_group) == block_group &&
+		UDF_SB_BLOCK_BITMAP(sb, block_group))
 	{
-		slot = block;
+		slot = block_group;
 	}
 	else
 	{
-		slot = load__block_bitmap(sb, block);
+		slot = load__block_bitmap(sb, block_group);
 	}
 
 	if (slot < 0)
@@ -248,7 +249,7 @@ error_return:
 int udf_new_block(const struct inode * inode, Uint16 partition, Uint32 goal,
 				Uint32 *prealloc_count, Uint32 *prealloc_block, int *err)
 {
-	int tmp, newbit, bit, block, block_group, group_start;
+	int tmp, newbit, bit=0, block, block_group, group_start;
 	int end_goal, nr_groups, bitmap_nr, i;
 	struct buffer_head *bh = NULL;
 	struct super_block *sb;
@@ -273,7 +274,7 @@ repeat:
 		goal = 0;
 
 	nr_groups = (UDF_SB_PARTLEN(sb, partition) +
-		(sizeof(struct SpaceBitmapDesc) << 3) + sb->s_blocksize - 1) / sb->s_blocksize;
+		(sizeof(struct SpaceBitmapDesc) << 3) + (sb->s_blocksize * 8) - 1) / (sb->s_blocksize * 8);
 	block = goal + (sizeof(struct SpaceBitmapDesc) << 3);
 	block_group = block >> (sb->s_blocksize_bits + 3);
 	group_start = block_group ? 0 : sizeof(struct SpaceBitmapDesc);
@@ -327,10 +328,10 @@ repeat:
 		}
 	}
 
-	for (i=0; i<nr_groups; i++)
+	for (i=0; i<(nr_groups*2); i++)
 	{
 		block_group ++;
-		if (block_group > nr_groups)
+		if (block_group >= nr_groups)
 			block_group = 0;
 		group_start = block_group ? 0 : sizeof(struct SpaceBitmapDesc);
 
@@ -338,17 +339,27 @@ repeat:
 		if (bitmap_nr < 0)
 			goto error_return;
 		bh = UDF_SB_BLOCK_BITMAP(sb, bitmap_nr);
-		ptr = memscan((char *)bh->b_data + group_start, 0xFF, sb->s_blocksize - group_start);
-		if ((ptr - ((char *)bh->b_data)) < sb->s_blocksize)
-			break;
+		if (i < nr_groups)
+		{
+			ptr = memscan((char *)bh->b_data + group_start, 0xFF, sb->s_blocksize - group_start);
+			if ((ptr - ((char *)bh->b_data)) < sb->s_blocksize)
+			{
+				bit = (ptr - ((char *)bh->b_data)) << 3;
+				break;
+			}
+		}
+		else
+		{
+			bit = udf_find_next_one_bit((char *)bh->b_data, sb->s_blocksize << 3, group_start << 3);
+			if (bit < sb->s_blocksize << 3)
+				break;
+		}
 	}
-	if (i >= nr_groups)
+	if (i >= (nr_groups*2))
 	{
 		unlock_super(sb);
 		return newblock;
 	}
-	ptr = memscan(bh->b_data + group_start, 0xFF, sb->s_blocksize - group_start);
-	bit = (ptr - ((char *)bh->b_data)) << 3;
 	if (bit < sb->s_blocksize << 3)
 		goto search_back;
 	else
@@ -361,6 +372,10 @@ repeat:
 
 search_back:
 	for (i=0; i<7 && bit > (group_start << 3) && udf_test_bit(bit - 1, bh->b_data); i++, bit--);
+
+#ifdef VDEBUG
+	udf_debug("group_start=%d, bit=%d\n", group_start, bit);
+#endif
 
 got_block:
 	newblock = bit + (block_group << (sb->s_blocksize_bits + 3)) -

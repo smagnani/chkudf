@@ -41,8 +41,8 @@ static int extent_trunc(struct inode * inode, lb_addr eloc, Uint32 elen,
 	int last_block = (elen + inode->i_sb->s_blocksize - 1) / inode->i_sb->s_blocksize;
 
 #ifdef VDEBUG
-	udf_debug("eloc: block=%d, partition=%d, elen=%d, offset=%d\n",
-		eloc.logicalBlockNum, eloc.partitionReferenceNum, elen, offset);
+	udf_debug("eloc: block=%d, partition=%d, elen=%d, offset=%d, size=%ld\n",
+		eloc.logicalBlockNum, eloc.partitionReferenceNum, elen, offset, inode->i_size);
 #endif
 
 	for (i=offset; i<last_block; i++)
@@ -95,6 +95,14 @@ static int trunc(struct inode * inode)
 	int retry = 0, etype;
 	int first_block = (inode->i_size + inode->i_sb->s_blocksize - 1) / inode->i_sb->s_blocksize;
 	struct buffer_head *bh = NULL;
+	int adsize;
+
+	if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_SHORT)
+		adsize = sizeof(short_ad);
+	else if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_LONG)
+		adsize = sizeof(long_ad);
+	else
+		adsize = 0;
 
 	if ((etype = inode_bmap(inode, first_block, &bloc, &extoffset, &eloc, &elen, &offset, &bh)) != -1)
 	{
@@ -102,8 +110,31 @@ static int trunc(struct inode * inode)
 		udf_debug("first_block = %d\n", first_block);
 #endif
 		retry |= extent_trunc(inode, eloc, elen, offset);
+		extoffset -= adsize;
+		if (offset)
+		{
+			elen = (EXTENT_RECORDED_ALLOCATED << 30) |
+				((offset << inode->i_sb->s_blocksize_bits) + 
+				(inode->i_size & (inode->i_sb->s_blocksize - 1)));
+			if (!memcmp(&UDF_I_EXT0LOC(inode), &eloc, sizeof(lb_addr)))
+				UDF_I_EXT0LOC(inode) = eloc;
+		}
+		else
+		{
+			if (!memcmp(&UDF_I_EXT0LOC(inode), &eloc, sizeof(lb_addr)))
+			{
+				UDF_I_EXT0LEN(inode) = 0;
+				UDF_I_EXT0LOC(inode).logicalBlockNum = 0;
+				UDF_I_EXT0LOC(inode).partitionReferenceNum = 0;
+			}
+			elen = 0;
+			eloc.logicalBlockNum = 0;
+			eloc.partitionReferenceNum = 0;
+			UDF_I_LENALLOC(inode) -= adsize;
+		}
+		etype = udf_write_aext(inode, &bloc, &extoffset, eloc, elen, &bh, 1);
 
-		while ((etype = udf_next_aext(inode, &bloc, &extoffset, &eloc, &elen, &bh)) != -1)
+		while ((etype = udf_next_aext(inode, &bloc, &extoffset, &eloc, &elen, &bh, 1)) != -1)
 		{
 #ifdef VDEBUG
 			udf_debug("bloc: block=%d, partition=%d, ext=%d, eloc: block=%d, partition=%d elen=%d\n",
@@ -111,7 +142,15 @@ static int trunc(struct inode * inode)
 				eloc.logicalBlockNum, eloc.partitionReferenceNum, elen);
 #endif
 			if (etype != EXTENT_NOT_RECORDED_NOT_ALLOCATED)
+			{
 				retry |= extent_trunc(inode, eloc, elen, 0);
+				extoffset -= adsize;
+				elen = 0;
+				eloc.logicalBlockNum = 0;
+				eloc.partitionReferenceNum = 0;
+				UDF_I_LENALLOC(inode) -= adsize;
+				etype = udf_write_aext(inode, &bloc, &extoffset, eloc, elen, &bh, 1);
+			}
 		}
 	}
 	udf_release_data(bh);

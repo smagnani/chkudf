@@ -1,4 +1,5 @@
---- linux-2.2.8/include/linux/fs.h	Mon Apr 19 15:51:45 1999
+diff -u --recursive --new-file linux-2.2.9/include/linux/fs.h linux/include/linux/fs.h
+--- linux-2.2.9/include/linux/fs.h	Mon Apr 19 15:51:45 1999
 +++ linux/include/linux/fs.h	Mon Apr 19 16:02:54 1999
 @@ -275,6 +275,7 @@
  #include <linux/hfs_fs_i.h>

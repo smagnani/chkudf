@@ -78,7 +78,7 @@ static int sync_all_extents(struct inode * inode, int wait)
 	{
 		err |= sync_extent(inode, &eloc, &elen, wait);
 
-		while ((etype = udf_next_aext(inode, &bloc, &extoffset, &eloc, &elen, &bh)) != -1)
+		while ((etype = udf_next_aext(inode, &bloc, &extoffset, &eloc, &elen, &bh, 1)) != -1)
 		{
 			if (etype == EXTENT_RECORDED_ALLOCATED)
 				err |= sync_extent(inode, &eloc, &elen, wait);

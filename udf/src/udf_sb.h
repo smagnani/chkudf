@@ -56,6 +56,11 @@
 	UDF_SB_PARTMAPS(X) = kmalloc(sizeof(struct udf_part_map) * Y, GFP_KERNEL);\
 }
 
+#if LINUX_VERSION_CODE < 0x020206
+#define UDF_SB_RENAME_LOCK(X)	( UDF_SB(X)->s_rename_lock )
+#define UDF_SB_RENAME_WAIT(X)	( UDF_SB(X)->s_rename_wait )
+#endif
+
 #define IS_STRICT(X)			( UDF_SB(X)->s_flags & UDF_FLAG_STRICT )
 #define IS_UNDELETE(X)			( UDF_SB(X)->s_flags & UDF_FLAG_UNDELETE )
 #define IS_UNHIDE(X)			( UDF_SB(X)->s_flags & UDF_FLAG_UNHIDE )

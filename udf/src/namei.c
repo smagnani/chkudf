@@ -354,6 +354,22 @@ udf_lookup(struct inode *dir, struct dentry *dentry)
 	struct FileIdentDesc cfi, *fi;
 	struct udf_fileident_bh fibh;
 
+#ifdef UDF_RECOVERY
+	/* temporary shorthand for specifying files by inode number */
+	if (!strncmp(dentry->d_name.name, ".B=", 3) )
+	{
+		lb_addr lb = { 0, simple_strtoul(dentry->d_name.name+3, NULL, 0) };
+		inode = udf_iget(dir->i_sb, lb);
+		if (!inode)
+#if LINUX_VERSION_CODE < 0x020207
+			return -EACCES;
+#else
+			return ERR_PTR(-EACCES);
+#endif
+	}
+	else
+#endif /* UDF_RECOVERY */
+
 	if ((fi = udf_find_entry(dir, dentry, &fibh, &cfi)))
 	{
 		if (fibh.sbh != fibh.ebh)
@@ -402,6 +418,14 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 	if (!dir || !dir->i_nlink)
 		return NULL;
 	sb = dir->i_sb;
+
+#if LINUX_VERSION_CODE < 0x020206
+	if (dentry->d_name.len >= UDF_NAME_LEN)
+	{
+		*err = -ENAMETOOLONG;
+		return NULL;
+	}
+#endif
 
 	if (!dentry->d_name.len)
 		return NULL;
@@ -553,7 +577,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 		if (UDF_I_ALLOCTYPE(dir) != ICB_FLAG_AD_IN_ICB)
 		{
 			Uint32 lextoffset = extoffset;
-			if (udf_next_aext(dir, &bloc, &extoffset, &eloc, &elen, &bh) !=
+			if (udf_next_aext(dir, &bloc, &extoffset, &eloc, &elen, &bh, 1) !=
 				EXTENT_RECORDED_ALLOCATED)
 			{
 				udf_release_data(bh);
@@ -564,7 +588,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 			{
 				elen += nfidlen;
 				elen = (EXTENT_RECORDED_ALLOCATED << 30) | elen;
-				udf_write_aext(dir, &bloc, &lextoffset, eloc, elen, &bh);
+				udf_write_aext(dir, &bloc, &lextoffset, eloc, elen, &bh, 1);
 				block = eloc.logicalBlockNum + (elen >> dir->i_sb->s_blocksize_bits);
 			}
 		}
@@ -585,7 +609,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 			fibh->sbh = fibh->ebh;
 		}
 
-		if (udf_next_aext(dir, &bloc, &extoffset, &eloc, &elen, &bh) !=
+		if (udf_next_aext(dir, &bloc, &extoffset, &eloc, &elen, &bh, 1) !=
 			EXTENT_RECORDED_ALLOCATED)
 		{
 			udf_release_data(bh);
@@ -604,7 +628,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 		}
 		if (!(fibh->soffset))
 		{
-			if (udf_next_aext(dir, &bloc, &lextoffset, &eloc, &elen, &bh) ==
+			if (udf_next_aext(dir, &bloc, &lextoffset, &eloc, &elen, &bh, 1) ==
 				EXTENT_RECORDED_ALLOCATED)
 			{
 				block = eloc.logicalBlockNum + (elen >> dir->i_sb->s_blocksize_bits);
@@ -702,9 +726,11 @@ int udf_mknod(struct inode * dir, struct dentry * dentry, int mode, int rdev)
 	udf_debug("dir->ino=%ld, dentry=%s\n", dir->i_ino, dentry->d_name.name);
 #endif
 
+#if LINUX_VERSION_CODE < 0x020206
 	err = -ENAMETOOLONG;
 	if (dentry->d_name.len >= UDF_NAME_LEN)
 		goto out;
+#endif
 
 	err = -EIO;
 	inode = udf_new_inode(dir, mode, &err);
@@ -772,9 +798,11 @@ int udf_mkdir(struct inode * dir, struct dentry * dentry, int mode)
 	udf_debug("dir->ino=%ld, dentry=%s\n", dir->i_ino, dentry->d_name.name);
 #endif
 
+#if LINUX_VERSION_CODE < 0x020206
 	err = -ENAMETOOLONG;
 	if (dentry->d_name.len >= UDF_NAME_LEN)
 		goto out;
+#endif
 
 #if 0
 	err = -EMLINK;
@@ -927,9 +955,11 @@ int udf_rmdir(struct inode * dir, struct dentry * dentry)
 	struct udf_fileident_bh fibh;
 	struct FileIdentDesc *fi, cfi;
 
+#if LINUX_VERSION_CODE < 0x020206
 	retval = -ENAMETOOLONG;
 	if (dentry->d_name.len >= UDF_NAME_LEN)
 		goto out;
+#endif
 
 	retval = -ENOENT;
 	fi = udf_find_entry(dir, dentry, &fibh, &cfi);
@@ -939,7 +969,10 @@ int udf_rmdir(struct inode * dir, struct dentry * dentry)
 	inode = dentry->d_inode;
 
 	retval = -EIO;
+	if (udf_get_lb_pblock(dir->i_sb, lelb_to_cpu(cfi.icb.extLocation), 0) != inode->i_ino)
+		goto end_rmdir;
 
+#if LINUX_VERSION_CODE < 0x020206
 	if (!empty_dir(inode))
 		retval = -ENOTEMPTY;
 	else if (udf_get_lb_pblock(dir->i_sb, lelb_to_cpu(cfi.icb.extLocation), 0) !=
@@ -952,6 +985,13 @@ int udf_rmdir(struct inode * dir, struct dentry * dentry)
 		retval = udf_delete_entry(fi, &fibh, &cfi);
 		dir->i_version = ++event;
 	}
+#else
+	retval = -ENOTEMPTY;
+	if (!empty_dir(inode))
+		goto end_rmdir;
+	retval = udf_delete_entry(fi, &fibh, &cfi);
+	dir->i_version = ++event;
+#endif
 	if (retval)
 		goto end_rmdir;
 	if (inode->i_nlink != 2)
@@ -988,9 +1028,11 @@ int udf_unlink(struct inode * dir, struct dentry * dentry)
 	udf_debug("dir->i_ino=%ld\n", dir->i_ino);
 #endif
 
+#if LINUX_VERSION_CODE < 0x020206
 	retval = -ENAMETOOLONG;
 	if (dentry->d_name.len >= UDF_NAME_LEN)
 		goto out;
+#endif
 
 	retval = -ENOENT;
 	fi = udf_find_entry(dir, dentry, &fibh, &cfi);
@@ -1156,8 +1198,10 @@ int udf_link(struct dentry * old_dentry, struct inode * dir,
 	if (S_ISDIR(inode->i_mode))
 		return -EPERM;
 
+#if LINUX_VERSION_CODE < 0x020206
 	if (IS_APPEND(inode) || IS_IMMUTABLE(inode))
 		return -EPERM;
+#endif
 
 #if 0
 	if (inode->i_nlink >= UDF_LINK_MAX)
@@ -1186,6 +1230,207 @@ int udf_link(struct dentry * old_dentry, struct inode * dir,
 	return 0;
 }
 
+
+#if LINUX_VERSION_CODE < 0x020206
+
+/*
+ * rename uses retrying to avoid race-conditions: at least they should be
+ * minimal.
+ * it tries to allocate all the blocks, then sanity-checks, and if the sanity-
+ * checks fail, it tries to restart itself again. Very practical - no changes
+ * are done until we know everything works ok.. and then all the changes can be
+ * done in one fell swoop when we have claimed all the buffers needed.
+ *
+ * Anybody can rename anything with this: the permission checks are left to the
+ * higher-level routines.
+ */
+static int do_udf_rename(struct inode *old_dir, struct dentry *old_dentry,
+	struct inode *new_dir, struct dentry *new_dentry)
+{
+	struct inode * old_inode, * new_inode;
+	struct udf_fileident_bh ofibh, nfibh;
+	struct FileIdentDesc *ofi = NULL, *nfi = NULL, *dir_fi = NULL, ocfi, ncfi;
+	struct buffer_head *dir_bh = NULL;
+	int retval = -ENOENT;
+
+	if (old_dentry->d_name.len > UDF_NAME_LEN)
+		goto end_rename;
+
+	old_inode = old_dentry->d_inode;
+	ofi = udf_find_entry(old_dir, old_dentry, &ofibh, &ocfi);
+	if (!ofi || udf_get_lb_pblock(old_dir->i_sb, lelb_to_cpu(ocfi.icb.extLocation), 0) !=
+		old_inode->i_ino)
+	{
+		goto end_rename;
+	}
+
+	new_inode = new_dentry->d_inode;
+	nfi = udf_find_entry(new_dir, new_dentry, &nfibh, &ncfi);
+	if (nfi)
+	{
+		if (!new_inode)
+		{
+			if (nfibh.sbh != nfibh.ebh)
+				udf_release_data(nfibh.ebh);
+			udf_release_data(nfibh.sbh);
+			nfi = NULL;
+		}
+		else
+		{
+/*
+			DQUOT_INIT(new_inode);
+*/
+		}
+	}
+	retval = 0;
+	if (new_inode == old_inode)
+		goto end_rename;
+	if (S_ISDIR(old_inode->i_mode))
+	{
+		Uint32 offset = UDF_I_EXT0OFFS(old_inode);
+		retval = -EINVAL;
+		if (is_subdir(new_dentry, old_dentry))
+			goto end_rename;
+
+		if (new_inode)
+		{
+			/* Prune any children before testing for busy */
+			if (new_dentry->d_count > 1)
+				shrink_dcache_parent(new_dentry);
+				retval = -EBUSY;
+				if (new_dentry->d_count > 1)
+					goto end_rename;
+			retval = -ENOTEMPTY;
+			if (!empty_dir(new_inode))
+				goto end_rename;
+		}
+		dir_bh = udf_bread(old_inode, 0, 0, &retval);
+		if (!dir_bh)
+			goto end_rename;
+		dir_fi = udf_get_fileident(dir_bh->b_data, old_inode->i_sb->s_blocksize, &offset);
+		if (!dir_fi)
+			goto end_rename;
+		if (udf_get_lb_pblock(old_inode->i_sb, cpu_to_lelb(dir_fi->icb.extLocation), 0) !=
+			old_dir->i_ino)
+		{
+			goto end_rename;
+		}
+#if 0
+		retval = -EMLINK;
+		if (!new_inode && new_dir->i_nlink >= UDF_LINK_MAX)
+			goto end_rename;
+#endif
+	}
+	if (!nfi)
+	{
+		nfi = udf_add_entry(new_dir, new_dentry, &nfibh, &ncfi, &retval);
+		if (!nfi)
+			goto end_rename;
+	}
+	new_dir->i_version = ++event;
+
+	/*
+	 * ok, that's it
+	 */
+	ncfi.fileVersionNum = ocfi.fileVersionNum;
+	ncfi.fileCharacteristics = ocfi.fileCharacteristics;
+	ncfi.icb.extLocation = ocfi.icb.extLocation;
+	ncfi.icb.extLength = ocfi.icb.extLength;
+	udf_write_fi(&ncfi, nfi, &nfibh, NULL, NULL);
+
+	udf_delete_entry(ofi, &ofibh, &ocfi);
+
+	old_dir->i_version = ++event;
+	if (new_inode)
+	{
+		new_inode->i_nlink--;
+		new_inode->i_ctime = CURRENT_TIME;
+		UDF_I_UCTIME(new_inode) = CURRENT_UTIME;
+		mark_inode_dirty(new_inode);
+	}
+	old_dir->i_ctime = old_dir->i_mtime = CURRENT_TIME;
+	UDF_I_UCTIME(old_dir) = UDF_I_UMTIME(old_dir) = CURRENT_UTIME;
+	mark_inode_dirty(old_dir);
+
+	if (dir_bh)
+	{
+		dir_fi->icb.extLocation = lelb_to_cpu(UDF_I_LOCATION(new_dir));
+		udf_update_tag((char *)dir_fi, sizeof(struct FileIdentDesc) +
+			cpu_to_le16(dir_fi->lengthOfImpUse));
+		if (UDF_I_ALLOCTYPE(old_inode) == ICB_FLAG_AD_IN_ICB)
+		{
+			mark_inode_dirty(old_inode);
+			old_inode->i_version = ++event;
+		}
+		else
+			mark_buffer_dirty(dir_bh, 1);
+		old_dir->i_nlink --;
+		mark_inode_dirty(old_dir);
+		if (new_inode)
+		{
+			new_inode->i_nlink --;
+			mark_inode_dirty(new_inode);
+		}
+		else
+		{
+			new_dir->i_nlink ++;
+			mark_inode_dirty(new_dir);
+		}
+	}
+
+	/* Update the dcache */
+	d_move(old_dentry, new_dentry);
+	retval = 0;
+
+end_rename:
+	udf_release_data(dir_bh);
+	if (ofi)
+	{
+		if (ofibh.sbh != ofibh.ebh)
+			udf_release_data(ofibh.ebh);
+		udf_release_data(ofibh.sbh);
+	}
+	if (nfi)
+	{
+		if (nfibh.sbh != nfibh.ebh)
+			udf_release_data(nfibh.ebh);
+		udf_release_data(nfibh.sbh);
+	}
+	return retval;
+}
+
+/* Ok, rename also locks out other renames, as they can change the parent of
+ * a directory, and we don't want any races. Other races are checked for by
+ * "do_rename()", which restarts if there are inconsistencies.
+ *
+ * Note that there is no race between different filesystems: it's only within
+ * the same device that races occur: many renames can happen at once, as long
+ * as they are on different partitions.
+ *
+ * In the udf file system, we use a lock flag stored in the memory
+ * super-block.  This way, we really lock other renames only if they occur
+ * on the same file system
+ */
+
+int udf_rename(struct inode *old_dir, struct dentry *old_dentry,
+	struct inode *new_dir, struct dentry *new_dentry)
+{
+	int result;
+
+	while (UDF_SB_RENAME_LOCK(old_dir->i_sb))
+		sleep_on(&UDF_SB_RENAME_WAIT(old_dir->i_sb));
+	UDF_SB_RENAME_LOCK(old_dir->i_sb) = 1;
+	result = do_udf_rename(old_dir, old_dentry, new_dir, new_dentry);
+	UDF_SB_RENAME_LOCK(old_dir->i_sb) = 0;
+	wake_up(&UDF_SB_RENAME_WAIT(old_dir->i_sb));
+	return result;
+}
+
+#else
+
+/* Anybody can rename anything with this: the permission checks are left to the
+ * higher-level routines.
+ */
 int udf_rename (struct inode * old_dir, struct dentry * old_dentry,
 	struct inode * new_dir, struct dentry * new_dentry)
 {
@@ -1324,3 +1569,4 @@ end_rename:
 	}
 	return retval;
 }
+#endif

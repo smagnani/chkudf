@@ -98,6 +98,11 @@ struct udf_sb_info
 
 	/* VAT inode */
 	struct inode    *s_vat;
+
+#if LINUX_VERSION_CODE < 0x020206
+	int s_rename_lock;
+	struct wait_queue * s_rename_wait;
+#endif
 };
 
 #endif /* !defined(_LINUX_UDF_FS_SB_H) */

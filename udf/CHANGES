@@ -91,3 +91,8 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
 
 06/03/99 blf	Fixed writing for files > 1 block
 				Started spliting out support for AD_IN_ICB files.
+
+06/11/99 dgb	Added a UDF_RECOVERY compile option and update to ./src/namei.c
+				that enables a ".B=xxx" filename syntax, useful for recovering 
+				files from damaged discs.  Modified ./patch/Makefile to 
+				assist in building kernel patches.

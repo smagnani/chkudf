@@ -38,10 +38,12 @@ install: .prereq.ok
 clean: clean-subdirs
 
 clean-subdirs:
-	@make -C lib clean
-	@make -C module clean
-	@make -C tools clean
+	touch config.mk
+	-@make -C lib clean
+	-@make -C module clean
+	-@make -C tools clean
+	-@make -C patch distclean
 
 distclean: clean
-	@make -C patch distclean
-	rm -rf .prereq.ok config.out config.mk
+	-@make -C patch distclean
+	rm -f *~ *.bak .prereq.ok config.out config.mk include/linux/modversions.h

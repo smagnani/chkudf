@@ -1294,7 +1294,11 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	}
 
 	/* Allocate a dentry for the root inode */
+#if LINUX_VERSION_CODE < 0x020306
 	sb->s_root = d_alloc_root(inode, NULL);
+#else
+	sb->s_root = d_alloc_root(inode);
+#endif
 	if (!sb->s_root)
 	{
 		iput(inode);
@@ -1404,8 +1408,10 @@ udf_statfs(struct super_block *sb, struct statfs *buf, int bufsize)
 	tmp.f_blocks = UDF_SB_PARTLEN(sb, UDF_SB_PARTITION(sb));
 	tmp.f_bfree = udf_count_free(sb);
 	tmp.f_bavail = tmp.f_bfree;
-	tmp.f_files = UDF_SB_LVIDBH(sb) ? le32_to_cpu(UDF_SB_LVIDIU(sb)->numFiles) : 0;
-	tmp.f_ffree = 0L;
+	tmp.f_files = (UDF_SB_LVIDBH(sb) ?
+		(le32_to_cpu(UDF_SB_LVIDIU(sb)->numFiles) +
+		le32_to_cpu(UDF_SB_LVIDIU(sb)->numDirs)) : 0) + tmp.f_bfree;
+	tmp.f_ffree = tmp.f_bfree;
 	/* __kernel_fsid_t f_fsid */
 	tmp.f_namelen = UDF_NAME_LEN;
 

@@ -107,7 +107,7 @@ udf_fileident_read(struct inode *dir, int *nf_pos,
 	{
 		int lextoffset = *extoffset;
 
-		if (udf_next_aext(dir, bloc, extoffset, &eloc, &elen, bh) !=
+		if (udf_next_aext(dir, bloc, extoffset, &eloc, &elen, bh, 1) !=
 			EXTENT_RECORDED_ALLOCATED)
 		{
 			return NULL;
@@ -149,7 +149,7 @@ udf_fileident_read(struct inode *dir, int *nf_pos,
 	{
 		int lextoffset = *extoffset;
 
-		if (udf_next_aext(dir, bloc, extoffset, &eloc, &elen, bh) !=
+		if (udf_next_aext(dir, bloc, extoffset, &eloc, &elen, bh, 1) !=
 			EXTENT_RECORDED_ALLOCATED)
 		{
 			return NULL;
@@ -290,7 +290,7 @@ udf_get_fileextent(void * buffer, int bufsize, int * offset)
 }
 
 short_ad *
-udf_get_fileshortad(void * buffer, int maxoffset, int *offset)
+udf_get_fileshortad(void * buffer, int maxoffset, int *offset, int inc)
 {
 	short_ad * sa;
 	Uint8 * ptr;
@@ -310,13 +310,15 @@ udf_get_fileshortad(void * buffer, int maxoffset, int *offset)
 	else
 		return NULL;
 
-	sa = (short_ad *)ptr;
-	*offset = *offset + sizeof(short_ad);
+	if ((sa = (short_ad *)ptr)->extLength == 0)
+		return NULL;
+	else if (inc)
+		(*offset) += sizeof(short_ad);
 	return sa;
 }
 
 long_ad *
-udf_get_filelongad(void * buffer, int maxoffset, int * offset)
+udf_get_filelongad(void * buffer, int maxoffset, int * offset, int inc)
 {
 	long_ad * la;
 	Uint8 * ptr;
@@ -336,7 +338,9 @@ udf_get_filelongad(void * buffer, int maxoffset, int * offset)
 	else
 		return NULL;
 
-	la = (long_ad *)ptr;
-	*offset = *offset + sizeof(long_ad);
+	if ((la = (long_ad *)ptr)->extLength == 0)
+		return NULL;
+	else if (inc)
+		(*offset) += sizeof(long_ad);
 	return la;
 }

@@ -339,7 +339,7 @@ fi
 if [ $src -eq 1 ] ; then UTS_VERSION=`uname -v` ; fi
 
 case "$VERSION.$PATCHLEVEL" in
-2.0|2.1|2.2)
+2.1|2.2|2.3)
 	if [ "$CONFIG_MODVERSIONS" = "y" ] ; then
 	    echo "MFLAG=-DMODVERSIONS -include $MODVER" >> $CONFIG_MK
 	fi
@@ -351,8 +351,7 @@ case "$VERSION.$PATCHLEVEL" in
     fi
     ;;
 *)
-    echo "This package requires either a 2.0 series kernel or higher,"
-    echo "or 2.1/2.2 series kernel."
+    echo "This package requires a 2.1/2.2 series kernel."
     exit 1
     ;;
 esac
