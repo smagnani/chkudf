@@ -107,8 +107,8 @@ void udf_delete_inode(struct inode * inode)
 	}
 
 	inode->i_size = 0;
-	if (inode->i_blocks)
-		udf_truncate(inode);
+	udf_truncate(inode);
+	write_inode_now(inode);
 	udf_free_inode(inode);
 out:
 	unlock_kernel();
@@ -259,7 +259,7 @@ struct buffer_head * udf_expand_dir_adinicb(struct inode *inode, int *block, int
 	dfibh.sbh = dfibh.ebh = dbh;
 	while ( (f_pos < size) )
 	{
-		sfi = udf_fileident_read(inode, &f_pos, &sfibh, &cfi, NULL, NULL, NULL, NULL);
+		sfi = udf_fileident_read(inode, &f_pos, &sfibh, &cfi, NULL, NULL, NULL, NULL, NULL, NULL);
 		if (!sfi)
 		{
 			udf_release_data(sbh);
@@ -894,7 +894,6 @@ __udf_read_inode(struct inode *inode)
 	 */
 
 	inode->i_blksize = PAGE_SIZE;
-	inode->i_version = 1;
 
 	bh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode), 0, &ident);
 
@@ -977,6 +976,9 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 	time_t convtime;
 	long convtime_usec;
 	int offset, alen;
+
+	inode->i_version = ++event;
+	UDF_I_NEW_INODE(inode) = 0;
 
 	fe = (struct FileEntry *)bh->b_data;
 	efe = (struct ExtendedFileEntry *)bh->b_data;
@@ -1244,6 +1246,17 @@ udf_update_inode(struct inode *inode, int do_sync)
 	}
 	fe = (struct FileEntry *)bh->b_data;
 	efe = (struct ExtendedFileEntry *)bh->b_data;
+	if (UDF_I_NEW_INODE(inode) == 1)
+	{
+		if (UDF_I_EXTENDED_FE(inode) == 0)
+			memset(bh->b_data, 0x0, sizeof(struct FileEntry));
+		else
+			memset(bh->b_data, 0x00, sizeof(struct ExtendedFileEntry));
+		memset(bh->b_data + udf_file_entry_alloc_offset(inode) +
+			UDF_I_LENALLOC(inode), 0x0, inode->i_sb->s_blocksize -
+			udf_file_entry_alloc_offset(inode) - UDF_I_LENALLOC(inode));
+		UDF_I_NEW_INODE(inode) = 0;
+	}
 
 	if (inode->i_uid != UDF_SB(inode->i_sb)->s_uid)
 		fe->uid = cpu_to_le32(inode->i_uid);
@@ -1723,10 +1736,11 @@ int udf_next_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 		}
 		case ICB_FLAG_AD_IN_ICB:
 		{
-			*bloc = *eloc = UDF_I_LOCATION(inode);
-			*elen = UDF_I_LENALLOC(inode);
-			*extoffset = udf_file_entry_alloc_offset(inode);
+			if (UDF_I_LENALLOC(inode) == 0)
+				return -1;
 			etype = EXTENT_RECORDED_ALLOCATED;
+			*eloc = UDF_I_LOCATION(inode);
+			*elen = UDF_I_LENALLOC(inode);
 			break;
 		}
 		default:
@@ -1972,7 +1986,7 @@ int inode_bmap(struct inode *inode, int block, lb_addr *bloc, Uint32 *extoffset,
 		return -1;
 	}
 
-	*extoffset = udf_file_entry_alloc_offset(inode);
+	*extoffset = 0;
 	*elen = 0;
 	*bloc = UDF_I_LOCATION(inode);
 
