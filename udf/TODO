@@ -5,8 +5,6 @@ full write support -- blf
   support tables as well as bitmaps for block allocation
   do delayed block assignments
 
-how to handle mmaping files embedded in the inode -- blf
-
 make sure reading works on big endian and/or 64 bit machines -- blf
 
 support unallocatedSpaceTable, freedSpaceTable, and freedSpaceBitmap -- blf
