@@ -175,7 +175,6 @@ struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
 	inode->i_mtime = inode->i_atime = inode->i_ctime = CURRENT_TIME;
 	UDF_I_UMTIME(inode) = UDF_I_UATIME(inode) = UDF_I_UCTIME(inode) = CURRENT_UTIME;
 	UDF_I_NEW_INODE(inode) = 1;
-	inode->i_op = NULL;
 	insert_inode_hash(inode);
 	mark_inode_dirty(inode);
 
