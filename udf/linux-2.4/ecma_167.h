@@ -4,7 +4,7 @@
  * This file is based on ECMA-167 3rd edition (June 1997)
  * http://www.ecma.ch
  *
- * Copyright (c) 2001-2002  Ben Fennema <bfennema@falcon.csc.calpoly.edu>
+ * Copyright (c) 2001-2003  Ben Fennema <bfennema@falcon.csc.calpoly.edu>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -606,7 +606,7 @@ struct fileEntry
 #define FE_RECORD_FMT_CRLF		0x0A
 #define FE_RECORD_FMT_LFCR		0x0B
 
-/*  Record Display Attributes (ECMA 167r3 4/14.9.8) */
+/* Record Display Attributes (ECMA 167r3 4/14.9.8) */
 #define FE_RECORD_DISPLAY_ATTR_UNDEF	0x00
 #define FE_RECORD_DISPLAY_ATTR_1	0x01
 #define FE_RECORD_DISPLAY_ATTR_2	0x02

@@ -4,7 +4,7 @@
  * This file is based on ECMA-167 3rd edition (June 1997)
  * http://www.ecma.ch
  *
- * Copyright (c) 2001-2002  Ben Fennema <bfennema@falcon.csc.calpoly.edu>
+ * Copyright (c) 2001-2003  Ben Fennema <bfennema@falcon.csc.calpoly.edu>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

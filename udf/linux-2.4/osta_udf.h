@@ -4,7 +4,7 @@
  * This file is based on OSTA UDF(tm) 2.50 (April 30, 2003)
  * http://www.osta.org
  *
- * Copyright (c) 2.50-2003  Ben Fennema <bfennema@falcon.csc.calpoly.edu>
+ * Copyright (c) 2001-2003  Ben Fennema <bfennema@falcon.csc.calpoly.edu>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -171,8 +171,8 @@ struct metadataPartitionMap
 struct virtualAllocationTable15
 {
 	uint32_t	VirtualSector[0];
-	regid		ident;
-	uint32_t	previousVATICB;
+	regid		vatIdent;
+	uint32_t	previousVATICBLoc;
 } __attribute__ ((packed));  
 
 #define ICBTAG_FILE_TYPE_VAT15		0x00U
@@ -183,9 +183,9 @@ struct virtualAllocationTable20
 	uint16_t	lengthHeader;
 	uint16_t	lengthImpUse;
 	dstring		logicalVolIdent[128];
-	uint32_t	previousVatICBLoc;
-	uint32_t	numFIDSFiles;
-	uint32_t	numFIDSDirectories;
+	uint32_t	previousVATICBLoc;
+	uint32_t	numFiles;
+	uint32_t	numDirs;
 	uint16_t	minReadRevision;
 	uint16_t	minWriteRevision;
 	uint16_t	maxWriteRevision;
