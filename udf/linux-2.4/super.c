@@ -164,7 +164,7 @@ module_exit(exit_udf_fs)
  *	noadinicb	Don't embed data in the inode
  *	shortad		Use short ad's
  *	longad		Use long ad's (default)
- *	strict		Set strict conformance
+ *	nostrict	Unset strict conformance
  *	iocharset=	Set the NLS character set
  *
  *	The remaining are for debugging and disaster recovery:
@@ -244,8 +244,8 @@ udf_parse_options(char *options, struct udf_options *uopt)
 			uopt->gid = simple_strtoul(val, NULL, 0);
 		else if (!strcmp(opt, "umask") && val)
 			uopt->umask = simple_strtoul(val, NULL, 0);
-		else if (!strcmp(opt, "strict") && !val)
-			uopt->flags |= (1 << UDF_FLAG_STRICT);
+		else if (!strcmp(opt, "nostrict") && !val)
+			uopt->flags &= ~(1 << UDF_FLAG_STRICT);
 		else if (!strcmp(opt, "uid") && val)
 			uopt->uid = simple_strtoul(val, NULL, 0);
 		else if (!strcmp(opt, "session") && val)
@@ -1359,7 +1359,7 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	struct udf_options uopt;
 	lb_addr rootdir, fileset;
 
-	uopt.flags = (1 << UDF_FLAG_USE_AD_IN_ICB);
+	uopt.flags = (1 << UDF_FLAG_USE_AD_IN_ICB) | (1 << UDF_FLAG_STRICT);
 	uopt.uid = -1;
 	uopt.gid = -1;
 	uopt.umask = 0;
