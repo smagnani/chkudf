@@ -127,6 +127,7 @@ extern int8_t udf_delete_aext(struct inode *, lb_addr, int, lb_addr, uint32_t, s
 extern int8_t udf_next_aext(struct inode *, lb_addr *, int *, lb_addr *, uint32_t *, struct buffer_head **, int);
 extern int8_t udf_current_aext(struct inode *, lb_addr *, int *, lb_addr *, uint32_t *, struct buffer_head **, int);
 extern void udf_discard_prealloc(struct inode *);
+extern void udf_mark_buffer_dirty_inode(struct buffer_head *, struct inode *);
 
 /* misc.c */
 extern int udf_read_tagged_data(char *, int size, int fd, int block, int partref);
@@ -140,7 +141,7 @@ extern void udf_release_data(struct buffer_head *);
 
 /* lowlevel.c */
 extern unsigned int udf_get_last_session(struct super_block *);
-extern unsigned int udf_get_last_block(struct super_block *);
+extern unsigned long udf_get_last_block(struct super_block *);
 
 /* partition.c */
 extern uint32_t udf_get_pblock(struct super_block *, uint32_t, uint16_t, uint32_t);
@@ -205,6 +206,8 @@ extern uint32_t udf64_low32(uint64_t);
 extern uint32_t udf64_high32(uint64_t);
 extern void udf_update_tag(char *, int);
 extern void udf_new_tag(char *, uint16_t, uint16_t, uint16_t, uint32_t, int);
+extern void udf_adj_dirs(struct super_block *, int);
+extern void udf_adj_files(struct super_block *, int);
 
 /* udftime.c */
 extern time_t *udf_stamp_to_time(time_t *, long *, timestamp);
