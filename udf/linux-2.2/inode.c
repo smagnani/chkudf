@@ -1278,6 +1278,7 @@ udf_update_inode(struct inode *inode, int do_sync)
 		use->lengthAllocDescs = cpu_to_le32(UDF_I_LENALLOC(inode));
 		crclen = sizeof(struct unallocSpaceEntry) + UDF_I_LENALLOC(inode) -
 			sizeof(tag);
+		use->descTag.tagLocation = cpu_to_le32(UDF_I_LOCATION(inode).logicalBlockNum);
 		use->descTag.descCRCLength = cpu_to_le16(crclen);
 		use->descTag.descCRC = cpu_to_le16(udf_crc((char *)use + sizeof(tag), crclen, 0));
 
