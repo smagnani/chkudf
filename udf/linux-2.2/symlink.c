@@ -35,7 +35,7 @@
 #include <linux/malloc.h>
 #include "udf_i.h"
 
-static void udf_pc_to_char(char *from, int fromlen, char *to)
+static void udf_pc_to_char(struct super_block *sb, char *from, int fromlen, char *to)
 {
 	struct pathComponent *pc;
 	int elen = 0;
@@ -63,9 +63,9 @@ static void udf_pc_to_char(char *from, int fromlen, char *to)
 				/* that would be . - just ignore */
 				break;
 			case 5:
-				memcpy(p, pc->componentIdent, pc->lengthComponentIdent);
-				p += pc->lengthComponentIdent;
+				p += udf_get_filename(sb, pc->componentIdent, p, pc->lengthComponentIdent);
 				*p++ = '/';
+				break;
 		}
 		elen += sizeof(struct pathComponent) + pc->lengthComponentIdent;
 	}
@@ -83,7 +83,7 @@ static struct dentry * udf_follow_link(struct dentry * dentry,
 	char *symlink, *tmpbuf;
 	
 	if (UDF_I_ALLOCTYPE(inode) == ICBTAG_FLAG_AD_IN_ICB)
-		symlink = UDF_I_DATA(inode) + UDF_I_LENALLOC(inode);
+		symlink = UDF_I_DATA(inode) + UDF_I_LENEATTR(inode);
 	else
 	{
 		bh = sb_bread(inode->i_sb, udf_bmap(inode, 0));
@@ -95,7 +95,7 @@ static struct dentry * udf_follow_link(struct dentry * dentry,
 	}
 	if ((tmpbuf = (char *)kmalloc(inode->i_size, GFP_KERNEL)))
 	{
-		udf_pc_to_char(symlink, inode->i_size, tmpbuf);
+		udf_pc_to_char(inode->i_sb, symlink, inode->i_size, tmpbuf);
 		udf_release_data(bh);
 		base = lookup_dentry(tmpbuf, base, follow);
 		kfree(tmpbuf);
@@ -116,7 +116,7 @@ static int udf_readlink(struct dentry * dentry, char * buffer, int buflen)
 	int len;
 	
 	if (UDF_I_ALLOCTYPE(inode) == ICBTAG_FLAG_AD_IN_ICB)
-		symlink = UDF_I_DATA(inode) + UDF_I_LENALLOC(inode);
+		symlink = UDF_I_DATA(inode) + UDF_I_LENEATTR(inode);
 	else
 	{
 		bh = sb_bread(inode->i_sb, udf_bmap(inode, 0));
@@ -129,7 +129,7 @@ static int udf_readlink(struct dentry * dentry, char * buffer, int buflen)
 
 	if ((tmpbuf = (char *)kmalloc(inode->i_size, GFP_KERNEL)))
 	{
-		udf_pc_to_char(symlink, inode->i_size, tmpbuf);
+		udf_pc_to_char(inode->i_sb, symlink, inode->i_size, tmpbuf);
 		if ((len = strlen(tmpbuf)) > buflen)
 			len = buflen;
 		if (copy_to_user(buffer, tmpbuf, len))

@@ -360,7 +360,6 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 {
 	struct super_block *sb;
 	struct fileIdentDesc *fi=NULL;
-	struct ustr unifilename;
 	char name[UDF_NAME_LEN], fname[UDF_NAME_LEN];
 	int namelen;
 	loff_t f_pos;
@@ -392,30 +391,11 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 			return NULL;
 		}
 
-		if ( !(udf_char_to_ustr(&unifilename, dentry->d_name.name, dentry->d_name.len)) )
+		if ( !(namelen = udf_put_filename(sb, dentry->d_name.name, name, dentry->d_name.len)))
 		{
 			*err = -ENAMETOOLONG;
 			return NULL;
 		}
-
-		if (UDF_QUERY_FLAG(sb, UDF_FLAG_UTF8))
-		{
-			if ( !(namelen = udf_UTF8toCS0(name, &unifilename, UDF_NAME_LEN)) )
-			{
-				*err = -ENAMETOOLONG;
-				return NULL;
-			}
-		}
-		else if (UDF_QUERY_FLAG(sb, UDF_FLAG_NLS_MAP))
-		{
-			if ( !(namelen = udf_NLStoCS0(UDF_SB(sb)->s_nls_map, name, &unifilename, UDF_NAME_LEN)) )
-			{
-				*err = -ENAMETOOLONG;
-				return NULL;
-			}
-		}
-		else
-			return NULL;
 	}
 	else
 		namelen = 0;
@@ -1072,6 +1052,8 @@ int udf_symlink(struct inode * dir, struct dentry * dentry, const char * symname
 	char *ea;
 	int err;
 	int block;
+	char name[UDF_NAME_LEN];
+	int namelen;
 
 	if (!(inode = udf_new_inode(dir, S_IFLNK, &err)))
 		goto out;
@@ -1102,12 +1084,11 @@ int udf_symlink(struct inode * dir, struct dentry * dentry, const char * symname
 		inode->i_blocks = inode->i_sb->s_blocksize / 512;
 		block = udf_get_pblock(inode->i_sb, block,
 			UDF_I_LOCATION(inode).partitionReferenceNum, 0);
+		bh = udf_tread(inode->i_sb, block);
+		ea = bh->b_data + udf_ext0_offset(inode);
 	}
 	else
-		block = udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0);
-
-	bh = udf_tread(inode->i_sb, block);
-	ea = bh->b_data + udf_ext0_offset(inode);
+		ea = UDF_I_DATA(inode) + UDF_I_LENEATTR(inode);
 
 	eoffset = inode->i_sb->s_blocksize - udf_ext0_offset(inode);
 	pc = (struct pathComponent *)ea;
@@ -1155,12 +1136,15 @@ int udf_symlink(struct inode * dir, struct dentry * dentry, const char * symname
 
 		if (pc->componentType == 5)
 		{
-			if (elen + sizeof(struct pathComponent) + symname - compstart > eoffset)
+			if ( !(namelen = udf_put_filename(inode->i_sb, compstart, name, symname - compstart)))
+				goto out_no_entry;
+
+			if (elen + sizeof(struct pathComponent) + namelen > eoffset)
 				goto out_no_entry;
 			else
-				pc->lengthComponentIdent = symname - compstart;
+				pc->lengthComponentIdent = namelen;
 
-			memcpy(pc->componentIdent, compstart, pc->lengthComponentIdent);
+			memcpy(pc->componentIdent, name, namelen);
 		}
 
 		elen += sizeof(struct pathComponent) + pc->lengthComponentIdent;
