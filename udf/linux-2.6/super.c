@@ -76,7 +76,11 @@
 static char error_buf[1024];
 
 /* These are the "meat" - everything else is stuffing */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,4)
 static int udf_fill_super(struct super_block *, void *, int);
+#else
+static struct super_block *udf_read_super(struct super_block *, void *, int);
+#endif
 static void udf_put_super(struct super_block *);
 static void udf_write_super(struct super_block *);
 static int udf_remount_fs(struct super_block *, int *, char *);
@@ -96,6 +100,7 @@ static unsigned int udf_count_free(struct super_block *);
 static int udf_statfs(struct super_block *, struct statfs *);
 
 /* UDF filesystem type */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,4)
 static struct super_block *udf_get_sb(struct file_system_type *fs_type,
 	int flags, char *dev_name, void *data)
 {
@@ -106,10 +111,16 @@ static struct file_system_type udf_fstype = {
 	owner:		THIS_MODULE,
 	name:		"udf",
 	get_sb:		udf_get_sb,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,7)
 	kill_sb:	kill_block_super,
+#endif
 	fs_flags:	FS_REQUIRES_DEV,
 };
+#else
+DECLARE_FSTYPE_DEV(udf_fstype, "udf", udf_read_super);
+#endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,3)
 static kmem_cache_t * udf_inode_cachep;
 
 static struct inode *udf_alloc_inode(struct super_block *sb)
@@ -151,11 +162,14 @@ static void destroy_inodecache(void)
 	if (kmem_cache_destroy(udf_inode_cachep))
 		printk(KERN_INFO "udf_inode_cache: not all structures were freed\n");
 }
+#endif
 
 /* Superblock operations */
 static struct super_operations udf_sb_ops = {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,3)
 	alloc_inode:		udf_alloc_inode,
 	destroy_inode:		udf_destroy_inode,
+#endif
 	read_inode:		udf_read_inode,
 	write_inode:		udf_write_inode,
 	put_inode:		udf_put_inode,
@@ -186,8 +200,11 @@ struct udf_options
 
 static int __init init_udf_fs(void)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,3)
 	int err;
+#endif
 	printk(KERN_NOTICE "udf: registering filesystem\n");
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,3)
 	err = init_inodecache();
 	if (err)
 		goto out1;
@@ -199,13 +216,18 @@ out:
 	destroy_inodecache();
 out1:
 	return err;
+#else
+	return register_filesystem(&udf_fstype);
+#endif
 }
 
 static void __exit exit_udf_fs(void)
 {
 	printk(KERN_NOTICE "udf: unregistering filesystem\n");
 	unregister_filesystem(&udf_fstype);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,3)
 	destroy_inodecache();
+#endif
 }
 
 EXPORT_NO_SYMBOLS;
@@ -380,10 +402,6 @@ udf_remount_fs(struct super_block *sb, int *flags, char *options)
 	UDF_SB(sb)->s_uid   = uopt.uid;
 	UDF_SB(sb)->s_gid   = uopt.gid;
 	UDF_SB(sb)->s_umask = uopt.umask;
-
-#if UDFFS_RW != 1
-	*flags |= MS_RDONLY;
-#endif
 
 	if ((*flags & MS_RDONLY) == (sb->s_flags & MS_RDONLY))
 		return 0;
@@ -1407,7 +1425,12 @@ static void udf_close_lvid(struct super_block *sb)
  *	July 1, 1997 - Andrew E. Mileski
  *	Written, tested, and released.
  */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,4)
 static int udf_fill_super(struct super_block *sb, void *options, int silent)
+#else
+static struct super_block *
+udf_read_super(struct super_block *sb, void *options, int silent)
+#endif
 {
 	int i;
 	struct inode *inode=NULL;
@@ -1420,10 +1443,6 @@ static int udf_fill_super(struct super_block *sb, void *options, int silent)
 	uopt.umask = 0;
 
 	memset(UDF_SB(sb), 0x00, sizeof(struct udf_sb_info));
-
-#if UDFFS_RW != 1
-	sb->s_flags |= MS_RDONLY;
-#endif
 
 	if (!udf_parse_options((char *)options, &uopt))
 		goto error_out;
@@ -1536,8 +1555,8 @@ static int udf_fill_super(struct super_block *sb, void *options, int silent)
 	{
 		timestamp ts;
 		udf_time_to_stamp(&ts, UDF_SB_RECORDTIME(sb), 0);
-		udf_info("UDF %s-%s (%s) Mounting volume '%s', timestamp %04u/%02u/%02u %02u:%02u (%x)\n",
-			UDFFS_VERSION, UDFFS_RW ? "rw" : "ro", UDFFS_DATE,
+		udf_info("UDF %s (%s) Mounting volume '%s', timestamp %04u/%02u/%02u %02u:%02u (%x)\n",
+			UDFFS_VERSION, UDFFS_DATE,
 			UDF_SB_VOLIDENT(sb), ts.year, ts.month, ts.day, ts.hour, ts.minute,
 			ts.typeAndTimezone);
 	}
@@ -1563,8 +1582,13 @@ static int udf_fill_super(struct super_block *sb, void *options, int silent)
 		iput(inode);
 		goto error_out;
 	}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,4)
 	sb->s_maxbytes = MAX_LFS_FILESIZE;
 	return 0;
+#else
+	sb->s_maxbytes = ~0ULL;
+	return sb;
+#endif
 
 error_out:
 	if (UDF_SB_VAT(sb))
@@ -1607,7 +1631,11 @@ error_out:
 		udf_close_lvid(sb);
 	udf_release_data(UDF_SB_LVIDBH(sb));
 	UDF_SB_FREE(sb);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,4)
 	return -EINVAL;
+#else
+	return NULL;
+#endif
 }
 
 void udf_error(struct super_block *sb, const char *function,

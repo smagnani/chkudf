@@ -221,7 +221,11 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 
 		if ( cfi.fileCharacteristics & FID_FILE_CHAR_PARENT )
 		{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,5)
 			iblock = parent_ino(filp->f_dentry);
+#else
+			iblock = udf_get_lb_pblock(dir->i_sb, UDF_I_LOCATION(filp->f_dentry->d_parent->d_inode), 0);
+#endif
 			flen = 2;
 			memcpy(fname, "..", flen);
 			dt_type = DT_DIR;
