@@ -101,7 +101,8 @@ ask_str () {
     /bin/echo -e "$1 [$default]: \c"
     read answer
     if [ -z "$answer" ] ; then answer="$default" ; fi
-    eval "$2"=\"$answer\"
+	if [ "$answer" = "none" ] ; then answer="" ; fi
+	eval "$2"=\"$answer\"
     write_str $2
 }
 
@@ -343,13 +344,13 @@ fi
 
 # Check for consistent kernel build dates
 
-CUR_D=`uname -v | sed -e 's/^#[0-9]* //'`
+CUR_D=`uname -v | sed -e 's/^#[0-9]* \(SMP\)\?//'`
 echo "The current kernel build date is $CUR_D."
 UTS_VERSION="unknown";
 if [ -f $LINUX/include/linux/compile.h ] ; then
     UTS_VERSION=`grep UTS_VERSION $LINUX/include/linux/compile.h |
 	sed -e 's/.*"\(.*\)"/\1/'`
-    SRC_D=`echo $UTS_VERSION | sed -e 's/^#[0-9]* //'`
+    SRC_D=`echo $UTS_VERSION | sed -e 's/^#[0-9]* \(SMP\)\?//'`
     if [ $SRC_RELEASE = $CUR_RELEASE -a "$SRC_D" != "$CUR_D" ] ; then
 	echo "WARNING: the source tree has a build date of $SRC_D."
 	if [ `date -d "$SRC_D" +%s` -gt `date -d "$CUR_D" +%s` ] ; then
