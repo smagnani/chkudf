@@ -1529,10 +1529,10 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 		iput(inode);
 		goto error_out;
 	}
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2,4,2)
-	sb->s_maxbytes = ~0ULL;
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,19)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,19)
 	sb->s_maxbytes = MAX_LFS_FILESIZE;
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,3)
+	sb->s_maxbytes = ~0ULL;
 #endif
 	return sb;
 
