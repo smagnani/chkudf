@@ -172,7 +172,7 @@ extern void udf_truncate_extents(struct inode *);
 /* balloc.c */
 extern void udf_free_blocks(struct super_block *, const struct inode *, lb_addr, uint32_t, uint32_t);
 extern int udf_prealloc_blocks(struct super_block *, const struct inode *, uint16_t, uint32_t, uint32_t);
-extern int udf_new_blocks(struct super_block *, const struct inode *, uint16_t, uint32_t, uint32_t, int *);
+extern int udf_new_block(struct super_block *, const struct inode *, uint16_t, uint32_t, int *);
 
 /* fsync.c */
 extern int udf_sync_file(struct file *, struct dentry *);
