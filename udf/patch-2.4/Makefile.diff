@@ -1,0 +1,98 @@
+include ../../config.mk
+
+#
+# individual diff files are created, but are only for inspection
+#
+DIFFS=DOC.diff FS.diff INCLUDE.diff MAINTAIN.diff 
+FSINDEXDIR=linux/Documentation/filesystems
+ED=ed -s
+
+#
+# ed. yuck. 
+#
+FSINDEXSCRIPT="/^ufs\n-1\n.r ../../fragments/00-INDEX.inc\nw\nq\n"
+IOCTLSCRIPT="/^'m'\n-1\n.r ../../fragments/ioctl-number.txt.inc\nw\nq\n"
+CONFHELPSCRIPT="/^fat fs\n-1\n.r ../../fragments/Configure.help.inc\nw\nq\n"
+MAINTSCRIPT="/^UMSDOS\n-1\n.r ../../fragments/MAINTAINERS.inc\nw\nq\n" 
+CONFIGINSCRIPT="/bool CONFIG_JOLIET\n+1\n.r ../../fragments/Config.in.inc\nw\nq\n"
+FSMAKESCRIPT1="/qnx4\ns/qnx4/qnx4 udf/\nw\nq\n" 
+FSMAKESCRIPT2="/CONFIG_AUTOFS\n-1\n.r ../../fragments/Makefile.inc\nw\nq\n" 
+FILESYSSCRIPT1="/qnx4_fs.h\na\n\#include <linux/udf_fs.h>\n.\nw\nq\n" 
+FILESYSSCRIPT2="/CONFIG_NLS\n-1\n.r ../../fragments/filesystems.c.inc\nw\nq\n" 
+FSHSCRIPT1="/qnx4_fs_i.h\na\n\#include <linux/udf_fs_i.h>\n.\nw\nq\n" 
+FSHSCRIPT2="/qnx4_fs_sb.h\na\n\#include <linux/udf_fs_sb.h>\n.\nw\nq\n" 
+FSHSCRIPT3="/qnx4_i;\na\n\t\tstruct udf_inode_info\t\tudf_i;\n.\nw\nq\n" 
+FSHSCRIPT4="/qnx4_sb;\na\n\t\tstruct udf_sb_info\tudf_sb;\n.\nw\nq\n" 
+
+all: builddir
+
+.PHONY : builddir
+builddir: 
+	@-rm -rf linux linux.old
+	@mkdir -p $(FSINDEXDIR) linux.old/$(FSINDEXDIR)
+	@mkdir -p linux.old/linux/fs linux.old/linux/include linux/fs/udf
+	@mkdir -p linux.old/linux/include/linux linux/include/linux
+
+
+.PHONY : DOC.diff FS.diff INCLUDE.diff MAINTAIN.diff
+DOC.diff: builddir
+	@cp ../../doc/udf.txt $(FSINDEXDIR)/udf.txt
+	@cp $(LINUX)/Documentation/filesystems/00-INDEX linux.old/$(FSINDEXDIR)
+	@cp $(LINUX)/Documentation/filesystems/00-INDEX $(FSINDEXDIR)
+	@/bin/echo $(FSINDEXSCRIPT) | $(ED) $(FSINDEXDIR)/00-INDEX  >>ed.log 2>&1
+	@cp $(LINUX)/Documentation/Configure.help linux.old/linux/Documentation/Configure.help
+	@cp $(LINUX)/Documentation/Configure.help linux/Documentation/Configure.help
+	@/bin/echo $(CONFHELPSCRIPT) | $(ED) linux/Documentation/Configure.help  >>ed.log 2>&1
+	@cp $(LINUX)/Documentation/ioctl-number.txt linux.old/linux/Documentation/ioctl-number.txt
+	@cp $(LINUX)/Documentation/ioctl-number.txt linux/Documentation/ioctl-number.txt
+	@/bin/echo $(IOCTLSCRIPT) | $(ED) linux/Documentation/ioctl-number.txt  >>ed.log 2>&1
+	@-diff -u --recursive --new-file linux.old/linux/Documentation linux/Documentation > DOC.diff
+
+# this diff will have a 2-line vs 3-line diff header
+MAINTAIN.diff: builddir
+	@cp $(LINUX)/MAINTAINERS linux.old/linux/MAINTAINERS
+	@cp $(LINUX)/MAINTAINERS linux/MAINTAINERS
+	@/bin/echo $(MAINTSCRIPT) | $(ED) linux/MAINTAINERS  >>ed.log 2>&1
+	@-diff -u --recursive --new-file linux.old/linux/MAINTAINERS linux/MAINTAINERS > MAINTAIN.diff
+
+FS.diff: builddir
+	@cp ../Makefile.udf linux/fs/udf/Makefile
+	@cp ../../linux-$(UTS_SHORT)/* linux/fs/udf
+	@cp $(LINUX)/fs/Makefile linux.old/linux/fs/Makefile
+	@cp $(LINUX)/fs/Makefile linux/fs/Makefile
+	@/bin/echo $(FSMAKESCRIPT1) | $(ED) linux/fs/Makefile  >>ed.log 2>&1
+	@/bin/echo $(FSMAKESCRIPT2) | $(ED) linux/fs/Makefile  >>ed.log 2>&1
+	@cp $(LINUX)/fs/filesystems.c linux.old/linux/fs/filesystems.c
+	@cp $(LINUX)/fs/filesystems.c linux/fs/filesystems.c
+	@/bin/echo $(FILESYSSCRIPT1) | $(ED) linux/fs/filesystems.c  >>ed.log 2>&1
+	@/bin/echo $(FILESYSSCRIPT2) | $(ED) linux/fs/filesystems.c  >>ed.log 2>&1
+	@cp $(LINUX)/fs/Config.in linux.old/linux/fs/Config.in
+	@cp $(LINUX)/fs/Config.in linux/fs/Config.in
+	@/bin/echo $(CONFIGINSCRIPT) | $(ED) linux/fs/Config.in  >>ed.log 2>&1
+	@-diff -u --recursive --new-file linux.old/linux/fs linux/fs > FS.diff
+
+INCLUDE.diff: builddir
+	@cp $(LINUX)/include/linux/fs.h linux.old/linux/include/linux/fs.h
+	@cp $(LINUX)/include/linux/fs.h linux/include/linux/fs.h
+	@/bin/echo $(FSHSCRIPT1) | $(ED) linux/include/linux/fs.h  >>ed.log 2>&1
+	@/bin/echo $(FSHSCRIPT2) | $(ED) linux/include/linux/fs.h  >>ed.log 2>&1
+	@/bin/echo $(FSHSCRIPT3) | $(ED) linux/include/linux/fs.h  >>ed.log 2>&1
+	@/bin/echo $(FSHSCRIPT4) | $(ED) linux/include/linux/fs.h  >>ed.log 2>&1
+	@cp ../../include/linux/udf* linux/include/linux
+	@-diff -u --recursive --new-file linux.old/linux/include linux/include > INCLUDE.diff
+
+#
+# diff may return 1, even in normal case
+#
+
+.PHONY : udffiles.patch
+udffiles.patch: $(DIFFS)
+	-diff -u --recursive --new-file linux.old/linux linux > udffiles.patch 
+	@echo "* "
+	@echo "* ignore errors from diff above"
+	@echo "* "
+
+.PHONY : clean
+clean: 
+	-rm -rf linux linux.old $(DIFFS)
+

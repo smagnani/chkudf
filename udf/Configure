@@ -25,7 +25,7 @@ if /bin/echo --version | grep -q -- -version ; then
     exit 1
 fi
 #if [ ! -f include/linux/udf.h ] ; then
-#    echo "Ack!  The Udf distribution is incomplete/damaged!"
+#    echo "Ack!  The UDF distribution is incomplete/damaged!"
 #    echo "    Unpack again."
 #    exit 1
 #fi
@@ -141,15 +141,15 @@ ask_str "C compiler name" CC
 
 ask_str "Linker name" LD
 
-ask_bool "Udf Write Support" CONFIG_WRITE
+ask_bool "UDF Write Support" CONFIG_WRITE
 
 ask_str "Compiler flags for debugging" PCDEBUG
 
 echo ""
 if [ $has_makefile -eq 1 ] ; then
-	echo "The Udf driver needs to be compiled to match the kernel it"
+	echo "The UDF driver needs to be compiled to match the kernel it"
 	echo "will be used with, or it may fail to load."
-	echo "If you are not sure what to do, please consult the Udf manual."
+	echo "If you are not sure what to do, please consult the UDF manual."
 	echo ""
 	echo "How would you like to set kernel-specific options?"
 	echo "    1 - Read from the currently running kernel"
@@ -250,8 +250,13 @@ case $src in
     2)
 	AUTOCONF=$LINUX/.config
 	if [ ! -r $AUTOCONF ] ; then
+	    echo "**********************************"
 	    echo "Config file $AUTOCONF not present!"
-	    echo "    To fix, run 'make config' in $LINUX."
+	    echo "To fix, run:"
+	    echo "      cd $LINUX"
+	    echo "      make menuconfig"
+	    echo "      make dep"
+	    echo " "
 	    exit 1
 	fi
 	echo "# Options from $AUTOCONF" >> $CONFIG
@@ -363,7 +368,7 @@ case "$VERSION.$PATCHLEVEL" in
 esac
 
 UTS_RELEASE=`grep UTS_RELEASE $LINUX/include/linux/version.h | awk '{print $3}' | sed 's/"//g'`
-UTS_SHORT=`echo $UTS_RELEASE | sed 's/-pre.*//' | sed 's/.[0-9]*$//'`
+UTS_SHORT=`echo $UTS_RELEASE | sed 's/-.*//' | sed 's/.[0-9]*$//'`
 write_str UTS_RELEASE
 write_str UTS_SHORT
 write_str UTS_VERSION
@@ -373,6 +378,27 @@ echo "LINUX_VERSION_CODE=$VERSION_CODE" >> $CONFIG_MK
 echo "" >> $CONFIG
 echo "" >> $CONFIG_MK
 echo ""
+
+#=======================================================================
+
+# make symlink for src and patch directories
+if [ -L src ]; then
+	rm src
+fi
+if [ -d linux-$UTS_SHORT ]; then
+	ln -s linux-$UTS_SHORT src
+else
+	echo Linux version $UTS_SHORT not supported.
+fi
+
+if [ -L patch ]; then
+	rm patch
+fi
+if [ -d patch-$UTS_SHORT ]; then
+	ln -s patch-$UTS_SHORT patch
+else
+	echo No patch for Linux version $UTS_SHORT.
+fi
 
 #=======================================================================
 

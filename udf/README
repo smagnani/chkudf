@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------
  * Linux(r) UDF Filesystem Driver
- * Version: 0.8.8
+ * Version: 0.8.9.1
  * --------------------------------------------------------------- */
 
 REQUIRED:
@@ -11,6 +11,9 @@ COMPILING:
 
 INSTALLING:
 	type: "make install"
+
+KERNEL PATCH:
+	type: "make patch"
 
 TESTING:
 	type "depmod -a"

@@ -5,10 +5,23 @@
 help all:
 	@echo "Pick one of the following targets:"
 	@echo -e "\tmake config\t\t- configure and check system setup"
-	@echo -e "\tmake udf.o\t\t- build Udf module"
-	@echo -e "\tmake install\t\t- install Udf module"
 	@echo -e "\tmake clean\t\t- clean up the directory"
+	@echo -e "\tmake lib\t\t- build udf libraries for tools"
 	@echo -e "\tmake udftools\t\t- build udf tools"
+	@echo -e "Module:"
+	@echo -e "\tmake udf.o (or module)\t\t- build Udf module"
+	@echo -e "\tmake install\t\t- install Udf module in /lib"
+	@echo -e "Patch:"
+	@echo -e "\tmake patch\t\t- create kernel patch"
+	@echo -e "\tmake apply\t\t- patch kernel source"
+	@echo -e "\tmake update\t\t- update kernel source with newer udf"
+	@echo -e "\tmake unapply\t\t- reverse patch kernel source"
+	@echo -e "\tmake remove\t\t- remove udf files from kernel source"
+
+# alternate names
+.PHONY : tools module
+tools: udftools
+module: udf.o
 
 config .prereq.ok:
 	@./Configure
@@ -23,29 +36,52 @@ kcheck:
 	    fi ; \
 	fi
 
+.PHONY : udf.o
 udf.o: .prereq.ok
-	@make -C module
+	@$(MAKE) -C module
+
+.PHONY : patch
+patch:  .prereq.ok
+	@$(MAKE) -C patch patch
+
+.PHONY : apply
+apply:  .prereq.ok
+	@$(MAKE) -C patch apply
+
+.PHONY : unapply
+unapply:  .prereq.ok
+	@$(MAKE) -C patch unapply
+
+.PHONY : update
+update:  .prereq.ok
+	@$(MAKE) -C patch update
+
+.PHONY : remove
+remove:  .prereq.ok
+	@$(MAKE) -C patch remove
 
 libudf: .prereq.ok
-	@make -C lib
+	@$(MAKE) -C lib
+
 
 udftools: libudf .prereq.ok
-	@make -C tools
+	@$(MAKE) -C tools
 
 install: .prereq.ok
-	@make -C module install
+	@$(MAKE) -C module install
 
 clean: clean-subdirs
 
 clean-subdirs:
 	touch config.mk
-	-@make -C lib clean
-	-@make -C module clean
-	-@make -C tools clean
-	-@make -C patch-2.2 clean
-	-@make -C patch-2.3 clean
+	-@$(MAKE) -C lib clean
+	-@$(MAKE) -C module clean
+	-@$(MAKE) -C tools clean
+	-@$(MAKE) -C patch-2.2 clean
+	-@$(MAKE) -C patch-2.3 clean
 
 distclean: clean
-	-@make -C patch-2.2 distclean
-	-@make -C patch-2.3 distclean
+	-@$(MAKE) -C patch-2.2 distclean
+	-@$(MAKE) -C patch-2.3 distclean
+	-@rm patch src
 	rm -f *~ *.bak .prereq.ok config.out config.mk include/linux/modversions.h

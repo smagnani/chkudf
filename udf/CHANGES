@@ -110,4 +110,15 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
 08/19/99 blf	Ported to linux 2.3.7+
 				Rewrote inode_getblk
 
-02/02/99 blf	Fixed unicode and anchor location bugs
+09/02/99 blf	Fixed unicode and anchor location bugs
+
+09/16/99 dgb	Fixed Configure to handle RedHat 6.0's kernel (which reports 
+		"UTS_RELEASE 2.2.5-15".) Fixed Configure to make symlinks for 
+		patch and src directories. Modified patch system to dynamically 
+		create diff files, instead of using pre-build diffs, and to 
+		better handle the apply/unapply. First draft of a FAQ.
+		Modified "make lib" to make both static and shared libraries.
+
+09/18/99 dgb	Updated patch system to properly apply/unapply from kernel 2.2,
+		And updated patch-2.3 to only do updates, since the driver
+		is now in the kernel (2.3.17+).
