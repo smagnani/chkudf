@@ -890,7 +890,7 @@ udf_load_logicalvol(struct super_block *sb, struct buffer_head * bh, lb_addr *fi
 
 	lvd = (struct LogicalVolDesc *)bh->b_data;
 
-	UDF_SB_ALLOC_PARTMAPS(sb, le32_to_cpu(lvd->numPartitionMaps))
+	UDF_SB_ALLOC_PARTMAPS(sb, le32_to_cpu(lvd->numPartitionMaps));
 
 	for (i=0,offset=0;
 		 i<UDF_SB_NUMPARTS(sb) && offset<le32_to_cpu(lvd->mapTableLength);
@@ -1349,6 +1349,7 @@ static void udf_close_lvid(struct super_block *sb)
 static struct super_block *
 udf_read_super(struct super_block *sb, void *options, int silent)
 {
+	int i;
 	struct inode *inode=NULL;
 	struct udf_options uopt;
 	lb_addr rootdir, fileset;
@@ -1500,7 +1501,9 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 		iput(inode);
 		goto error_out;
 	}
+#if LINUX_VERSION_CODE > KERNEL_VERSION(2,4,0)
 	sb->s_maxbytes = ~0ULL;
+#endif
 	return sb;
 
 error_out:
@@ -1513,10 +1516,33 @@ error_out:
 		if (UDF_SB_PARTFLAGS(sb, UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_FREED_TABLE)
 			iput(UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_fspace.s_table);
 		if (UDF_SB_PARTFLAGS(sb, UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_UNALLOC_BITMAP)
+		{
+			for (i=0; i<UDF_SB_BITMAP_NR_GROUPS(sb,UDF_SB_PARTITION(sb),s_uspace); i++)
+			{
+				if (UDF_SB_BITMAP(sb,UDF_SB_PARTITION(sb),s_uspace,i))
+					udf_release_data(UDF_SB_BITMAP(sb,UDF_SB_PARTITION(sb),s_uspace,i));
+			}
 			kfree(UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_uspace.s_bitmap);
+		}
 		if (UDF_SB_PARTFLAGS(sb, UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_FREED_BITMAP)
+		{
+			for (i=0; i<UDF_SB_BITMAP_NR_GROUPS(sb,UDF_SB_PARTITION(sb),s_fspace); i++)
+			{
+				if (UDF_SB_BITMAP(sb,UDF_SB_PARTITION(sb),s_fspace,i))
+					udf_release_data(UDF_SB_BITMAP(sb,UDF_SB_PARTITION(sb),s_fspace,i));
+			}
 			kfree(UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_fspace.s_bitmap);
+		}
+		if (UDF_SB_PARTTYPE(sb, UDF_SB_PARTITION(sb)) == UDF_SPARABLE_MAP15)
+		{
+			for (i=0; i<4; i++)
+					udf_release_data(UDF_SB_TYPESPAR(sb, UDF_SB_PARTITION(sb)).s_spar_map[i]);
+		}
 	}
+#ifdef CONFIG_NLS
+	if (UDF_SB(sb)->s_flags & (1 << UDF_FLAG_NLS_MAP))
+		unload_nls(UDF_SB(sb)->s_nls_map);
+#endif
 	if (!(sb->s_flags & MS_RDONLY))
 		udf_close_lvid(sb);
 	udf_release_data(UDF_SB_LVIDBH(sb));
