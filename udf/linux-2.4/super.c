@@ -203,7 +203,7 @@ udf_parse_options(char *options, struct udf_options *uopt)
 	char *opt, *val;
 
 	uopt->novrs = 0;
-	uopt->blocksize = 0;
+	uopt->blocksize = 2048;
 	uopt->partition = 0xFFFF;
 	uopt->session = 0xFFFFFFFF;
 	uopt->lastblock = 0xFFFFFFFF;
@@ -348,7 +348,7 @@ udf_set_blocksize(struct super_block *sb, int bsize)
 	/* Use specified block size if specified */
 	if (bsize)
 		sb->s_blocksize = bsize;
-	else
+	if (get_hardsect_size(sb->s_dev) > sb->s_blocksize)
 		sb->s_blocksize = get_hardsect_size(sb->s_dev); 
 
 	/* Block size must be an even multiple of 512 */
