@@ -51,12 +51,19 @@ int udf_adinicb_readpage (struct file * file, struct page * page)
 	struct inode * inode;
 	struct buffer_head *bh;
 	int block;
+	int err = 0;
 
 	inode = file->f_dentry->d_inode;
 
 	memset((char *)page_address(page), 0, PAGE_SIZE);
 	block = udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0);
 	bh = getblk (inode->i_dev, block, inode->i_sb->s_blocksize);
+	if (!bh)
+	{
+		set_bit(PG_error, &page->flags);
+		err = -EIO;
+		goto out;
+	}
 	if (!buffer_uptodate(bh))
 	{
 		ll_rw_block (READ, 1, &bh);
@@ -66,7 +73,8 @@ int udf_adinicb_readpage (struct file * file, struct page * page)
 		inode->i_size);
 	brelse(bh);
 	set_bit(PG_uptodate, &page->flags);
-	return 0;
+out:
+	return err;
 }
 
 /*
