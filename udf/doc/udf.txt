@@ -1,7 +1,7 @@
 *
 * ./Documentation/filesystems/udf.txt
 *
-UDF Filesystem version 0.9.6
+UDF Filesystem version 0.9.8
 
 If you encounter problems with reading UDF discs using this driver,
 please report them to linux_udf@hpesjro.fc.hp.com, which is the
@@ -47,11 +47,7 @@ The following expect a offset from the partition root.
 -------------------------------------------------------------------------------
 
 
-For more information see:
-	http://www.trylinux.com/projects/udf/index.html
-
 For the latest version and toolset see:
-	http://www.csc.calpoly.edu/~bfennema/udf.html
 	http://linux-udf.sourceforge.net/
 
 Documentation on UDF and ECMA 167 is available FREE from:
