@@ -15,7 +15,7 @@
  *      ftp://prep.ai.mit.edu/pub/gnu/GPL
  *  Each contributing author retains all rights to their own work.
  *
- *  (C) 1999-2000 Ben Fennema
+ *  (C) 1999-2001 Ben Fennema
  *  (C) 1999-2000 Stelias Computing Inc
  *
  * HISTORY
@@ -29,7 +29,7 @@
 #include <linux/udf_fs.h>
 #include "udf_i.h"
 
-static int sync_block (struct inode * inode, Uint32 * block, int wait)
+static int sync_block (struct inode * inode, uint32_t * block, int wait)
 {
 	struct buffer_head * bh;
 	
@@ -51,9 +51,9 @@ static int sync_block (struct inode * inode, Uint32 * block, int wait)
 	return 0;
 }
 
-static int sync_extent (struct inode * inode, lb_addr *loc, Uint32 *len, int wait)
+static int sync_extent (struct inode * inode, lb_addr *loc, uint32_t *len, int wait)
 {
-	Uint32 i, block;
+	uint32_t i, block;
 	int rc, err = 0;
 
 	for (i = 0; i < *len; i++)
@@ -69,7 +69,7 @@ static int sync_extent (struct inode * inode, lb_addr *loc, Uint32 *len, int wai
 static int sync_all_extents(struct inode * inode, int wait)
 {
 	lb_addr bloc, eloc;
-	Uint32 extoffset, elen, offset;
+	uint32_t extoffset, elen, offset;
 	int err = 0, etype;
 	struct buffer_head *bh = NULL;
 	
@@ -79,7 +79,7 @@ static int sync_all_extents(struct inode * inode, int wait)
 
 		while ((etype = udf_next_aext(inode, &bloc, &extoffset, &eloc, &elen, &bh, 1)) != -1)
 		{
-			if (etype == EXTENT_RECORDED_ALLOCATED)
+			if (etype == (EXT_RECORDED_ALLOCATED >> 30))
 				err |= sync_extent(inode, &eloc, &elen, wait);
 		}
 	}
