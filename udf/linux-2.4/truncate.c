@@ -15,7 +15,7 @@
  *		ftp://prep.ai.mit.edu/pub/gnu/GPL
  *	Each contributing author retains all rights to their own work.
  *
- *  (C) 1999 Ben Fennema
+ *  (C) 1999-2000 Ben Fennema
  *  (C) 1999 Stelias Computing Inc
  *
  * HISTORY
@@ -49,11 +49,6 @@ static void extent_trunc(struct inode * inode, lb_addr bloc, int *extoffset,
 
 	inode->i_blocks -= (blocks * (last_block - offset));
 	udf_write_aext(inode, bloc, extoffset, neloc, nelen, bh, 1);
-	if (!memcmp(&UDF_I_EXT0LOC(inode), &eloc, sizeof(lb_addr)))
-	{
-		UDF_I_EXT0LOC(inode) = neloc;
-		UDF_I_EXT0LEN(inode) = nelen;
-	}
 	mark_inode_dirty(inode);
 	udf_free_blocks(inode, eloc, offset, last_block - offset);
 }
@@ -151,8 +146,6 @@ static void trunc(struct inode * inode)
 	}
 	else if (inode->i_size)
 	{
-		lb_addr e0loc = UDF_I_LOCATION(inode);
-		Uint32 ext0offset = udf_file_entry_alloc_offset(inode);
 		char tetype;
 
 		if (offset)
@@ -164,8 +157,6 @@ static void trunc(struct inode * inode)
 				extoffset -= adsize;
 				elen = (EXTENT_NOT_RECORDED_NOT_ALLOCATED << 30) |
 					(elen + (offset << inode->i_sb->s_blocksize_bits));
-				if (ext0offset == extoffset && !memcmp(&e0loc, &bloc, sizeof(lb_addr)))
-					UDF_I_EXT0LEN(inode) = elen;
 				udf_write_aext(inode, bloc, &extoffset, eloc, elen, &bh, 0);
 			}
 			else
@@ -176,18 +167,11 @@ static void trunc(struct inode * inode)
 					elen = (EXTENT_RECORDED_ALLOCATED << 30) |
 						((elen + inode->i_sb->s_blocksize - 1) &
 						~(inode->i_sb->s_blocksize - 1));
-					if (ext0offset == extoffset && !memcmp(&e0loc, &bloc, sizeof(lb_addr)))
-						UDF_I_EXT0LEN(inode) = elen;
 					udf_write_aext(inode, bloc, &extoffset, eloc, elen, &bh, 1);
 				}
 				memset(&eloc, 0x00, sizeof(lb_addr));
 				elen = (EXTENT_NOT_RECORDED_NOT_ALLOCATED << 30) |
 					(offset << inode->i_sb->s_blocksize_bits);
-				if (ext0offset == extoffset && !memcmp(&e0loc, &bloc, sizeof(lb_addr)))
-				{
-					UDF_I_EXT0LOC(inode) = eloc;
-					UDF_I_EXT0LEN(inode) = elen;
-				}
 				udf_add_aext(inode, &bloc, &extoffset, eloc, elen, &bh, 1);
 			}
 		}
@@ -204,12 +188,8 @@ void udf_truncate(struct inode * inode)
 	if (IS_APPEND(inode) || IS_IMMUTABLE(inode))
 		return;
 
-	if (!UDF_I_EXT0OFFS(inode))
-	{
-		udf_discard_prealloc(inode);
-
-		trunc(inode);
-	}
+	udf_discard_prealloc(inode);
+	trunc(inode);
 
 	inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 	mark_inode_dirty(inode);
@@ -222,6 +202,8 @@ void udf_truncate_adinicb(struct inode * inode)
 		return;
 	if (IS_APPEND(inode) || IS_IMMUTABLE(inode))
 		return;
+
+	UDF_I_LENALLOC(inode) = inode->i_size;
 
 	inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 	mark_inode_dirty(inode);
