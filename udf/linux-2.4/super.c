@@ -1452,6 +1452,8 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 			sb->s_flags |= MS_RDONLY;
 		}
 
+		UDF_SB_UDFREV(sb) = minUDFWriteRev;
+
 		if (minUDFReadRev >= UDF_VERS_USE_EXTENDED_FE)
 			UDF_SET_FLAG(sb, UDF_FLAG_USE_EXTENDED_FE);
 		if (minUDFReadRev >= UDF_VERS_USE_STREAMS)
