@@ -48,33 +48,13 @@ typedef void * poll_table;
 
 int udf_adinicb_readpage (struct file * file, struct page * page)
 {
-	struct inode * inode;
-	struct buffer_head *bh;
-	int block;
-	int err = 0;
-
-	inode = file->f_dentry->d_inode;
+	struct inode *inode = file->f_dentry->d_inode;
 
 	memset((char *)page_address(page), 0, PAGE_SIZE);
-	block = udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0);
-	bh = getblk (inode->i_dev, block, inode->i_sb->s_blocksize);
-	if (!bh)
-	{
-		set_bit(PG_error, &page->flags);
-		err = -EIO;
-		goto out;
-	}
-	if (!buffer_uptodate(bh))
-	{
-		ll_rw_block (READ, 1, &bh);
-		wait_on_buffer(bh);
-	}
-	memcpy((char *)page_address(page), bh->b_data + udf_ext0_offset(inode),
+	memcpy((char *)page_address(page), UDF_I_DATA(inode) + UDF_I_LENEATTR(inode),
 		inode->i_size);
-	brelse(bh);
 	set_bit(PG_uptodate, &page->flags);
-out:
-	return err;
+	return 0;
 }
 
 /*
@@ -135,7 +115,7 @@ static inline void remove_suid(struct inode * inode)
 static ssize_t udf_file_write(struct file * filp, const char * buf,
 	size_t count, loff_t *ppos)
 {
-	struct inode * inode = filp->f_dentry->d_inode;
+	struct inode *inode = filp->f_dentry->d_inode;
 	off_t pos;
 	long block;
 	int offset;
@@ -242,7 +222,25 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 	written = 0;
 
 	if (UDF_I_ALLOCTYPE(inode) == ICBTAG_FLAG_AD_IN_ICB)
+	{
 		pos -= udf_file_entry_alloc_offset(inode);
+		if (c > count)
+			c = count;
+		c -= copy_from_user(UDF_I_DATA(inode) + pos, buf, c);
+		if (!c)
+		{
+			if (!written)
+				written = -EFAULT;
+		}
+		else
+		{
+			pos += c;
+			written += c;
+			buf += c;
+			count -= c;
+		}
+		goto out;
+	}
 
 	do
 	{
@@ -345,6 +343,7 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 		}
 	}
 
+out:
 	if (pos > inode->i_size)
 		inode->i_size = pos;
 	if (filp->f_flags & O_SYNC)
@@ -394,9 +393,6 @@ int udf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 	unsigned long arg)
 {
 	int result = -EINVAL;
-	struct buffer_head *bh = NULL;
-	long_ad eaicb;
-	uint8_t *ea = NULL;
 
 	if ( permission(inode, MAY_READ) != 0 )
 	{
@@ -411,7 +407,6 @@ int udf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 		return -EINVAL;
 	}
 
-	/* first, do ioctls that don't need to udf_read */
 	switch (cmd)
 	{
 		case UDF_GETVOLIDENT:
@@ -429,51 +424,16 @@ int udf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 
 			return result;
 		}
-	}
-
-	/* ok, we need to read the inode */
-	bh = udf_tread(inode->i_sb,
-		udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0),
-		inode->i_sb->s_blocksize);
-
-	if (!bh)
-	{
-		udf_debug("bread failed (inode=%ld)\n", inode->i_ino);
-		return -EIO;
-	}
-
-	if (UDF_I_EXTENDED_FE(inode) == 0)
-	{
-		struct fileEntry *fe;
-
-		fe = (struct fileEntry *)bh->b_data;
-		eaicb = lela_to_cpu(fe->extendedAttrICB);
-		if (UDF_I_LENEATTR(inode))
-			ea = fe->extendedAttr;
-	}
-	else
-	{
-		struct extendedFileEntry *efe;
-
-		efe = (struct extendedFileEntry *)bh->b_data;
-		eaicb = lela_to_cpu(efe->extendedAttrICB);
-		if (UDF_I_LENEATTR(inode))
-			ea = efe->extendedAttr;
-	}
-
-	switch (cmd) 
-	{
 		case UDF_GETEASIZE:
 			result = put_user(UDF_I_LENEATTR(inode), (int *)arg);
 			break;
 
 		case UDF_GETEABLOCK:
-			result = copy_to_user((char *)arg, ea,
+			result = copy_to_user((char *)arg, UDF_I_DATA(inode),
 				UDF_I_LENEATTR(inode)) ? -EFAULT : 0;
 			break;
 	}
 
-	udf_release_data(bh);
 	return result;
 }
 
