@@ -372,16 +372,15 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 		return NULL;
 	sb = dir->i_sb;
 
+	if (dentry)
+	{
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,6)
-	if (dentry->d_name.len >= UDF_NAME_LEN)
-	{
-		*err = -ENAMETOOLONG;
-		return NULL;
-	}
+		if (dentry->d_name.len >= UDF_NAME_LEN)
+		{
+			*err = -ENAMETOOLONG;
+			return NULL;
+		}
 #endif
-
-	if (dentry->d_name.len)
-	{
 		if (!dentry->d_name.len)
 		{
 			*err = -EINVAL;
@@ -486,20 +485,18 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 				}
 			}
 	
-			if (!lfi)
+			if (!lfi || !dentry)
 				continue;
 	
-			if ((flen = udf_get_filename(nameptr, fname, lfi)))
+			if ((flen = udf_get_filename(nameptr, fname, lfi)) &&
+				udf_match(flen, fname, &(dentry->d_name)))
 			{
-				if (udf_match(flen, fname, &(dentry->d_name)))
-				{
-					if (fibh->sbh != fibh->ebh)
-						udf_release_data(fibh->ebh);
-					udf_release_data(fibh->sbh);
-					udf_release_data(bh);
-					*err = -EEXIST;
-					return NULL;
-				}
+				if (fibh->sbh != fibh->ebh)
+					udf_release_data(fibh->ebh);
+				udf_release_data(fibh->sbh);
+				udf_release_data(bh);
+				*err = -EEXIST;
+				return NULL;
 			}
 		}
 	}
