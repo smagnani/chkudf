@@ -150,7 +150,7 @@ extern void udf_release_data(struct buffer_head *);
 
 /* lowlevel.c */
 extern unsigned int udf_get_last_session(struct super_block *);
-extern unsigned int udf_get_last_block(struct super_block *);
+extern unsigned long udf_get_last_block(struct super_block *);
 
 /* partition.c */
 extern uint32_t udf_get_pblock(struct super_block *, uint32_t, uint16_t, uint32_t);
