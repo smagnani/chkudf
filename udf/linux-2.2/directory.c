@@ -87,7 +87,10 @@ udf_fileident_read(struct inode *dir, loff_t *nf_pos,
 
 	if (UDF_I_ALLOCTYPE(dir) == ICBTAG_FLAG_AD_IN_ICB)
 	{
-		fi = udf_get_fileident(UDF_I_DATA(dir) - udf_file_entry_alloc_offset(dir),
+		fi = udf_get_fileident(UDF_I_DATA(dir) -
+			(UDF_I_EFE(dir) ?
+				sizeof(struct extendedFileEntry) :
+				sizeof(struct fileEntry)),
 			dir->i_sb->s_blocksize, &(fibh->eoffset));
 
 		if (!fi)

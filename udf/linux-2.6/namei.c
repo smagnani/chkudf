@@ -532,7 +532,7 @@ add:
 		if (UDF_I_ALLOCTYPE(dir) == ICBTAG_FLAG_AD_IN_ICB)
 		{
 			block = UDF_I_LOCATION(dir).logicalBlockNum;
-			fi = (struct fileIdentDesc *)(UDF_I_DATA(dir) + fibh->soffset - udf_ext0_offset(dir));
+			fi = (struct fileIdentDesc *)(UDF_I_DATA(dir) + fibh->soffset - udf_ext0_offset(dir) + UDF_I_LENEATTR(dir));
 		}
 		else
 		{
@@ -1216,7 +1216,7 @@ static int udf_rename (struct inode * old_dir, struct dentry * old_dentry,
 		if (UDF_I_ALLOCTYPE(old_inode) == ICBTAG_FLAG_AD_IN_ICB)
 		{
 			dir_fi = udf_get_fileident(UDF_I_DATA(old_inode) -
-			        (UDF_I_EFE(old_inode) ?
+				(UDF_I_EFE(old_inode) ?
 					sizeof(struct extendedFileEntry) :
 					sizeof(struct fileEntry)),
 				old_inode->i_sb->s_blocksize, &offset);
