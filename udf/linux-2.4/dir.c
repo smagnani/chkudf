@@ -52,7 +52,7 @@ struct file_operations udf_dir_operations = {
 	read:				generic_read_dir,
 	readdir:			udf_readdir,
 	ioctl:				udf_ioctl,
-	fsync:				udf_sync_file,
+	fsync:				udf_fsync_file,
 };
 
 /*

@@ -1435,7 +1435,6 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	return sb;
 
 error_out:
-	sb->s_dev = NODEV;
 	if (UDF_SB_VAT(sb))
 		iput(UDF_SB_VAT(sb));
 	if (UDF_SB_NUMPARTS(sb))

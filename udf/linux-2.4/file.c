@@ -42,7 +42,7 @@
 #include "udf_i.h"
 #include "udf_sb.h"
 
-static int udf_adinicb_writepage(struct file *file, struct dentry *dentry, struct page *page)
+static int udf_adinicb_writepage(struct file *file, struct page *page)
 {
 	struct inode *inode = (struct inode *)page->mapping->host;
 
@@ -64,7 +64,7 @@ static int udf_adinicb_writepage(struct file *file, struct dentry *dentry, struc
 	return 0;
 }
 
-static int udf_adinicb_readpage(struct dentry *dentry, struct page * page)
+static int udf_adinicb_readpage(struct file *file, struct page * page)
 {
 	struct inode *inode = (struct inode *)page->mapping->host;
 
@@ -328,7 +328,7 @@ struct file_operations udf_file_operations = {
 	mmap:				generic_file_mmap,
 	write:				udf_file_write,
 	release:			udf_release_file,
-	fsync:				udf_sync_file,
+	fsync:				udf_fsync_file,
 };
 
 struct inode_operations udf_file_inode_operations = {

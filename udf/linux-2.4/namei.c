@@ -43,8 +43,7 @@ static inline int udf_match(int len, const char * const name, struct qstr *qs)
 }
 
 int udf_write_fi(struct FileIdentDesc *cfi, struct FileIdentDesc *sfi,
-	struct udf_fileident_bh *fibh,
-	Uint8 *impuse, Uint8 *fileident)
+	struct udf_fileident_bh *fibh, Uint8 *impuse, Uint8 *fileident)
 {
 	Uint16 crclen = fibh->eoffset - fibh->soffset - sizeof(tag);
 	Uint16 crc;
@@ -595,8 +594,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 }
 
 static int udf_delete_entry(struct FileIdentDesc *fi,
-	struct udf_fileident_bh *fibh,
-	struct FileIdentDesc *cfi)
+	struct udf_fileident_bh *fibh, struct FileIdentDesc *cfi)
 {
 	cfi->fileCharacteristics |= FILE_DELETED;
 	return udf_write_fi(cfi, fi, fibh, NULL, NULL);
@@ -1113,7 +1111,7 @@ static int udf_link(struct dentry * old_dentry, struct inode * dir,
 	inode->i_ctime = CURRENT_TIME;
 	UDF_I_UCTIME(inode) = CURRENT_UTIME;
 	mark_inode_dirty(inode);
-	inode->i_count ++;
+	atomic_inc(&inode->i_count);
 	d_instantiate(dentry, inode);
 	return 0;
 }

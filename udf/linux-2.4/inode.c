@@ -125,12 +125,12 @@ void udf_discard_prealloc(struct inode * inode)
 		udf_trunc(inode);
 }
 
-static int udf_writepage(struct file *file, struct dentry *dentry, struct page *page)
+static int udf_writepage(struct file *file, struct page *page)
 {
 	return block_write_full_page(page, udf_get_block);
 }
 
-static int udf_readpage(struct dentry *dentry, struct page *page)
+static int udf_readpage(struct file *file, struct page *page)
 {
 	return block_read_full_page(page, udf_get_block);
 }
@@ -199,10 +199,10 @@ void udf_expand_file_adinicb(struct inode * inode, int newsize, int * err)
 	else
 		UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_LONG;
 	inode->i_blocks = inode->i_sb->s_blocksize / 512;
-	mark_buffer_dirty(bh, 1);
+	mark_buffer_dirty_inode(bh, 1, inode);
 	udf_release_data(bh);
 
-	inode->i_data.a_ops->writepage(NULL, NULL, page);
+	inode->i_data.a_ops->writepage(NULL, page);
 	UnlockPage(page);
 	page_cache_release(page);
 
@@ -294,7 +294,7 @@ struct buffer_head * udf_expand_dir_adinicb(struct inode *inode, int *block, int
 	/* UniqueID stuff */
 
 	inode->i_blocks = inode->i_sb->s_blocksize / 512;
-	mark_buffer_dirty(sbh, 1);
+	mark_buffer_dirty_inode(sbh, 1, inode);
 	udf_release_data(sbh);
 	mark_inode_dirty(inode);
 	inode->i_version ++;
@@ -362,13 +362,11 @@ struct buffer_head * udf_getblk(struct inode * inode, long block,
 	int create, int * err)
 {
 	struct buffer_head dummy;
-	int error;
 
 	dummy.b_state = 0;
 	dummy.b_blocknr = -1000;
-	error = udf_get_block(inode, block, &dummy, create);
-	*err = error;
-	if (!error & buffer_mapped(&dummy))
+	*err = udf_get_block(inode, block, &dummy, create);
+	if (!*err & buffer_mapped(&dummy))
 	{
 		struct buffer_head *bh;
 		bh = getblk(dummy.b_dev, dummy.b_blocknr, inode->i_sb->s_blocksize);
@@ -507,8 +505,6 @@ static struct buffer_head * inode_getblk(struct inode * inode, long block,
 			lastblock = 1;
 	}
 	udf_release_data(cbh);
-
-	*err = -EFBIG;
 
 	/* Check file limits.. */
 	{
@@ -817,29 +813,6 @@ struct buffer_head * udf_bread(struct inode * inode, int block,
 	bh = udf_getblk(inode, block, create, err);
 	if (!bh)
 		return NULL;
-
-#if 0
-	if (create &&
-		S_ISDIR(inode->i_mode) &&
-		inode->i_blocks > prev_blocks)
-	{
-		int i;
-		struct buffer_head *tmp_bh = NULL;
-
-		for (i=1;
-			i < UDF_DEFAULT_PREALLOC_DIR_BLOCKS;
-			i++)
-		{
-			tmp_bh = udf_getblk(inode, block+i, create, err);
-			if (!tmp_bh)
-			{
-				udf_release_data(bh);
-				return 0;
-			}
-			udf_release_data(tmp_bh);
-		}
-	}
-#endif
 
 	if (buffer_uptodate(bh))
 		return bh;
@@ -1220,10 +1193,10 @@ udf_convert_permissions(struct FileEntry *fe)
  *	Written, tested, and released.
  */
 
-void udf_write_inode(struct inode * inode)
+void udf_write_inode(struct inode * inode, int wait)
 {
 	lock_kernel();
-	udf_update_inode(inode, 0);
+	udf_update_inode(inode, wait);
 	unlock_kernel();
 }
 
@@ -1283,7 +1256,7 @@ udf_update_inode(struct inode *inode, int do_sync)
 			if (i != 4)
 				use->descTag.tagChecksum += ((Uint8 *)&(use->descTag))[i];
 
-		mark_buffer_dirty(bh, 1);
+		mark_buffer_dirty_inode(bh, 1, inode);
 		udf_release_data(bh);
 		return err;
 	}
@@ -1338,7 +1311,7 @@ udf_update_inode(struct inode *inode, int do_sync)
 		eid->identSuffix[1] = UDF_OS_ID_LINUX;
 		dsea->majorDeviceIdent = kdev_t_to_nr(inode->i_rdev) >> 8;
 		dsea->minorDeviceIdent = kdev_t_to_nr(inode->i_rdev) & 0xFF;
-		mark_buffer_dirty(tbh, 1);
+		mark_buffer_dirty_inode(tbh, 1, inode);
 		udf_release_data(tbh);
 	}
 
@@ -1601,7 +1574,7 @@ int udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 			}
 		}
 		udf_update_tag((*bh)->b_data, loffset);
-		mark_buffer_dirty(*bh, 1);
+		mark_buffer_dirty_inode(*bh, 1, inode);
 		udf_release_data(*bh);
 		*bh = nbh;
 	}
@@ -1619,7 +1592,7 @@ int udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 		aed->lengthAllocDescs =
 			cpu_to_le32(le32_to_cpu(aed->lengthAllocDescs) + adsize);
 		udf_update_tag((*bh)->b_data, *extoffset + (inc ? 0 : adsize));
-		mark_buffer_dirty(*bh, 1);
+		mark_buffer_dirty_inode(*bh, 1, inode);
 	}
 
 	return ret;
@@ -1680,7 +1653,7 @@ int udf_write_aext(struct inode *inode, lb_addr bloc, int *extoffset,
 	else
 		mark_inode_dirty(inode);
 
-	mark_buffer_dirty(bh, 1);
+	mark_buffer_dirty_inode(bh, 1, inode);
 
 	if (inc)
 		*extoffset += adsize;
@@ -1990,7 +1963,7 @@ int udf_delete_aext(struct inode *inode, lb_addr nbloc, int nextoffset,
 			aed->lengthAllocDescs =
 				cpu_to_le32(le32_to_cpu(aed->lengthAllocDescs) - (2*adsize));
 			udf_update_tag((obh)->b_data, oextoffset - (2*adsize));
-			mark_buffer_dirty(obh, 1);
+			mark_buffer_dirty_inode(obh, 1, inode);
 		}
 	}
 	else
@@ -2007,7 +1980,7 @@ int udf_delete_aext(struct inode *inode, lb_addr nbloc, int nextoffset,
 			aed->lengthAllocDescs =
 				cpu_to_le32(le32_to_cpu(aed->lengthAllocDescs) - adsize);
 			udf_update_tag((obh)->b_data, oextoffset - adsize);
-			mark_buffer_dirty(obh, 1);
+			mark_buffer_dirty_inode(obh, 1, inode);
 		}
 	}
 	
