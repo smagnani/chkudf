@@ -145,3 +145,11 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
                 Added code to allow ADINICB files to be mmap'd
                 Sync'd changes with 2.3 development
                 Got rid of the semaphore in udf_iget
+
+02/29/00 blf    Fix truncate
+                Added noadinicb/shortad options
+                Redid flag system
+                Added udf versioning info
+                Fixed block size calculations
+                Sync'd changes with 2.3 development
+                Added cdrwtool and pktcdvd to tools
