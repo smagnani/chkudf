@@ -1007,10 +1007,6 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 		inode->i_nlink = 1;
 	
 	inode->i_size = le64_to_cpu(fe->informationLength);
-#if BITS_PER_LONG < 64
-	if (le64_to_cpu(fe->informationLength) & 0xFFFFFFFF00000000ULL)
-		inode->i_size = (Uint32)-1;
-#endif
 
 	inode->i_mode = udf_convert_permissions(fe);
 	inode->i_mode &= ~UDF_SB(inode->i_sb)->s_umask;
