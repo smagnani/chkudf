@@ -71,7 +71,7 @@
 #define VDS_POS_IMP_USE_VOL_DESC	4
 #define VDS_POS_VOL_DESC_PTR		5
 #define VDS_POS_TERMINATING_DESC	6
-#define VDS_POS_LENGTH				7
+#define VDS_POS_LENGTH			7
 
 static char error_buf[1024];
 
@@ -100,14 +100,14 @@ static DECLARE_FSTYPE_DEV(udf_fstype, "udf", udf_read_super);
 
 /* Superblock operations */
 static struct super_operations udf_sb_ops = {
-	read_inode:			udf_read_inode,
+	read_inode:		udf_read_inode,
 	write_inode:		udf_write_inode,
-	put_inode:			udf_put_inode,
+	put_inode:		udf_put_inode,
 	delete_inode:		udf_delete_inode,
-	put_super:			udf_put_super,
+	put_super:		udf_put_super,
 	write_super:		udf_write_super,
-	statfs:				udf_statfs,
-	remount_fs:			udf_remount_fs,
+	statfs:			udf_statfs,
+	remount_fs:		udf_remount_fs,
 };
 
 struct udf_options
@@ -489,9 +489,9 @@ udf_find_anchor(struct super_block *sb, int useranchor, int lastblock)
 {
 	int varlastblock = udf_variable_to_fixed(lastblock);
 	int last[] =  { lastblock, lastblock - 2,
-					lastblock - 150, lastblock - 152,
-					varlastblock, varlastblock - 2,
-					varlastblock - 150, varlastblock - 152 };
+			lastblock - 150, lastblock - 152,
+			varlastblock, varlastblock - 2,
+			varlastblock - 150, varlastblock - 152 };
 	struct buffer_head *bh = NULL;
 	Uint16 ident;
 	Uint32 location;
@@ -798,9 +798,6 @@ udf_load_partdesc(struct super_block *sb, struct buffer_head *bh)
 			UDF_SB_PARTLEN(sb,i) = le32_to_cpu(p->partitionLength); /* blocks */
 			UDF_SB_PARTROOT(sb,i) = le32_to_cpu(p->partitionStartingLocation) + UDF_SB_SESSION(sb);
 
-			if (UDF_SB_PARTTYPE(sb,i) == UDF_SPARABLE_MAP15)
-				udf_fill_spartable(sb, &UDF_SB_TYPESPAR(sb,i), UDF_SB_PARTLEN(sb,i));
-
 			if (!strcmp(p->partitionContents.ident, PARTITION_CONTENTS_NSR02) ||
 				!strcmp(p->partitionContents.ident, PARTITION_CONTENTS_NSR03))
 			{
@@ -820,13 +817,16 @@ udf_load_partdesc(struct super_block *sb, struct buffer_head *bh)
 				if (phd->unallocatedSpaceBitmap.extLength)
 				{
 					UDF_SB_ALLOC_BITMAP(sb, i, s_uspace);
-					UDF_SB_PARTMAPS(sb)[i].s_uspace.s_bitmap->s_extLength =
-						le32_to_cpu(phd->unallocatedSpaceBitmap.extLength);
-					UDF_SB_PARTMAPS(sb)[i].s_uspace.s_bitmap->s_extPosition =
-						le32_to_cpu(phd->unallocatedSpaceBitmap.extPosition);
-					UDF_SB_PARTFLAGS(sb,i) |= UDF_PART_FLAG_UNALLOC_BITMAP;
-					udf_debug("unallocatedSpaceBitmap (part %d) @ %d\n",
-						i, UDF_SB_PARTMAPS(sb)[i].s_uspace.s_bitmap->s_extPosition);
+					if (UDF_SB_PARTMAPS(sb)[i].s_uspace.s_bitmap != NULL)
+					{
+						UDF_SB_PARTMAPS(sb)[i].s_uspace.s_bitmap->s_extLength =
+							le32_to_cpu(phd->unallocatedSpaceBitmap.extLength);
+						UDF_SB_PARTMAPS(sb)[i].s_uspace.s_bitmap->s_extPosition =
+							le32_to_cpu(phd->unallocatedSpaceBitmap.extPosition);
+						UDF_SB_PARTFLAGS(sb,i) |= UDF_PART_FLAG_UNALLOC_BITMAP;
+						udf_debug("unallocatedSpaceBitmap (part %d) @ %d\n",
+							i, UDF_SB_PARTMAPS(sb)[i].s_uspace.s_bitmap->s_extPosition);
+					}
 				}
 				if (phd->partitionIntegrityTable.extLength)
 					udf_debug("partitionIntegrityTable (part %d)\n", i);
@@ -843,13 +843,16 @@ udf_load_partdesc(struct super_block *sb, struct buffer_head *bh)
 				if (phd->freedSpaceBitmap.extLength)
 				{
 					UDF_SB_ALLOC_BITMAP(sb, i, s_fspace);
-					UDF_SB_PARTMAPS(sb)[i].s_fspace.s_bitmap->s_extLength =
-						le32_to_cpu(phd->freedSpaceBitmap.extLength);
-					UDF_SB_PARTMAPS(sb)[i].s_fspace.s_bitmap->s_extPosition =
-						le32_to_cpu(phd->freedSpaceBitmap.extPosition);
-					UDF_SB_PARTFLAGS(sb,i) |= UDF_PART_FLAG_FREED_BITMAP;
-					udf_debug("freedSpaceBitmap (part %d) @ %d\n",
-						i, UDF_SB_PARTMAPS(sb)[i].s_fspace.s_bitmap->s_extPosition);
+					if (UDF_SB_PARTMAPS(sb)[i].s_fspace.s_bitmap != NULL)
+					{
+						UDF_SB_PARTMAPS(sb)[i].s_fspace.s_bitmap->s_extLength =
+							le32_to_cpu(phd->freedSpaceBitmap.extLength);
+						UDF_SB_PARTMAPS(sb)[i].s_fspace.s_bitmap->s_extPosition =
+							le32_to_cpu(phd->freedSpaceBitmap.extPosition);
+						UDF_SB_PARTFLAGS(sb,i) |= UDF_PART_FLAG_FREED_BITMAP;
+						udf_debug("freedSpaceBitmap (part %d) @ %d\n",
+							i, UDF_SB_PARTMAPS(sb)[i].s_fspace.s_bitmap->s_extPosition);
+					}
 				}
 			}
 			break;
@@ -876,8 +879,7 @@ udf_load_logicalvol(struct super_block *sb, struct buffer_head * bh, lb_addr *fi
 
 	lvd = (struct LogicalVolDesc *)bh->b_data;
 
-	UDF_SB_NUMPARTS(sb) = le32_to_cpu(lvd->numPartitionMaps);
-	UDF_SB_ALLOC_PARTMAPS(sb, UDF_SB_NUMPARTS(sb));
+	UDF_SB_ALLOC_PARTMAPS(sb, le32_to_cpu(lvd->numPartitionMaps))
 
 	for (i=0,offset=0;
 		 i<UDF_SB_NUMPARTS(sb) && offset<le32_to_cpu(lvd->mapTableLength);
@@ -910,16 +912,29 @@ udf_load_logicalvol(struct super_block *sb, struct buffer_head * bh, lb_addr *fi
 			}
 			else if (!strncmp(upm2->partIdent.ident, UDF_ID_SPARABLE, strlen(UDF_ID_SPARABLE)))
 			{
-				int plen;
-
+				Uint32 loc;
+				Uint16 ident;
+				struct SparingTable *st;
 				struct SparablePartitionMap *spm = (struct SparablePartitionMap *)&(lvd->partitionMaps[offset]);
+
 				UDF_SB_PARTTYPE(sb,i) = UDF_SPARABLE_MAP15;
-				plen = le16_to_cpu(spm->packetLength);
-				UDF_SB_TYPESPAR(sb,i).s_spar_pshift = 0;
-				while (plen >>= 1)
-					UDF_SB_TYPESPAR(sb,i).s_spar_pshift ++;
+				UDF_SB_TYPESPAR(sb,i).s_packet_len = le16_to_cpu(spm->packetLength);
 				for (j=0; j<spm->numSparingTables; j++)
-					UDF_SB_TYPESPAR(sb,i).s_spar_loc[j] = le32_to_cpu(spm->locSparingTable[j]);
+				{
+					loc = le32_to_cpu(spm->locSparingTable[j]);
+					UDF_SB_TYPESPAR(sb,i).s_spar_map[j] =
+						udf_read_tagged(sb, loc, loc, &ident);
+					if (UDF_SB_TYPESPAR(sb,i).s_spar_map[j] != NULL)
+					{
+						st = (struct SparingTable *)UDF_SB_TYPESPAR(sb,i).s_spar_map[j]->b_data;
+						if (ident != 0 ||
+							strncmp(st->sparingIdent.ident, UDF_ID_SPARING, strlen(UDF_ID_SPARING)))
+						{
+							udf_release_data(UDF_SB_TYPESPAR(sb,i).s_spar_map[j]);
+							UDF_SB_TYPESPAR(sb,i).s_spar_map[j] = NULL;
+						}
+					}
+				}
 				UDF_SB_PARTFUNC(sb,i) = udf_get_pblock_spar15;
 			}
 			else
@@ -1549,6 +1564,11 @@ udf_put_super(struct super_block *sb)
 					udf_release_data(UDF_SB_BITMAP(sb,UDF_SB_PARTITION(sb),s_fspace,i));
 			}
 			kfree(UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_fspace.s_bitmap);
+		}
+		if (UDF_SB_PARTTYPE(sb, UDF_SB_PARTITION(sb)) == UDF_SPARABLE_MAP15)
+		{
+			for (i=0; i<4; i++)
+				udf_release_data(UDF_SB_TYPESPAR(sb, UDF_SB_PARTITION(sb)).s_spar_map[i]);
 		}
 	}
 	if (!(sb->s_flags & MS_RDONLY))
