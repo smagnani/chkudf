@@ -61,13 +61,9 @@ void udf_free_inode(struct inode * inode)
 	if (UDF_SB_LVIDBH(sb))
 	{
 		if (is_directory)
-			UDF_SB_LVIDIU(sb)->numDirs =
-				cpu_to_le32(le32_to_cpu(UDF_SB_LVIDIU(sb)->numDirs) - 1);
+			udf_adj_dirs(inode->i_sb, -1);
 		else
-			UDF_SB_LVIDIU(sb)->numFiles =
-				cpu_to_le32(le32_to_cpu(UDF_SB_LVIDIU(sb)->numFiles) - 1);
-		
-		mark_buffer_dirty(UDF_SB_LVIDBH(sb));
+			udf_adj_files(inode->i_sb, -1);
 	}
 	unlock_super(sb);
 
@@ -95,8 +91,14 @@ struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
 	}
 	*err = -ENOSPC;
 
-	block = udf_new_blocks(dir->i_sb, NULL, UDF_I_LOCATION(dir).partitionReferenceNum,
-		start, 1, err);
+	if (UDF_I_STRAT4096(dir))
+	{
+		UDF_I_STRAT4096(inode) = 1;
+		block = udf_new_blocks(dir->i_sb, NULL, UDF_I_LOCATION(dir).partitionReferenceNum, start, 2, err);
+	}
+	else
+		block = udf_new_blocks(dir->i_sb, NULL, UDF_I_LOCATION(dir).partitionReferenceNum, start, 1, err);
+
 	if (*err)
 	{
 		iput(inode);
@@ -110,11 +112,9 @@ struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
 		uint64_t uniqueID;
 		lvhd = (struct logicalVolHeaderDesc *)(UDF_SB_LVID(sb)->logicalVolContentsUse);
 		if (S_ISDIR(mode))
-			UDF_SB_LVIDIU(sb)->numDirs =
-				cpu_to_le32(le32_to_cpu(UDF_SB_LVIDIU(sb)->numDirs) + 1);
+			udf_adj_dirs(sb, 1);
 		else
-			UDF_SB_LVIDIU(sb)->numFiles =
-				cpu_to_le32(le32_to_cpu(UDF_SB_LVIDIU(sb)->numFiles) + 1);
+			udf_adj_files(sb, 1);
 		UDF_I_UNIQUE(inode) = uniqueID = le64_to_cpu(lvhd->uniqueID);
 		if (!(++uniqueID & 0x00000000FFFFFFFFUL))
 			uniqueID += 16;
