@@ -189,7 +189,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 		return 0;
 	}
 
-	if (!(offset & ((16 >> (dir->i_sb->s_blocksize_bits - 9))-1))
+	if (!(offset & ((16 >> (dir->i_sb->s_blocksize_bits - 9))-1)))
 	{
 		i = 16 >> (dir->i_sb->s_blocksize_bits - 9);
 		if (i+offset > (elen >> dir->i_sb->s_blocksize_bits))

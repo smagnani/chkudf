@@ -84,6 +84,7 @@ gid_t udf_convert_gid(int gidin)
 
 #if defined(__linux__) && defined(__KERNEL__)
 
+extern struct buffer_head *
 udf_tgetblk(struct super_block *sb, int block, int size)
 {
 	if (UDF_QUERY_FLAG(sb, UDF_FLAG_VARCONV))
