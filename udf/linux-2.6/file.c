@@ -16,7 +16,7 @@
  *  Each contributing author retains all rights to their own work.
  *
  *  (C) 1998-1999 Dave Boynton
- *  (C) 1998-2001 Ben Fennema
+ *  (C) 1998-2003 Ben Fennema
  *  (C) 1999-2000 Stelias Computing Inc
  *
  * HISTORY
@@ -188,7 +188,7 @@ int udf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 {
 	int result = -EINVAL;
 
-	if ( permission(inode, MAY_READ) != 0 )
+	if ( permission(inode, MAY_READ, NULL) != 0 )
 	{
 		udf_debug("no permission to access inode %lu\n",
 						inode->i_ino);

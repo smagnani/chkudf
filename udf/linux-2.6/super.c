@@ -26,7 +26,7 @@
  *  Each contributing author retains all rights to their own work.
  *
  *  (C) 1998 Dave Boynton
- *  (C) 1998-2001 Ben Fennema
+ *  (C) 1998-2003 Ben Fennema
  *  (C) 2000 Stelias Computing Inc
  *
  * HISTORY
@@ -46,10 +46,8 @@
 #include "udfdecl.h"    
 
 #include <linux/config.h>
-#include <linux/version.h>
 #include <linux/blkdev.h>
 #include <linux/slab.h>
-#include <linux/vmalloc.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/stat.h>
@@ -96,7 +94,7 @@ static void udf_load_partdesc(struct super_block *, struct buffer_head *);
 static void udf_open_lvid(struct super_block *);
 static void udf_close_lvid(struct super_block *);
 static unsigned int udf_count_free(struct super_block *);
-static int udf_statfs(struct super_block *, struct statfs *);
+static int udf_statfs(struct super_block *, struct kstatfs *);
 
 /* UDF filesystem type */
 static struct super_block *udf_get_sb(struct file_system_type *fs_type,
@@ -1693,7 +1691,7 @@ udf_put_super(struct super_block *sb)
  *	Written, tested, and released.
  */
 static int
-udf_statfs(struct super_block *sb, struct statfs *buf)
+udf_statfs(struct super_block *sb, struct kstatfs *buf)
 {
 	buf->f_type = UDF_SUPER_MAGIC;
 	buf->f_bsize = sb->s_blocksize;

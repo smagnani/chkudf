@@ -15,7 +15,7 @@
  *              ftp://prep.ai.mit.edu/pub/gnu/GPL
  *      Each contributing author retains all rights to their own work.
  *
- *  (C) 1998-2001 Ben Fennema
+ *  (C) 1998-2003 Ben Fennema
  *  (C) 1999-2000 Stelias Computing Inc
  *
  * HISTORY
@@ -289,6 +289,7 @@ udf_find_entry(struct inode *dir, struct dentry *dentry,
  * PRE-CONDITIONS
  *	dir			Pointer to inode of parent directory.
  *	dentry			Pointer to dentry to complete.
+ *	nd			Pointer to lookup nameidata
  *
  * POST-CONDITIONS
  *	<return>		Zero on success.
@@ -299,7 +300,7 @@ udf_find_entry(struct inode *dir, struct dentry *dentry,
  */
 
 static struct dentry *
-udf_lookup(struct inode *dir, struct dentry *dentry)
+udf_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
 {
 	struct inode *inode = NULL;
 	struct fileIdentDesc cfi, *fi;
@@ -618,7 +619,7 @@ static int udf_delete_entry(struct inode *inode, struct fileIdentDesc *fi,
 	return udf_write_fi(inode, cfi, fi, fibh, NULL, NULL);
 }
 
-static int udf_create(struct inode *dir, struct dentry *dentry, int mode)
+static int udf_create(struct inode *dir, struct dentry *dentry, int mode, struct nameidata *nd)
 {
 	struct udf_fileident_bh fibh;
 	struct inode *inode;
@@ -671,8 +672,11 @@ static int udf_mknod(struct inode * dir, struct dentry * dentry, int mode, dev_t
 {
 	struct inode * inode;
 	struct udf_fileident_bh fibh;
-	int err;
 	struct fileIdentDesc cfi, *fi;
+	int err;
+
+	if (!old_valid_dev(rdev))
+		return -EINVAL;
 
 	lock_kernel();
 	err = -EIO;
@@ -715,8 +719,8 @@ static int udf_mkdir(struct inode * dir, struct dentry * dentry, int mode)
 {
 	struct inode * inode;
 	struct udf_fileident_bh fibh;
-	int err;
 	struct fileIdentDesc cfi, *fi;
+	int err;
 
 	lock_kernel();
 	err = -EMLINK;
@@ -1113,8 +1117,8 @@ static int udf_link(struct dentry * old_dentry, struct inode * dir,
 {
 	struct inode *inode = old_dentry->d_inode;
 	struct udf_fileident_bh fibh;
-	int err;
 	struct fileIdentDesc cfi, *fi;
+	int err;
 
 	lock_kernel();
 	if (inode->i_nlink >= (256<<sizeof(inode->i_nlink))-1)
