@@ -1360,6 +1360,14 @@ static int do_udf_rename(struct inode *old_dir, struct dentry *old_dentry,
 	new_dir->i_version = ++event;
 
 	/*
+	 * Like most other Unix systems, set the ctime for inodes on a
+	 * rename.
+	 */
+	old_inode->i_ctime = CURRENT_TIME;
+	UDF_I_UCTIME(old_inode) = CURRENT_UTIME;
+	mark_inode_dirty(old_inode);
+
+	/*
 	 * ok, that's it
 	 */
 	ncfi.fileVersionNum = ocfi.fileVersionNum;
