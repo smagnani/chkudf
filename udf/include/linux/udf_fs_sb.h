@@ -16,9 +16,23 @@
 
 #include <linux/time.h>
 
-#define UDF_TYPE1_MAP		0x0101U
-#define UDF_VIRTUAL_MAP		0x0102U
-#define UDF_SPARABLE_MAP	0x0202U
+#define UDF_TYPE1_MAP15		0x1511U
+#define UDF_VIRTUAL_MAP15	0x1512U
+#define UDF_VIRTUAL_MAP20	0x2012U
+#define UDF_SPARABLE_MAP15	0x1522U
+
+struct udf_sparing_data
+{
+	Uint32		s_spar_loc;
+	Uint16		s_spar_plen;
+}
+
+struct udf_virtual_data
+{
+	inode		*s_vat;
+	Uint16		s_start_offset;
+	Uint32		s_num_entries;
+}
 
 struct udf_part_map
 {
@@ -27,6 +41,11 @@ struct udf_part_map
 	Uint32		s_partition_len;
 	Uint16		s_volumeseqnum;
 	Uint16		s_partition_num;
+	union
+	{
+		udf_sparing_data	s_sparing;
+		udf_virtual_data	s_virtual;
+	} s_type_specific;
 };
 
 struct udf_sb_info
@@ -145,9 +164,11 @@ struct udf_sb_info
 #else
 #define UDF_SB_PARTTYPE(X,Y)	( UDF_SB_PARTMAPS(X)[Y].s_partition_type )
 #define UDF_SB_PARTROOT(X,Y)	( UDF_SB_PARTMAPS(X)[Y].s_partition_root )
-#define UDF_SB_PARTLEN(X,Y)	( UDF_SB_PARTMAPS(X)[Y].s_partition_len )
-#define UDF_SB_PARTVSN(X,Y)	( UDF_SB_PARTMAPS(X)[Y].s_volumeseqnum )
-#define UDF_SB_PARTNUM(X,Y)	( UDF_SB_PARTMAPS(X)[Y].s_partition_num )
+#define UDF_SB_PARTLEN(X,Y)		( UDF_SB_PARTMAPS(X)[Y].s_partition_len )
+#define UDF_SB_PARTVSN(X,Y)		( UDF_SB_PARTMAPS(X)[Y].s_volumeseqnum )
+#define UDF_SB_PARTNUM(X,Y)		( UDF_SB_PARTMAPS(X)[Y].s_partition_num )
+#define UDF_SB_TYPESPAR(X,Y)	( UDF_SB_PARTMAPS(X)[Y].s_type_specific.s_sparing )
+#define UDF_SB_TYPEVIRT(X,Y)	( UDF_SB_PARTMAPS(X)[Y].s_type_specific.s_virtual )
 #endif
 
 #endif	/* defined(__KERNEL__) */

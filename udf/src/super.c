@@ -471,9 +471,13 @@ udf_get_last_block(kdev_t dev)
 					CDROMREADTOCENTRY,
 					(unsigned long) &toc);
 		set_fs(old_fs);
-
+#if 0
+		if (i == 0)
+			return 32 * ((toc.cdte_addr.lba +37)/39) - 1;
+#else
 		if (i == 0)
 			return toc.cdte_addr.lba - 1;
+#endif
 	}
 	else
 		printk(KERN_DEBUG "udf: device doesn't know how to ioctl?\n");
@@ -802,7 +806,7 @@ udf_load_logicalvol(struct super_block *sb,struct buffer_head * bh)
 		if (type == 1)
 		{
 			struct GenericPartitionMap1 *gpm1 = (struct GenericPartitionMap1 *)&(lvd->partitionMaps[offset]);
-			UDF_SB_PARTTYPE(sb,i) = UDF_TYPE1_MAP;
+			UDF_SB_PARTTYPE(sb,i) = UDF_TYPE1_MAP15;
 			UDF_SB_PARTVSN(sb,i) = gpm1->volSeqNum;
 			UDF_SB_PARTNUM(sb,i) = gpm1->partitionNum;
 		}
@@ -811,17 +815,29 @@ udf_load_logicalvol(struct super_block *sb,struct buffer_head * bh)
 			struct UdfPartitionMap2 *upm2 = (struct UdfPartitionMap2 *)&(lvd->partitionMaps[offset]);
 			if (!strncmp(upm2->partIdent.ident, UDF_ID_PARTITION, strlen(UDF_ID_PARTITION)))
 			{
-				UDF_SB_PARTTYPE(sb,i) = UDF_VIRTUAL_MAP;
-				/*
-					Setup VAT
-				 */
+				UDF_SB_TYPEVIRT(sb,i).s_vat = iget(sb, UDF_SB_LASTBLOCK(sb));
+				if (((Uint16 *)upm2->partIdent.identSuffix)[0] == 0x0150)
+				{
+					UDF_SB_PARTTYPE(sb,i) = UDF_VIRTUAL_MAP15;
+					UDF_SB_TYPEVIRT(sb,i).s_start_offset = 0;
+					UDF_SB_TYPEVIRT(sb,i).s_num_entries = (UDF_SB_TYPEVIRT(sb,i).s_vat->i_size - 36) / sizeof(Uint32);;
+				}
+				else if (((Uint16 *)upm2->partIdent.identSuffix)[0] == 0x0200)
+				{
+					UDF_SB_PARTTYPE(sb,i) = UDF_VIRTUAL_MAP20;
+					pos = udf_bmap(UDF_SB_TYPEVIRT(sb,i).s_vat, 0);
+					bh = bread(sb, pos, sb->s_blocksize);
+					UDF_SB_TYPEVIRT(sb,i).s_start_offset = ((struct VirtualAllocationTable *)bh)->lengthHeader;
+					UDF_SB_TYPEVIRT(sb,i).s_num_entries = (UDF_SB_TYPEVIRT(sb,i).s_vat->i_size -
+						UDF_SB_TYPEVIRT(sb,i).s_start_offset) / sizeof(Uint32);
+				}
 			}
 			else if (!strncmp(upm2->partIdent.ident, UDF_ID_SPARABLE, strlen(UDF_ID_SPARABLE)))
 			{
-				UDF_SB_PARTTYPE(sb,i) = UDF_SPARABLE_MAP;
-				/*
-					Setup sparing tables
-				*/
+				struct SparablePartitionMap *spm = (struct SparablePartitionMap *)&(lvd->partitionMaps[offset]);
+				UDF_SB_PARTTYPE(sb,i) = UDF_SPARABLE_MAP15;
+				UDF_SB_TYPESPAR(sb,i).s_spar_plen = spm->packetLength;
+				UDF_SB_TYPESPAR(sb,i).s_spar_loc = spm->locSparingTable[0];
 			}
 			else
 			{
@@ -878,42 +894,43 @@ udf_process_sequence(struct super_block *sb, long block, long lastblock)
 
 		/* Process each descriptor (ISO 13346 3/8.3-8.4) */
 		descIdent = ((tag *)bh->b_data)->tagIdent;
-		switch (descIdent) {
+		switch (descIdent)
+		{
 			case TID_PRIMARY_VOL_DESC: /* ISO 13346 3/10.1 */
-			udf_load_pvoldesc(sb, bh);
-			break;
+				udf_load_pvoldesc(sb, bh);
+				break;
 
 			case TID_VOL_DESC_PTR: /* ISO 13346 3/10.3 */
-			break;
+				break;
 
 			case TID_IMP_USE_VOL_DESC: /* ISO 13346 3/10.4 */
-			break;
+				break;
 
 			case TID_PARTITION_DESC: /* ISO 13346 3/10.5 */
-			udf_load_partdesc(sb, bh);
-			break;
+				udf_load_partdesc(sb, bh);
+				break;
 
 			case TID_LOGICAL_VOL_DESC: /* ISO 13346 3/10.6 */
 			{
 				printk(KERN_DEBUG "udf: Logical Vol Desc: block %lx\n", block);
 				udf_load_logicalvol(sb, bh);
+				break;
 			}
-			break;
 
 			case TID_UNALLOC_SPACE_DESC: /* ISO 13346 3/10.8 */
-			break;
+				break;
 
 			case TID_TERMINATING_DESC: /* ISO 13346 3/10.9 */
-			break;
+				break;
 
 			case TID_FILE_SET_DESC:
-			break;
+				break;
 
 			case TID_FILE_IDENT_DESC:
-			break;
+				break;
 	
 			default:
-			break;
+				break;
 		}
 		udf_release_data(bh);
 	}
@@ -974,7 +991,42 @@ udf_load_partition(struct super_block *sb,struct AnchorVolDescPtr *anchor)
 	/* responsible for finding the PartitionDesc(s) */
 	if ( udf_process_sequence(sb, main_s, main_e) &&
 	     udf_process_sequence(sb, reserve_s, reserve_e) )
+	{
+#if 0
+		for (i=0; i<UDF_SB_NUMPARTS(sb); i++)
+		{
+			switch UDF_SB_PARTTYPE(sb, i)
+			{
+				case UDF_VIRTUAL_MAP15:
+				case UDF_VIRTUAL_MAP20:
+				{
+					lb_addr ino;
+
+					if (i == 0)
+						ino.partitionReferenceNum = i+1;
+					else
+						ino.partitionReferenceNum = i-1;
+
+					ino.logicalBlockNum = UDF_SB_LASTBLOCK(sb) - UDF_SB_PARTROOT(sb,ino.partitionReferenceNum);
+
+					UDF_SB_TYPEVIRT(sb,i).s_vat = udf_iget(sb, la);
+
+					if (UDF_SB_PARTTYPE(sb,i) == UDF_VIRTUAL_MAP15)
+						UDF_SB_TYPEVIRT(sb,i).s_start_offset = 0;
+					else if (UDF_SB_PARTTYPE(sb,i) == UDF_VIRTUAL_MAP20)
+					{
+						struct buffer_head *bh;
+
+						udf_bmap(UDF_SB_TYPEVIRT(sb,i).s_vat, 1);
+						bh = bread(
+						UDF_SB_TYPEVIRT(sb,i).s_start_offset = 
+					}
+				}
+			}
+		}
+#endif
 		return 1;
+	}
 	return 0;
 }
 

@@ -373,6 +373,7 @@ struct UdfPartitionMap2
 	EntityID	partIdent;
 	Uint16		volSeqNum;
 	Uint16		partitionNum;
+	Uint8		reserved2[24];
 };
 
 /* A Type 2 Partition Map */
