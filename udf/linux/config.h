@@ -1,0 +1,2 @@
+#define CONFIG_UDF 1
+#undef  CONFIG_UDF_WRITE
