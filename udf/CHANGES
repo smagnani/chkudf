@@ -151,5 +151,7 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
                 Redid flag system
                 Added udf versioning info
                 Fixed block size calculations
+		Quota should be set everywhere correctly
                 Sync'd changes with 2.3 development
                 Added cdrwtool and pktcdvd to tools
+		mkudf updates

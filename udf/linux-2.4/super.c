@@ -199,14 +199,18 @@ int __init init_udf_fs(void)
  *	gid=		Set the default group.
  *	umask=		Set the default umask.
  *	uid=		Set the default user.
+ *	bs=			Set the block size.
  *	unhide		Show otherwise hidden files.
  *	undelete	Show deleted files in lists.
+ *	adinicb		Embed data in the inode (default)
+ *	noadinicb	Don't embed data in the inode
+ *	shortad		Use short ad's
+ *	longad		Use long ad's (default)
  *	strict		Set strict conformance (unused)
  *
  *	The remaining are for debugging and disaster recovery:
  *
- *	bs=		Set the block size. (may not work unless 2048)
- *	novrs           Skip volume sequence recognition 
+ *	novrs		Skip volume sequence recognition 
  *
  *	The following expect a offset from 0.
  *
