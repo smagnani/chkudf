@@ -163,13 +163,12 @@ struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
 	unlock_super(sb);
 #ifdef QUOTA_CHANGE
 	if (DQUOT_ALLOC_INODE(inode))
-	{
-		DQUOT_DROP(inode);
 #else
 	if (DQUOT_ALLOC_INODE(sb, inode))
-	{
-		sb->dq_op->drop(inode);
 #endif
+	{
+		DQUOT_DROP(inode);
+		inode->i_flags |= S_NOQUOTA;
 		inode->i_nlink = 0;
 		iput(inode);
 		*err = -EDQUOT;
