@@ -42,11 +42,11 @@
 
 #if !defined(UDFFS_RW)
 
-#if defined(CONFIG_UDF_FS_WRITE)
+#if defined(CONFIG_UDF_RW)
 #define UDFFS_RW		1
-#else /* !defined(CONFIG_UDF_FS_WRITE) */
+#else /* !defined(CONFIG_UDF_RW) */
 #define UDFFS_RW		0
-#endif /* defined(CONFIG_UDF_FS_WRITE) */
+#endif /* defined(CONFIG_UDF_RW) */
 
 #endif /* !defined(UDFFS_RW) */
 
