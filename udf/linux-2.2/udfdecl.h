@@ -102,7 +102,7 @@ struct ktm
 struct ustr
 {
 	Uint8 u_cmpID;
-	Uint8 u_name[UDF_NAME_LEN-1];
+	Uint8 u_name[UDF_NAME_LEN];
 	Uint8 u_len;
 	Uint8 padding;
 	unsigned long u_hash;
@@ -148,7 +148,7 @@ extern int inode_bmap(struct inode *, int, lb_addr *, Uint32 *, lb_addr *, Uint3
 extern int udf_bmap(struct inode *, int);
 extern int udf_readpage_adinicb(struct file *, struct page *);
 extern int udf_add_aext(struct inode *, lb_addr *, int *, lb_addr, Uint32, struct buffer_head **, int);
-extern int udf_write_aext(struct inode *, lb_addr, int *, lb_addr, Uint32, struct buffer_head **, int);
+extern int udf_write_aext(struct inode *, lb_addr, int *, lb_addr, Uint32, struct buffer_head *, int);
 extern int udf_insert_aext(struct inode *, lb_addr, int, lb_addr, Uint32, struct buffer_head *);
 extern int udf_delete_aext(struct inode *, lb_addr, int, lb_addr, Uint32, struct buffer_head *);
 extern int udf_next_aext(struct inode *, lb_addr *, int *, lb_addr *, Uint32 *, struct buffer_head **, int);
@@ -189,9 +189,11 @@ extern void udf_truncate(struct inode *);
 extern void udf_truncate_adinicb(struct inode *);
 
 /* balloc.c */
-extern void udf_free_blocks(const struct inode *, lb_addr, Uint32, Uint32);
-extern int udf_prealloc_blocks(const struct inode *, Uint16, Uint32, Uint32);
-extern int udf_new_block(const struct inode *, Uint16, Uint32, int *);
+extern inline void udf_free_blocks(const struct inode *, lb_addr, Uint32, Uint32);
+extern inline int udf_prealloc_blocks(const struct inode *, Uint16, Uint32, Uint32);
+extern inline int udf_new_block(const struct inode *, Uint16, Uint32, int *);
+
+/* fsync.c */
 extern int udf_sync_file(struct file *, struct dentry *);
 extern int udf_sync_file_adinicb(struct file *, struct dentry *);
 
