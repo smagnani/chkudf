@@ -1150,7 +1150,12 @@ static int udf_rename (struct inode * old_dir, struct dentry * old_dentry,
 	int retval = -ENOENT;
 
 	old_inode = old_dentry->d_inode;
-	ofi = udf_find_entry(old_dir, old_dentry, &ofibh, &ocfi);
+	if ((ofi = udf_find_entry(old_dir, old_dentry, &ofibh, &ocfi)))
+	{
+		if (ofibh.sbh != ofibh.ebh)
+			udf_release_data(ofibh.ebh);
+		udf_release_data(ofibh.sbh);
+	}
 	if (!ofi || udf_get_lb_pblock(old_dir->i_sb, lelb_to_cpu(ocfi.icb.extLocation), 0) !=
 		old_inode->i_ino)
 	{
@@ -1223,6 +1228,8 @@ static int udf_rename (struct inode * old_dir, struct dentry * old_dentry,
 	memcpy(&(ncfi.icb), &(ocfi.icb), sizeof(long_ad));
 	udf_write_fi(&ncfi, nfi, &nfibh, NULL, NULL);
 
+	/* The old fid may have moved - find it again */
+	ofi = udf_find_entry(old_dir, old_dentry, &ofibh, &ocfi);
 	udf_delete_entry(ofi, &ofibh, &ocfi);
 
 	old_dir->i_version = ++event;
@@ -1263,16 +1270,17 @@ static int udf_rename (struct inode * old_dir, struct dentry * old_dentry,
 		}
 	}
 
-	retval = 0;
-
-end_rename:
-	udf_release_data(dir_bh);
 	if (ofi)
 	{
 		if (ofibh.sbh != ofibh.ebh)
 			udf_release_data(ofibh.ebh);
 		udf_release_data(ofibh.sbh);
 	}
+
+	retval = 0;
+
+end_rename:
+	udf_release_data(dir_bh);
 	if (nfi)
 	{
 		if (nfibh.sbh != nfibh.ebh)
