@@ -89,8 +89,8 @@ struct udf_sb_info
 	__u16			s_partition;
 
 	/* Sector headers */
-	__u32			s_session;
-	__u32			s_anchor[4];
+	__s32			s_session;
+	__u32			s_anchor[5];
 	__u32			s_lastblock;
 
 	struct buffer_head	*s_lvidbh;
