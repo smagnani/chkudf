@@ -83,4 +83,8 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
 
 04/19/99 blf	Support for link, symlink, and mknod
 
-05/12/99 blf	Initial support for writing
+05/12/99 blf	Initial support for writing (no sparse files)
+
+05/28/99 blf	Fixed various directory entry writing bugs. Added rename
+				for files and directories. Add fsync support (untested)
+				Handle VAT's that are in the ICB.

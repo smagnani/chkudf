@@ -29,6 +29,11 @@
 #include <asm/uaccess.h>
 #include <scsi/scsi.h>
 
+typedef struct scsi_device Scsi_Device;
+typedef struct scsi_cmnd   Scsi_Cmnd;
+
+#include <scsi/scsi_ioctl.h>
+
 #include <linux/udf_fs.h>
 #include "udf_sb.h"
 
@@ -92,7 +97,8 @@ do_scsi(kdev_t dev, struct inode *inode_fake, Uint8 *command, int cmd_len,
 	ip[0] = in_len;
 	ip[1] = out_len;
 	memcpy(buffer + 8, command, cmd_len);
-	return get_blkfops(MAJOR(dev))->ioctl(inode_fake, NULL, 1, (unsigned long)buffer);
+	return get_blkfops(MAJOR(dev))->ioctl(inode_fake,
+		NULL, SCSI_IOCTL_SEND_COMMAND, (unsigned long)buffer);
 }
 
 static unsigned int
@@ -142,7 +148,7 @@ udf_get_last_rti(kdev_t dev, struct inode *inode_fake)
 				else
 				{
 					udf_debug("Variable packet written track.\n");
-					lastsector = trackstart + tracklength - 2;
+					lastsector = trackstart + tracklength - 1;
 					if (freeblocks)
 					{
 						lastsector = lastsector - freeblocks - 6;
@@ -176,33 +182,37 @@ verify_lastblock(kdev_t dev, int lastblock, int *flags)
 {
 	struct buffer_head *bh;
 	tag *tp;
-	int blocklist[5];
+	int blocklist[10];
 	int i;
 
-	blocklist[0] = lastblock - 2;
-	blocklist[1] = lastblock;
-	blocklist[2] = lastblock - 150;
-	blocklist[3] = lastblock - 152;
-	blocklist[4] = 32 * ((lastblock + 37) / 39);
+	blocklist[0] = blocklist[1] = lastblock - 2;
+	blocklist[2] = blocklist[3] = lastblock;
+	blocklist[4] = blocklist[5] = lastblock - 150;
+	blocklist[6] = blocklist[7] = lastblock - 152;
+	blocklist[8] = blocklist[9] = 32 * ((lastblock + 37) / 39);
 
-	for (i=0; i<5; i++)
+	for (i=0; i<10; i+=2)
 	{
 		bh = bread(dev, blocklist[i], blksize_size[MAJOR(dev)][MINOR(dev)]);
 		if (bh)
 		{
 			tp = (tag *)bh->b_data;
-			if (tp->tagIdent == TID_ANCHOR_VOL_DESC_PTR ||
-				tp->tagIdent == TID_FILE_ENTRY ||
-				tp->tagIdent == TID_EXTENDED_FILE_ENTRY)
+			if (tp->tagIdent == TID_ANCHOR_VOL_DESC_PTR)
 			{
 				if (tp->tagLocation == blocklist[i])
 					break;
 				else if (tp->tagLocation == udf_variable_to_fixed(blocklist[i]))
 				{
-					blocklist[i] = udf_variable_to_fixed(blocklist[i]);
+					blocklist[i+1] = udf_variable_to_fixed(blocklist[i+1]);
 					*flags |= UDF_FLAG_VARCONV;
 					break;
 				}
+			}
+			else if (tp->tagIdent == TID_FILE_ENTRY ||
+				tp->tagIdent == TID_EXTENDED_FILE_ENTRY)
+			{
+				blocklist[i] -= 256;
+				i -= 2;
 			}
 			brelse(bh);
 			bh = NULL;
@@ -214,7 +224,7 @@ verify_lastblock(kdev_t dev, int lastblock, int *flags)
 	else
 	{
 		brelse(bh);
-		return blocklist[i];
+		return blocklist[i+1];
 	}
 }
 

@@ -7,9 +7,7 @@ support extended attributes -- blf
 
 full write support -- blf
   rename
-  llseek
   write
-  sync
 
   block/inode allocation algorithm
 

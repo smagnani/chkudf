@@ -63,10 +63,12 @@ extern int udf_rmdir(struct inode *, struct dentry *);
 extern int udf_unlink(struct inode *, struct dentry *);
 extern int udf_symlink(struct inode *, struct dentry *, const char *);
 extern int udf_link(struct dentry *, struct inode *, struct dentry *);
+extern int udf_rename(struct inode *, struct dentry *, struct inode *, struct dentry *);
 extern int udf_ioctl(struct inode *, struct file *, unsigned int, unsigned long);
 extern struct inode *udf_iget(struct super_block *, lb_addr);
+extern int udf_sync_inode(struct inode *);
 extern struct buffer_head * udf_expand_adinicb(struct inode *, int *, int, int *);
-extern struct buffer_head * udf_getblk(struct inode *, long, int, int *);
+extern struct buffer_head * udf_getblk(struct inode *, long, int, int, int *);
 extern struct buffer_head * udf_bread(struct inode *, int, int, int *);
 extern void udf_read_inode(struct inode *);
 extern void udf_put_inode(struct inode *);
@@ -75,6 +77,7 @@ extern void udf_write_inode(struct inode *);
 extern int udf_bmap(struct inode *, int);
 extern int inode_bmap(struct inode *, int, lb_addr *, Uint32 *, lb_addr *, Uint32 *, Uint32 *, struct buffer_head **);
 extern int udf_add_aext(struct inode *, lb_addr *, int *, lb_addr, Uint32, struct buffer_head **);
+extern int udf_write_aext(struct inode *, lb_addr *, int *, lb_addr, Uint32, struct buffer_head **);
 extern int udf_next_aext(struct inode *, lb_addr *, int *, lb_addr *, Uint32 *, struct buffer_head **);
 
 extern int udf_read_tagged_data(char *, int size, int fd, int block, int partref);
@@ -95,12 +98,13 @@ extern Uint32 udf_get_lb_pblock(struct super_block *, lb_addr, Uint32);
 
 extern int udf_get_filename(char *, char *, int);
 
-void udf_free_inode(struct inode *);
-struct inode * udf_new_inode (const struct inode *, int, int *);
-void udf_discard_prealloc(struct inode *);
-void udf_truncate(struct inode *);
-void udf_free_blocks(const struct inode *, lb_addr, Uint32, Uint32);
-int udf_new_block(const struct inode *, Uint16, Uint32, Uint32 *, Uint32 *, int *);
+extern void udf_free_inode(struct inode *);
+extern struct inode * udf_new_inode (const struct inode *, int, int *);
+extern void udf_discard_prealloc(struct inode *);
+extern void udf_truncate(struct inode *);
+extern void udf_free_blocks(const struct inode *, lb_addr, Uint32, Uint32);
+extern int udf_new_block(const struct inode *, Uint16, Uint32, Uint32 *, Uint32 *, int *);
+extern int udf_sync_file(struct file *, struct dentry *);
 
 #else
 
@@ -183,14 +187,20 @@ extern inline int find_next_one_bit (void * addr, int size, int offset)
 		return size;
 	size -= result;
 	offset &= (BITS_PER_LONG-1);
+#ifdef VDEBUG
 	udf_debug("addr=%p, p=%p, offset=%d, size=%d, result=%ld\n",
 		addr, p, offset, size, result);
+#endif
 	if (offset)
 	{
 		tmp = *(p++);
+#ifdef VDEBUG
 		udf_debug("tmp=%lx\n", tmp);
+#endif
 		tmp &= ~0UL << offset;
+#ifdef VDEBUG
 		udf_debug("tmp=%lx\n", tmp);
+#endif
 		if (size < BITS_PER_LONG)
 			goto found_first;
 		if (tmp)
@@ -198,7 +208,9 @@ extern inline int find_next_one_bit (void * addr, int size, int offset)
 		size -= BITS_PER_LONG;
 		result += BITS_PER_LONG;
 	}
+#ifdef VDEBUG
 	udf_debug("size=%d, result=%ld\n", size, result);
+#endif
 	while (size & ~(BITS_PER_LONG-1))
 	{
 		if ((tmp = *(p++)))
@@ -212,7 +224,9 @@ extern inline int find_next_one_bit (void * addr, int size, int offset)
 found_first:
 	tmp &= ~0UL >> (BITS_PER_LONG-size);
 found_middle:
+#ifdef VDEBUG
 	udf_debug("result=%ld, ffs(tmp)=%d\n", result, ffs(tmp));
+#endif
 	return result + ffs(tmp) - 1;
 }
 
@@ -255,7 +269,9 @@ udf_filead_read(struct inode *, Uint8 *, Uint8, lb_addr, int *, int *,
 extern struct FileIdentDesc *
 udf_fileident_read(struct inode *, int *,
 	struct udf_fileident_bh *,
-	struct FileIdentDesc *);
+	struct FileIdentDesc *,
+	lb_addr *, Uint32 *,
+	Uint32 *, struct buffer_head **);
 #endif
 extern struct FileIdentDesc * 
 udf_get_fileident(void * buffer, int bufsize, int * offset);

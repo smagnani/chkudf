@@ -21,7 +21,7 @@ CFLAGS	= $(KFLAGS) $(MFLAG)
 
 SRCS	:= balloc.c dir.c file.c ialloc.c inode.c lowlevel.c namei.c
 SRCS	+= partition.c super.c truncate.c symlink.c
-SRCS	+= crc.c directory.c misc.c udftime.c unicode.c
+SRCS	+= crc.c directory.c misc.c udftime.c unicode.c fsync.c
 
 OBJS	= $(SRCS:%.c=%.o)
 

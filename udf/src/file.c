@@ -17,6 +17,7 @@
  *
  *  (C) 1998-1999 Dave Boynton
  *  (C) 1998-1999 Ben Fennema
+ *  (C) 1999 Stelias Computing Inc
  *
  * HISTORY
  *
@@ -26,6 +27,7 @@
  *  12/06/98 blf  Added udf_file_read. uses generic_file_read for all cases but
  *                ICB_FLAG_AD_IN_ICB.
  *  04/06/99      64 bit file handling on 32 bit systems taken from ext2 file.c
+ *  05/12/99      Preliminary file write support
  */
 
 #include "udfdecl.h"
@@ -44,6 +46,7 @@
 
 typedef void * poll_table; 
 
+static long long udf_file_llseek(struct file *, long long, int);
 static ssize_t udf_file_read (struct file *, char *, size_t, loff_t *);
 static ssize_t udf_file_write (struct file *, const char *, size_t, loff_t *);
 #if BITS_PER_LONG < 64
@@ -52,7 +55,7 @@ static int udf_open_file(struct inode *, struct file *);
 static int udf_release_file(struct inode *, struct file *);
 
 static struct file_operations udf_file_operations = {
-	NULL,				/* llseek */
+	udf_file_llseek,	/* llseek */
 	udf_file_read,		/* read */
 	udf_file_write,		/* write */
 	NULL,				/* readdir */
@@ -66,7 +69,7 @@ static struct file_operations udf_file_operations = {
 #endif
 	NULL,				/* flush */
 	udf_release_file,	/* release */
-	NULL,				/* fsync */
+	udf_sync_file,		/* fsync */
 	NULL,				/* fasync */
 	NULL,				/* check_media_change */
 	NULL,				/* revalidate */
@@ -99,6 +102,44 @@ struct inode_operations udf_file_inode_operations = {
 	NULL,				/* updatepage */
 	NULL				/* revalidate */
 };
+
+/*
+ * Make sure the offset never goes beyond the 32-bit mark..
+ */
+static long long udf_file_llseek(struct file * file, long long offset, int origin)
+{
+	struct inode * inode = file->f_dentry->d_inode;
+
+	switch (origin)
+	{
+		case 2:
+		{
+			offset += inode->i_size;
+			break;
+		}
+		case 1:
+		{
+			offset += file->f_pos;
+			break;
+		}
+	}
+	if (((unsigned long long) offset >> 32) != 0)
+	{
+#if BITS_PER_LONG < 64
+		return -EINVAL;
+#else
+		if (offset > ???)
+			return -EINVAL;
+#endif
+	}
+	if (offset != file->f_pos)
+	{
+		file->f_pos = offset;
+		file->f_reada = 0;
+		file->f_version = ++event;
+	}
+	return offset;
+}
 
 static inline void remove_suid(struct inode * inode)
 {
@@ -198,15 +239,15 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 	written = 0;
 	do
 	{
-		bh = udf_getblk(inode, block, 1, &err);
+		if (c > count)
+			c = count;
+		bh = udf_getblk(inode, block, c, 1, &err);
 		if (!bh)
 		{
 			if (!written)
 				written = err;
 			break;
 		}
-		if (c > count)
-			c = count;
 		if (c != sb->s_blocksize && !buffer_uptodate(bh))
 		{
 			ll_rw_block (READ, 1, &bh);
@@ -257,6 +298,7 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 		offset = 0;
 		c = sb->s_blocksize;
 	} while (count);
+
     if (buffercount)
 	{
 		ll_rw_block(WRITE, buffercount, bufferlist);

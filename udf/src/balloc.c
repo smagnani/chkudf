@@ -304,9 +304,13 @@ repeat:
 			goto got_block;
 		}
 		end_goal = (bit + 63) & ~63;
+#ifdef VDEBUG
 		udf_debug("end_goal=%d, bit=%d\n", end_goal, bit);
+#endif
 		bit = udf_find_next_one_bit(bh->b_data, end_goal, bit);
+#ifdef VDEBUG
 		udf_debug("bit=%d\n", bit);
+#endif
 		if (bit < end_goal)
 			goto got_block;
 		ptr = memscan((char *)bh->b_data + (bit >> 3), 0xFF, sb->s_blocksize - ((bit + 7) >> 3));
@@ -363,8 +367,10 @@ got_block:
 	newblock = bit + (block_group << (sb->s_blocksize_bits + 3)) -
 		(group_start << 3);
 
+#ifdef VDEBUG
 	udf_debug("newblock=%d, bit=%d, block_group=%d, group_start=%d\n",
 		newblock, bit, block_group, group_start);
+#endif
 	tmp = udf_get_pblock(sb, newblock, partition, 0);
 #ifdef VDEBUG
 	udf_debug("got block! bit=%d, block_group=%d, newblock=%d, block=%d\n",

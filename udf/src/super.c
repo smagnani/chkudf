@@ -60,6 +60,7 @@
 
 #include <linux/udf_fs.h>
 #include "udf_sb.h"
+#include "udf_i.h"
 
 #include <linux/init.h>
 #include <asm/uaccess.h>
@@ -1025,11 +1026,12 @@ udf_load_partition(struct super_block *sb, struct AnchorVolDescPtr *anchor, lb_a
 
 				ino.logicalBlockNum = UDF_SB_LASTBLOCK(sb) - UDF_SB_PARTROOT(sb,ino.partitionReferenceNum);
 
-				UDF_SB_VAT(sb) = udf_iget(sb, ino);
+				if (!(UDF_SB_VAT(sb) = udf_iget(sb, ino)))
+					return 1;
 
 				if (UDF_SB_PARTTYPE(sb,i) == UDF_VIRTUAL_MAP15)
 				{
-					UDF_SB_TYPEVIRT(sb,i).s_start_offset = 0;
+					UDF_SB_TYPEVIRT(sb,i).s_start_offset = UDF_I_EXT0OFFS(UDF_SB_VAT(sb));
 					UDF_SB_TYPEVIRT(sb,i).s_num_entries = (UDF_SB_VAT(sb)->i_size - 36) / sizeof(Uint32);
 				}
 				else if (UDF_SB_PARTTYPE(sb,i) == UDF_VIRTUAL_MAP20)
@@ -1039,7 +1041,9 @@ udf_load_partition(struct super_block *sb, struct AnchorVolDescPtr *anchor, lb_a
 
 					pos = udf_bmap(UDF_SB_VAT(sb), 0);
 					bh = bread(sb->s_dev, pos, sb->s_blocksize);
-					UDF_SB_TYPEVIRT(sb,i).s_start_offset = le16_to_cpu(((struct VirtualAllocationTable20 *)bh->b_data)->lengthHeader);
+					UDF_SB_TYPEVIRT(sb,i).s_start_offset =
+						le16_to_cpu(((struct VirtualAllocationTable20 *)bh->b_data + UDF_I_EXT0OFFS(UDF_SB_VAT(sb)))->lengthHeader) +
+							UDF_I_EXT0OFFS(UDF_SB_VAT(sb));
 					UDF_SB_TYPEVIRT(sb,i).s_num_entries = (UDF_SB_VAT(sb)->i_size -
 						UDF_SB_TYPEVIRT(sb,i).s_start_offset) / sizeof(Uint32);
 					udf_release_data(bh);
@@ -1185,6 +1189,12 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	else
 		UDF_SB_LASTBLOCK(sb) = uopt.lastblock;
 
+	if (!UDF_SB_LASTBLOCK(sb))
+	{
+		udf_debug("Unable to determine Lastblock\n");
+		goto error_out;
+	}
+
 	udf_debug("Lastblock=%d\n", UDF_SB_LASTBLOCK(sb));
 
 	if (!uopt.novrs)
@@ -1214,6 +1224,7 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 
 	UDF_SB_CHARSET(sb) = NULL;
 
+#ifdef CONFIG_NLS
 	if (uopt.utf8 == 0)
 	{
 		char *p = uopt.iocharset ? uopt.iocharset : "iso8859-1";
@@ -1223,6 +1234,7 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 				goto error_out;
 		UDF_SB_CHARSET(sb) = load_nls_default();
 	}
+#endif
 
 	/* Fill in the rest of the superblock */
 	sb->s_op = &udf_sb_ops;
@@ -1296,7 +1308,8 @@ error_out:
 	sb->s_dev = NODEV;
 	if (UDF_SB_VAT(sb))
 		iput(UDF_SB_VAT(sb));
-	udf_close_lvid(sb);
+	if (!(sb->s_flags & MS_RDONLY))
+		udf_close_lvid(sb);
 	udf_release_data(UDF_SB_LVIDBH(sb));
 	UDF_SB_FREE(sb);
 	unlock_super(sb);
@@ -1353,7 +1366,8 @@ udf_put_super(struct super_block *sb)
 
 	if (UDF_SB_VAT(sb))
 		iput(UDF_SB_VAT(sb));
-	udf_close_lvid(sb);
+	if (!(sb->s_flags & MS_RDONLY))
+		udf_close_lvid(sb);
 	udf_release_data(UDF_SB_LVIDBH(sb));
 	for (i=0; i<UDF_MAX_BLOCK_LOADED; i++)
 		udf_release_data(UDF_SB_BLOCK_BITMAP(sb, i));

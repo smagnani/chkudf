@@ -114,8 +114,7 @@ static int trunc(struct inode * inode)
 				retry |= extent_trunc(inode, eloc, elen, 0);
 		}
 	}
-	if (bh)
-		udf_release_data(bh);
+	udf_release_data(bh);
 	return retry;
 }
 
