@@ -15,7 +15,7 @@
  *		ftp://prep.ai.mit.edu/pub/gnu/GPL
  *	Each contributing author retains all rights to their own work.
  *
- *  (C) 1998-1999 Ben Fennema
+ *  (C) 1998-2000 Ben Fennema
  *
  * HISTORY
  *
@@ -246,13 +246,13 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 
 		if ( (cfi.fileCharacteristics & FILE_DELETED) != 0 )
 		{
-			if ( !IS_UNDELETE(dir->i_sb) )
+			if ( !UDF_QUERY_FLAG(dir->i_sb, UDF_FLAG_UNDELETE) )
 				continue;
 		}
 		
 		if ( (cfi.fileCharacteristics & FILE_HIDDEN) != 0 )
 		{
-			if ( !IS_UNHIDE(dir->i_sb) )
+			if ( !UDF_QUERY_FLAG(dir->i_sb, UDF_FLAG_UNHIDE) )
 				continue;
 		}
 
