@@ -588,7 +588,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 			{
 				elen += nfidlen;
 				elen = (EXTENT_RECORDED_ALLOCATED << 30) | elen;
-				udf_write_aext(dir, &bloc, &lextoffset, eloc, elen, &bh, 1);
+				udf_write_aext(dir, bloc, &lextoffset, eloc, elen, &bh, 1);
 				block = eloc.logicalBlockNum + (elen >> dir->i_sb->s_blocksize_bits);
 			}
 		}

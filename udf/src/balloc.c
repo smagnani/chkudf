@@ -220,6 +220,10 @@ do_more:
 	bh = UDF_SB_BLOCK_BITMAP(sb, bitmap_nr);
 	for (i=0; i < count; i++)
 	{
+#ifdef VDEBUG
+		udf_debug("bit=%ld, count=%d, bitmap_nr=%d, block_group=%ld, i=%ld\n",
+			bit, count, bitmap_nr, block_group, i);
+#endif
 		if (udf_set_bit(bit + i, bh->b_data))
 		{
 			udf_debug("bit %ld already set\n", bit + i);

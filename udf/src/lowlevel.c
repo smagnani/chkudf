@@ -113,14 +113,15 @@ udf_get_last_rti(kdev_t dev, struct inode *inode_fake)
 	unsigned long lastsector = 0;
 
 	ip = (int *)(buffer + 8);
-	memset(cdb, 0, 12);
+	memset(cdb, 0, 10);
 	cdb[0] = 0x51;
 	cdb[8] = 32;
 	result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, 32);
 	if (!result)
 	{
 		track_no = buffer[14];
-		udf_debug("Generic Read Disc Info worked; last track is %d.\n", track_no);
+		udf_debug("Generic Read Disc Info worked; last track is %d. status=0x%x\n",
+			track_no, buffer[10] & 0x3);
 		memset(buffer, 0, 128);
 		cdb[0] = 0x52;
 		cdb[1] = 1;
@@ -160,11 +161,52 @@ udf_get_last_rti(kdev_t dev, struct inode *inode_fake)
 	return lastsector;
 }
 
+static unsigned int
+udf_get_toc_entry(kdev_t dev, struct inode *inode_fake)
+{
+	extern struct file_operations * get_blkfops(unsigned int);
+	struct cdrom_tocentry toc;
+	int res, lastsector = 0;
+
+	toc.cdte_format = CDROM_LBA;
+	toc.cdte_track = 0xAA;
+	
+	if (!(res = get_blkfops(MAJOR(dev))->ioctl(inode_fake,
+			NULL,
+			CDROMREADTOCENTRY,
+			(unsigned long) &toc)))
+	{
+		lastsector = toc.cdte_addr.lba - 1;
+	}
+
+	return lastsector;
+}
+
+static unsigned int
+udf_get_capacity(kdev_t dev, struct inode *inode_fake)
+{
+	char buffer[128];
+	int result = 0;
+	int *ip;
+	Uint8 cdb[10];
+	unsigned long lastsector = 0;
+
+	ip = (int *)(buffer + 8);
+	memset(cdb, 0, 10);
+
+	cdb[0] = READ_CAPACITY;
+	result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, 8);
+	if (!result)
+		lastsector = be32_to_cpu(ip[0]);
+
+	return lastsector;
+}
+
 static int
 is_mmc(kdev_t dev, struct inode *inode_fake)
 {
     char buffer[142];
-    int result = 0;
+    int result = 0, n;
     Uint8 cdb[6];
 
 	cdb[0] = MODE_SENSE;
@@ -173,6 +215,18 @@ is_mmc(kdev_t dev, struct inode *inode_fake)
 	cdb[1] = cdb[3] = cdb[5] = 0;
 
 	result = do_scsi(dev, inode_fake, cdb, 6, buffer, 0, 128);
+	if (!result)
+	{
+		n = 8 + buffer[8+3] + 4;
+		udf_debug("DVD-RAM R/W(%c/%c)  DVD-R R/W(%c/%c)  DVD-ROM R(%c)\n",
+			buffer[n+2] & 0x20 ? 'Y' : 'N', buffer[n+3] & 0x20 ? 'Y' : 'N',
+			buffer[n+2] & 0x10 ? 'Y' : 'N', buffer[n+3] & 0x10 ? 'Y' : 'N',
+			buffer[n+2] & 0x08 ? 'Y' : 'N');
+		udf_debug("CD-RW   R/W(%c/%c)  CD-R  R/W(%c/%c)  Fixed Packet (%c)\n",
+			buffer[n+2] & 0x02 ? 'Y' : 'N', buffer[n+3] & 0x02 ? 'Y' : 'N',
+			buffer[n+2] & 0x01 ? 'Y' : 'N', buffer[n+3] & 0x01 ? 'Y' : 'N',
+			buffer[n+2] & 0x04 ? 'Y' : 'N');
+	}
 	return !result;
 }
 
@@ -220,7 +274,10 @@ verify_lastblock(kdev_t dev, int lastblock, int *flags)
 	}
 
 	if (!bh)
+	{
+		udf_debug("Unable to find Last Anchor @ ~%d\n", lastblock);
 		return 0;
+	}
 	else
 	{
 		brelse(bh);
@@ -267,7 +324,7 @@ udf_get_last_block(kdev_t dev, int *flags)
 
 		if (!ret) /* Hard Disk */
 		{
-			udf_debug("BLKGETSIZE ret=%d, lblock=%ld\n", ret, lblock);
+			udf_debug("BLKGETSIZE lblock=%ld\n", lblock);
 			if (mult)
 				lblock *= mult;
 			else if (div)
@@ -280,24 +337,18 @@ udf_get_last_block(kdev_t dev, int *flags)
 			if (is_mmc(dev, &inode_fake) &&
 				(lblock = udf_get_last_rti(dev, &inode_fake)))
 			{
+				udf_debug("LAST_RTI lblock=%ld\n", lblock);
 				accurate = 1;
 			}
-			else
+			else if ((lblock = udf_get_toc_entry(dev, &inode_fake)))
 			{
-				struct cdrom_tocentry toc;
-
-				toc.cdte_format = CDROM_LBA;
-				toc.cdte_track = 0xAA;
-	
-				ret = get_blkfops(MAJOR(dev))->ioctl(&inode_fake,
-						NULL,
-						CDROMREADTOCENTRY,
-						(unsigned long) &toc);
-				if (!ret)
-				{
-					accurate = 0;
-					lblock = toc.cdte_addr.lba - 1;
-				}
+				udf_debug("TOC_ENTRY lblock=%ld\n", lblock);
+				accurate = 0;
+			}
+			else if ((lblock = udf_get_capacity(dev, &inode_fake)))
+			{
+				udf_debug("READ_CAPACITY lblock=%ld\n", lblock);
+				accurate = 0;
 			}
 		}
 		set_fs(old_fs);

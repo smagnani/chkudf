@@ -78,10 +78,11 @@ extern void udf_write_inode(struct inode *);
 extern int udf_bmap(struct inode *, int);
 extern int inode_bmap(struct inode *, int, lb_addr *, Uint32 *, lb_addr *, Uint32 *, Uint32 *, struct buffer_head **);
 extern int udf_add_aext(struct inode *, lb_addr *, int *, lb_addr, Uint32, struct buffer_head **, int);
-extern int udf_write_aext(struct inode *, lb_addr *, int *, lb_addr, Uint32, struct buffer_head **, int);
+extern int udf_write_aext(struct inode *, lb_addr, int *, lb_addr, Uint32, struct buffer_head **, int);
 extern int udf_insert_aext(struct inode *, lb_addr, int, lb_addr, Uint32, struct buffer_head *);
 extern int udf_delete_aext(struct inode *, lb_addr, int, lb_addr, Uint32, struct buffer_head *, int);
 extern int udf_next_aext(struct inode *, lb_addr *, int *, lb_addr *, Uint32 *, struct buffer_head **, int);
+extern int udf_current_aext(struct inode *, lb_addr *, int *, lb_addr *, Uint32 *, struct buffer_head **, int);
 
 extern int udf_read_tagged_data(char *, int size, int fd, int block, int partref);
 

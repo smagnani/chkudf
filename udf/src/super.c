@@ -1000,10 +1000,6 @@ udf_load_partition(struct super_block *sb, struct AnchorVolDescPtr *anchor, lb_a
 	reserve_e = reserve_e >> sb->s_blocksize_bits;
 	reserve_e += reserve_s;
 
-#if 0
-	UDF_SB_LASTBLOCK(sb)= (main_e > reserve_e) ? main_e : reserve_e;
-#endif
-
 	/* Process the main & reserve sequences */
 	/* responsible for finding the PartitionDesc(s) */
 	if ( udf_process_sequence(sb, main_s, main_e, fileset) &&
@@ -1018,6 +1014,12 @@ udf_load_partition(struct super_block *sb, struct AnchorVolDescPtr *anchor, lb_a
 			case UDF_VIRTUAL_MAP20:
 			{
 				lb_addr ino;
+
+				if (!UDF_SB_LASTBLOCK(sb))
+				{
+					udf_debug("Unable to determine Lastblock (For Virtual Partition)\n");
+					return 1;
+				}
 
 				if (i == 0)
 					ino.partitionReferenceNum = i+1;
@@ -1189,11 +1191,6 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	else
 		UDF_SB_LASTBLOCK(sb) = uopt.lastblock;
 
-	if (!UDF_SB_LASTBLOCK(sb))
-	{
-		udf_debug("Unable to determine Lastblock\n");
-		goto error_out;
-	}
 
 	udf_debug("Lastblock=%d\n", UDF_SB_LASTBLOCK(sb));
 
