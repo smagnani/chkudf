@@ -1043,7 +1043,7 @@ udf_process_sequence(struct super_block *sb, long block, long lastblock, lb_addr
 	int i,j;
 	Uint32 vdsn;
 	Uint16 ident;
-	long next_s, next_e = 0;
+	long next_s = 0, next_e = 0;
 
 	memset(vds, 0, sizeof(struct udf_vds_record) * VDS_POS_LENGTH);
 
