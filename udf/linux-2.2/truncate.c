@@ -121,8 +121,11 @@ void udf_truncate_extents(struct inode * inode)
 					{
 						struct AllocExtDesc *aed = (struct AllocExtDesc *)(bh->b_data);
 						aed->lengthAllocDescs = cpu_to_le32(lenalloc);
-						udf_update_tag(bh->b_data, lenalloc +
-							sizeof(struct AllocExtDesc));
+						if (!UDF_QUERY_FLAG(inode->i_sb, UDF_FLAG_STRICT) || UDF_SB_UDFREV(inode->i_sb) >= 0x0201)
+							udf_update_tag(bh->b_data, lenalloc +
+								sizeof(struct AllocExtDesc));
+						else
+							udf_update_tag(bh->b_data, sizeof(struct AllocExtDesc));
 						mark_buffer_dirty(bh, 1);
 					}
 				}
@@ -163,8 +166,11 @@ void udf_truncate_extents(struct inode * inode)
 			{
 				struct AllocExtDesc *aed = (struct AllocExtDesc *)(bh->b_data);
 				aed->lengthAllocDescs = cpu_to_le32(lenalloc);
-				udf_update_tag(bh->b_data, lenalloc +
-					sizeof(struct AllocExtDesc));
+				if (!UDF_QUERY_FLAG(inode->i_sb, UDF_FLAG_STRICT) || UDF_SB_UDFREV(inode->i_sb) >= 0x0201)
+					udf_update_tag(bh->b_data, lenalloc +
+						sizeof(struct AllocExtDesc));
+				else
+					udf_update_tag(bh->b_data, sizeof(struct AllocExtDesc));
 				mark_buffer_dirty(bh, 1);
 			}
 		}
