@@ -752,8 +752,8 @@ static void udf_merge_extents(struct inode *inode,
 					laarr[i+1].extLength = (laarr[i+1].extLength -
 						(laarr[i].extLength & UDF_EXTENT_LENGTH_MASK) +
 						UDF_EXTENT_LENGTH_MASK) & ~(inode->i_sb->s_blocksize-1);
-					laarr[i].extLength = (UDF_EXTENT_LENGTH_MASK + 1) -
-						inode->i_sb->s_blocksize;
+					laarr[i].extLength = (laarr[i].extLength & UDF_EXTENT_FLAG_MASK) +
+						(UDF_EXTENT_LENGTH_MASK + 1) - inode->i_sb->s_blocksize;
 					laarr[i+1].extLocation.logicalBlockNum =
 						laarr[i].extLocation.logicalBlockNum +
 						((laarr[i].extLength & UDF_EXTENT_LENGTH_MASK) >>
@@ -770,6 +770,37 @@ static void udf_merge_extents(struct inode *inode,
 					i --;
 					(*endnum) --;
 				}
+			}
+		}
+		else if (((laarr[i].extLength >> 30) == (EXT_NOT_RECORDED_ALLOCATED >> 30)) &&
+			((laarr[i+1].extLength >> 30) == (EXT_NOT_RECORDED_NOT_ALLOCATED >> 30)))
+		{
+			udf_free_blocks(inode->i_sb, inode, laarr[i].extLocation, 0,
+				((laarr[i].extLength & UDF_EXTENT_LENGTH_MASK) +
+				inode->i_sb->s_blocksize - 1) >> inode->i_sb->s_blocksize_bits);
+			laarr[i].extLocation.logicalBlockNum = 0;
+			laarr[i].extLocation.partitionReferenceNum = 0;
+
+			if (((laarr[i].extLength & UDF_EXTENT_LENGTH_MASK) +
+				(laarr[i+1].extLength & UDF_EXTENT_LENGTH_MASK) +
+				inode->i_sb->s_blocksize - 1) & ~UDF_EXTENT_LENGTH_MASK)
+			{
+				laarr[i+1].extLength = (laarr[i+1].extLength -
+					(laarr[i].extLength & UDF_EXTENT_LENGTH_MASK) +
+					UDF_EXTENT_LENGTH_MASK) & ~(inode->i_sb->s_blocksize-1);
+				laarr[i].extLength = (laarr[i].extLength & UDF_EXTENT_FLAG_MASK) +
+					(UDF_EXTENT_LENGTH_MASK + 1) - inode->i_sb->s_blocksize;
+			}
+			else
+			{
+				laarr[i].extLength = laarr[i+1].extLength +
+					(((laarr[i].extLength & UDF_EXTENT_LENGTH_MASK) +
+					inode->i_sb->s_blocksize - 1) & ~(inode->i_sb->s_blocksize-1));
+				if (*endnum > (i+2))
+					memmove(&laarr[i+1], &laarr[i+2],
+						sizeof(long_ad) * (*endnum - (i+2)));
+				i --;
+				(*endnum) --;
 			}
 		}
 	}
