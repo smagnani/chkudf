@@ -53,7 +53,7 @@ void udf_free_inode(struct inode * inode)
 #endif
 	DQUOT_DROP(inode);
 
-	lock_super(sb);
+	lock_kernel();
 
 	is_directory = S_ISDIR(inode->i_mode);
 
@@ -70,7 +70,7 @@ void udf_free_inode(struct inode * inode)
 		
 		mark_buffer_dirty(UDF_SB_LVIDBH(sb));
 	}
-	unlock_super(sb);
+	unlock_kernel();
 
 	udf_free_blocks(sb, NULL, UDF_I_LOCATION(inode), 0, 1);
 }
@@ -103,7 +103,7 @@ struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
 		iput(inode);
 		return NULL;
 	}
-	lock_super(sb);
+	lock_kernel();
 
 	if (UDF_SB_LVIDBH(sb))
 	{
@@ -167,7 +167,7 @@ struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
 	insert_inode_hash(inode);
 	mark_inode_dirty(inode);
 
-	unlock_super(sb);
+	unlock_kernel();
 #ifndef OLD_QUOTA
 	if (DQUOT_ALLOC_INODE(inode))
 #else

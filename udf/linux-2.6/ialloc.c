@@ -15,7 +15,7 @@
  *		ftp://prep.ai.mit.edu/pub/gnu/GPL
  *	Each contributing author retains all rights to their own work.
  *
- *  (C) 1998-2001 Ben Fennema
+ *  (C) 1998-2003 Ben Fennema
  *
  * HISTORY
  *
@@ -48,7 +48,7 @@ void udf_free_inode(struct inode * inode)
 	DQUOT_FREE_INODE(inode);
 	DQUOT_DROP(inode);
 
-	lock_super(sb);
+	lock_kernel();
 
 	is_directory = S_ISDIR(inode->i_mode);
 
@@ -65,7 +65,7 @@ void udf_free_inode(struct inode * inode)
 		
 		mark_buffer_dirty(UDF_SB_LVIDBH(sb));
 	}
-	unlock_super(sb);
+	unlock_kernel();
 
 	udf_free_blocks(sb, NULL, UDF_I_LOCATION(inode), 0, 1);
 }
@@ -94,7 +94,7 @@ struct inode * udf_new_inode (struct inode *dir, int mode, int * err)
 		iput(inode);
 		return NULL;
 	}
-	lock_super(sb);
+	lock_kernel();
 
 	UDF_I_UNIQUE(inode) = 0;
 	UDF_I_LENEXTENTS(inode) = 0;
@@ -161,7 +161,7 @@ struct inode * udf_new_inode (struct inode *dir, int mode, int * err)
 	insert_inode_hash(inode);
 	mark_inode_dirty(inode);
 
-	unlock_super(sb);
+	unlock_kernel();
 	if (DQUOT_ALLOC_INODE(inode))
 	{
 		DQUOT_DROP(inode);
