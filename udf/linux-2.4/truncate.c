@@ -63,6 +63,7 @@ static void extent_trunc(struct inode * inode, lb_addr bloc, int extoffset,
 #endif
 				mark_inode_dirty(inode);
 			}
+
 			if (etype != (EXT_NOT_RECORDED_NOT_ALLOCATED >> 30))
 				udf_free_blocks(inode->i_sb, inode, eloc, first_block, last_block - first_block);
 		}

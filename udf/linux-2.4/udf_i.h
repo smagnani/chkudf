@@ -18,6 +18,5 @@
 #define UDF_I_UCTIME(X)		( UDF_I(X)->i_uctime )
 #define UDF_I_CRTIME(X)		( UDF_I(X)->i_crtime )
 #define UDF_I_UCRTIME(X)	( UDF_I(X)->i_ucrtime )
-#define UDF_I_BH(X)		( UDF_I(X)->i_bh )
 
 #endif /* !defined(_LINUX_UDF_I_H) */

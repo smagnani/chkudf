@@ -163,11 +163,11 @@ extern void udf_truncate_extents(struct inode *);
 #ifndef OLD_QUOTA
 extern void udf_free_blocks(struct super_block *, struct inode *, lb_addr, uint32_t, uint32_t);
 extern int udf_prealloc_blocks(struct super_block *, struct inode *, uint16_t, uint32_t, uint32_t);
-extern int udf_new_blocks(struct super_block *, struct inode *, uint16_t, uint32_t, uint32_t, int *);
+extern int udf_new_block(struct super_block *, struct inode *, uint16_t, uint32_t, int *);
 #else
 extern void udf_free_blocks(struct super_block *, const struct inode *, lb_addr, uint32_t, uint32_t);
 extern int udf_prealloc_blocks(struct super_block *, const struct inode *, uint16_t, uint32_t, uint32_t);
-extern int udf_new_blocks(struct super_block *, const struct inode *, uint16_t, uint32_t, uint32_t, int *);
+extern int udf_new_block(struct super_block *, const struct inode *, uint16_t, uint32_t, int *);
 #endif
 
 /* fsync.c */

@@ -648,10 +648,7 @@ static int udf_create(struct inode *dir, struct dentry *dentry, int mode)
 		iput(inode);
 		return err;
 	}
-	if (UDF_I_STRAT4096(dir))
-		cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize * 2);
-	else
-		cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize);
+	cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize);
 	cfi.icb.extLocation = cpu_to_lelb(UDF_I_LOCATION(inode));
 	*(uint32_t *)((struct allocDescImpUse *)cfi.icb.impUse)->impUse =
 		cpu_to_le32(UDF_I_UNIQUE(inode) & 0x00000000FFFFFFFFUL);
@@ -689,10 +686,7 @@ static int udf_mknod(struct inode * dir, struct dentry * dentry, int mode, int r
 		iput(inode);
 		return err;
 	}
-	if (UDF_I_STRAT4096(dir))
-		cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize * 2);
-	else
-		cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize);
+	cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize);
 	cfi.icb.extLocation = cpu_to_lelb(UDF_I_LOCATION(inode));
 	*(uint32_t *)((struct allocDescImpUse *)cfi.icb.impUse)->impUse =
 		cpu_to_le32(UDF_I_UNIQUE(inode) & 0x00000000FFFFFFFFUL);
@@ -739,10 +733,7 @@ static int udf_mkdir(struct inode * dir, struct dentry * dentry, int mode)
 		goto out;
 	}
 	inode->i_nlink = 2;
-	if (UDF_I_STRAT4096(dir))
-		cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize * 2);
-	else
-		cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize);
+	cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize);
 	cfi.icb.extLocation = cpu_to_lelb(UDF_I_LOCATION(dir));
 	*(uint32_t *)((struct allocDescImpUse *)cfi.icb.impUse)->impUse =
 		cpu_to_le32(UDF_I_UNIQUE(dir) & 0x00000000FFFFFFFFUL);
@@ -761,10 +752,7 @@ static int udf_mkdir(struct inode * dir, struct dentry * dentry, int mode)
 		iput(inode);
 		goto out;
 	}
-	if (UDF_I_STRAT4096(dir))
-		cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize * 2);
-	else
-		cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize);
+	cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize);
 	cfi.icb.extLocation = cpu_to_lelb(UDF_I_LOCATION(inode));
 	*(uint32_t *)((struct allocDescImpUse *)cfi.icb.impUse)->impUse =
 		cpu_to_le32(UDF_I_UNIQUE(inode) & 0x00000000FFFFFFFFUL);
@@ -962,9 +950,9 @@ static int udf_symlink(struct inode * dir, struct dentry * dentry, const char * 
 		lb_addr bloc, eloc;
 		uint32_t elen, extoffset;
 
-		block = udf_new_blocks(inode->i_sb, inode,
+		block = udf_new_block(inode->i_sb, inode,
 			UDF_I_LOCATION(inode).partitionReferenceNum,
-			UDF_I_LOCATION(inode).logicalBlockNum, 1, &err);
+			UDF_I_LOCATION(inode).logicalBlockNum, &err);
 		if (!block)
 			goto out_no_entry;
 		bloc = UDF_I_LOCATION(inode);
@@ -1068,10 +1056,7 @@ static int udf_symlink(struct inode * dir, struct dentry * dentry, const char * 
 
 	if (!(fi = udf_add_entry(dir, dentry, &fibh, &cfi, &err)))
 		goto out_no_entry;
-	if (UDF_I_STRAT4096(dir))
-		cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize * 2);
-	else
-		cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize);
+	cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize);
 	cfi.icb.extLocation = cpu_to_lelb(UDF_I_LOCATION(inode));
 	if (UDF_SB_LVIDBH(inode->i_sb))
 	{
@@ -1124,10 +1109,7 @@ static int udf_link(struct dentry * old_dentry, struct inode * dir,
 
 	if (!(fi = udf_add_entry(dir, dentry, &fibh, &cfi, &err)))
 		return err;
-	if (UDF_I_STRAT4096(dir))
-		cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize * 2);
-	else
-		cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize);
+	cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize);
 	cfi.icb.extLocation = cpu_to_lelb(UDF_I_LOCATION(inode));
 	if (UDF_SB_LVIDBH(inode->i_sb))
 	{
