@@ -8,7 +8,7 @@
  *  OSTA-UDF(tm) = Optical Storage Technology Association
  *  Universal Disk Format.
  *
- *  This code is based on version 2.00 of the UDF specification,
+ *  This code is based on version 2.50 of the UDF specification,
  *  and revision 3 of the ECMA 167 standard [equivalent to ISO 13346].
  *    http://www.osta.org/ *    http://www.ecma.ch/
  *    http://www.iso.org/
@@ -37,8 +37,8 @@
 #define UDF_PREALLOCATE
 #define UDF_DEFAULT_PREALLOC_BLOCKS	8
 
-#define UDFFS_DATE			"2003/01/05"
-#define UDFFS_VERSION			"0.9.7"
+#define UDFFS_DATE			"2003/10/01"
+#define UDFFS_VERSION			"0.9.8-cvs"
 
 #define UDFFS_DEBUG
 
