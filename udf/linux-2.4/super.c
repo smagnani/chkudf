@@ -985,8 +985,10 @@ udf_load_logicalvolint(struct super_block *sb, extent_ad loc)
 	struct buffer_head *bh = NULL;
 	Uint16 ident;
 
-	while ((bh = udf_read_tagged(sb, loc.extLocation, loc.extLocation, &ident)) &&
-		ident == TID_LOGICAL_VOL_INTEGRITY_DESC && loc.extLength > 0)
+	while (loc.extLength > 0 &&
+		(bh = udf_read_tagged(sb, loc.extLocation,
+			loc.extLocation, &ident)) &&
+		ident == TID_LOGICAL_VOL_INTEGRITY_DESC)
 	{
 		UDF_SB_LVIDBH(sb) = bh;
 		
