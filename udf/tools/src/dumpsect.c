@@ -33,15 +33,15 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <udfdecl.h>
+#include <stdint.h>
 
 #ifndef HAVE_LLSEEK_PROTOTYPE
-extern Sint64 llseek (int fd, Sint64 offset, int origin);
+extern int64_t llseek (int fd, int64_t offset, int origin);
 #endif
 
-Uint8 sector[2048];
+uint8_t sector[2048];
 
-static Sint64 udf_lseek64(int fd, Sint64 offset, int whence)
+static int64_t udf_lseek64(int fd, int64_t offset, int whence)
 {
 #ifdef __USE_LARGEFILE64
 	return lseek64(fd, offset, whence);
@@ -53,10 +53,10 @@ static Sint64 udf_lseek64(int fd, Sint64 offset, int whence)
 int main(int argc, char **argv)
 {
 	int fd;
-	Sint64 retval;
-	Sint64 fp;
-	Uint64 sec = 0;
-	Uint32 bytes = 2048;
+	int64_t retval;
+	int64_t fp;
+	uint64_t sec = 0;
+	uint32_t bytes = 2048;
 
 	if (argc < 2) {
 		printf("usage: dump <device> <sector> <bytes>\n");
