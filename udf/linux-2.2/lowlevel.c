@@ -326,25 +326,12 @@ is_mmc(kdev_t dev, struct inode *inode_fake)
 unsigned int
 udf_get_last_block(struct super_block *sb)
 {
-	extern int *blksize_size[];
 	kdev_t dev = sb->s_dev;
 	struct inode inode_fake;
 	extern struct file_operations * get_blkfops(unsigned int);
 	int ret;
 	unsigned long lblock;
-	unsigned int hbsize = get_hardblocksize(dev);
-	unsigned int blocksize = sb->s_blocksize;
-	unsigned int mult = 0;
-	unsigned int div = 0;
 	int accurate = 0;
-
-	if (!hbsize)
-		hbsize = blksize_size[MAJOR(dev)][MINOR(dev)];
-
-	if (hbsize > blocksize)
-		mult = hbsize / blocksize;
-	else if (blocksize > hbsize)
-		div = blocksize / hbsize;
 
 	if (get_blkfops(MAJOR(dev))->ioctl!=NULL)
 	{
@@ -365,11 +352,7 @@ udf_get_last_block(struct super_block *sb)
 		if (!ret && lblock != 0x7FFFFFFF) /* Hard Disk */
 		{
 			udf_debug("BLKGETSIZE lblock=%ld\n", lblock);
-			if (mult)
-				lblock *= mult;
-			else if (div)
-				lblock /= div;
-			lblock --;
+			lblock = ((512 * lblock) / sb->s_blocksize) - 1;
 			accurate = 1;
 		}
 		else /* CDROM */
