@@ -1,0 +1,77 @@
+file.c:
+file_operations
+  llseek (ext2_file_lseek)
+  read - udf_file_read (generic_file_read)
+  write (ext2_file_write)
+  readdir
+  poll
+  ioctl - udf_ioctl (ext2_ioctl)
+  mmap (generic_file_mmap)
+  open - udf_open_file (ext2_open_file)
+  flush
+  release - udf_release_file (ext2_release_file)
+  fsync (ext2_sync_file)
+  fasync
+  check_media_change
+  revalidate
+  lock
+
+inode_operations
+  create
+  lookkup 
+  link
+  unlink
+  symlink
+  mkdir
+  rmdir
+  mknod
+  rename
+  readlink
+  follow_link
+  readpage (generic_readpage)
+  writepage
+  bmap - udf_bmap (ext2_bmap)
+  truncate - udf_truncate (ext2_truncate)
+  permission (ext2_permission)
+  smap
+  updatepage
+  revalidate
+
+dir.c:
+file_operations
+  llseek
+  read
+  write
+  readdir - udf_readdir (ext2_readdir)
+  poll
+  ioctl - udf_ioctl (ext2_ioctl)
+  mmap
+  open
+  flush
+  release
+  fsync (ext2_sync_file)
+  fasync
+  check_media_change
+  revalidate
+  lock
+
+inode_operations
+  create - udf_create (ext2_create)
+  lookup - udf_lookup (ext2_lookup)
+  link (ext2_link)
+  unlink - udf_unlink (ext2_unlink)
+  symlink (ext2_symlink)
+  mkdir - udf_mkdir (ext2_mkdir)
+  rmdir - udf_rmdir (ext2_rmdir)
+  mknod (ext2_mknod)
+  rename (ext2_rename)
+  readlink
+  follow_link
+  readpage
+  writepage
+  bmap
+  truncate
+  permission (ext2_permission)
+  smap
+  updatepage
+  revalidate

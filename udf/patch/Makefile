@@ -19,13 +19,11 @@ apply:	kernel.patch patch.apply
 	@echo "* -------------------------------------------- *"
 	@echo "* copying udf source files to $(SRC) *"
 	@echo "* -------------------------------------------- *"
-	rm -rf $(SRC)/fs/udf $(SRC)/include/config/udf
+	rm -rf $(SRC)/fs/udf
 	mkdir $(SRC)/fs/udf
 	cp ../src/* $(SRC)/fs/udf
 	cp Makefile.udf $(SRC)/fs/udf/Makefile
 	cp ../include/linux/*.h $(SRC)/include/linux
-	-mkdir $(SRC)/include/config/udf
-	cp ../include/config/udf/*.h $(SRC)/include/config/udf
 	cp ../doc/udf.txt $(SRC)/Documentation/filesystems
 
 unapply:  kernel.patch patch.apply

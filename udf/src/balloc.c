@@ -236,6 +236,7 @@ do_more:
 		goto do_more;
 	}
 error_return:
+	sb->s_dirt = 1;
 	if (UDF_SB_LVIDBH(sb))
 		mark_buffer_dirty(UDF_SB_LVIDBH(sb), 1);
 	unlock_super(sb);
@@ -372,6 +373,25 @@ got_block:
 #ifdef UDF_PREALLOCATE
 	if (prealloc_block)
 	{
+		int prealloc_goal;
+
+		prealloc_goal = UDF_DEFAULT_PREALLOC_BLOCKS;
+
+		*prealloc_count = 0;
+		*prealloc_block = tmp + 1;
+		for (i=1; i< peralloc_goal && (bit + i) < (sb->s_blocksize << 3); i++)
+		{
+			if (!udf_clear_bit(bit + i, bh->b_data))
+				break;
+			(*prealloc_count)++;
+		}
+		if (UDF_SB_LVIDBH(sb))
+		{
+			UDF_SB_LVID(sb)->freeSpaceTable[newblock.partitionReferenceNum] =
+				cpu_to_le32(le32_to_cpu(UDF_SB_LVID(sb)->freeSpaceTable[newblock.partitionReferenceNum])-*prealloc_count);
+			mark_buffer_dirty(UDF_SB_LVIDBH(sb), 1);
+		}
+		udf_debug("Prealloced a further %lu bits.\n", *prealloc_count);
 	}
 #endif
 
@@ -385,10 +405,15 @@ got_block:
 	memset(bh->b_data, 0, sb->s_blocksize);
 	mark_buffer_uptodate(bh, 1);
 	mark_buffer_dirty(bh, 1);
-	brelse(bh);
+	udf_release_data(bh);
 
-	/* lower block count */
-
+	if (UDF_SB_LVIDBH(sb))
+	{
+		UDF_SB_LVID(sb)->freeSpaceTable[newblock.partitionReferenceNum] =
+			cpu_to_le32(le32_to_cpu(UDF_SB_LVID(sb)->freeSpaceTable[newblock.partitionReferenceNum])-1);
+		mark_buffer_dirty(UDF_SB_LVIDBH(sb), 1);
+	}
+	sb->s_dirt = 1;
 	unlock_super(sb);
 	*err = 0;
 	return newblock;

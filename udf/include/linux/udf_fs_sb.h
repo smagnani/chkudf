@@ -86,6 +86,9 @@ struct udf_sb_info
 	/* Root Info */
 	time_t s_recordtime;
 
+	/* Fileset Info */
+	__u16 s_serialnum;
+
 	/* Character Mapping Info */
 	struct nls_table *s_nls_iocharset;
 	__u8 s_utf8;

@@ -59,6 +59,8 @@
 #include <linux/init.h>
 #include <asm/uaccess.h>
 
+static char error_buf[1024];
+
 /* These are the "meat" - everything else is stuffing */
 static struct super_block *udf_read_super(struct super_block *, void *, int);
 static void udf_put_super(struct super_block *);
@@ -430,7 +432,10 @@ udf_vrs(struct super_block *sb, int silent)
 		vsd = (struct VolStructDesc *)bh->b_data;
 
 		if (vsd->stdIdent[0] == 0)
+		{
+			udf_release_data(bh);
 			break;
+		}
 		else if (!strncmp(vsd->stdIdent, STD_ID_CD001, STD_ID_LEN))
 		{
 			iso9660 = sector;
@@ -461,6 +466,7 @@ udf_vrs(struct super_block *sb, int silent)
 		}
 		else if (!strncmp(vsd->stdIdent, STD_ID_TEA01, STD_ID_LEN))
 		{
+			udf_release_data(bh);
 			break;
 		}
 		else if (!strncmp(vsd->stdIdent, STD_ID_NSR02, STD_ID_LEN))
@@ -471,7 +477,7 @@ udf_vrs(struct super_block *sb, int silent)
 		{
 			nsr03 = sector;
 		}
-		brelse(bh);
+		udf_release_data(bh);
 	}
 
 	if (nsr03)
@@ -552,9 +558,6 @@ udf_find_fileset(struct super_block *sb, lb_addr *fileset, lb_addr *root)
 	if (fileset->logicalBlockNum != 0xFFFFFFFF ||
 		fileset->partitionReferenceNum != 0xFFFF)
 	{
-		udf_debug("Fileset at block=%d, partition=%d\n",
-				fileset->logicalBlockNum, fileset->partitionReferenceNum);
-
 		bh = udf_read_ptagged(sb, *fileset, 0, &ident);
 
 		if (!bh)
@@ -566,7 +569,8 @@ udf_find_fileset(struct super_block *sb, lb_addr *fileset, lb_addr *root)
 		}
 			
 	}
-	else /* Search backwards through the partitions */
+
+	if (!bh) /* Search backwards through the partitions */
 	{
 		lb_addr newfileset;
 
@@ -621,6 +625,7 @@ udf_find_fileset(struct super_block *sb, lb_addr *fileset, lb_addr *root)
 				fileset->partitionReferenceNum == 0xFFFF);
 		}
 	}
+
 	if ((fileset->logicalBlockNum != 0xFFFFFFFF ||
 		fileset->partitionReferenceNum != 0xFFFF) && bh)
 	{
@@ -679,6 +684,8 @@ udf_load_fileset(struct super_block *sb, struct buffer_head *bh, lb_addr *root)
 	fset = (struct FileSetDesc *)bh->b_data;
 
 	*root = lelb_to_cpu(fset->rootDirectoryICB.extLocation);
+
+	UDF_SB_SERIALNUM(sb) = le16_to_cpu(fset->descTag.tagSerialNum);
 
 	udf_debug("Rootdir at block=%d, partition=%d\n", 
 		root->logicalBlockNum, root->partitionReferenceNum);
@@ -1026,7 +1033,7 @@ udf_load_partition(struct super_block *sb, struct AnchorVolDescPtr *anchor, lb_a
 					Uint32 pos;
 
 					pos = udf_bmap(UDF_SB_VAT(sb), 0);
-					bh = udf_bread(sb, pos, sb->s_blocksize);
+					bh = bread(sb->s_dev, pos, sb->s_blocksize);
 					UDF_SB_TYPEVIRT(sb,i).s_start_offset = le16_to_cpu(((struct VirtualAllocationTable20 *)bh->b_data)->lengthHeader);
 					UDF_SB_TYPEVIRT(sb,i).s_num_entries = (UDF_SB_VAT(sb)->i_size -
 						UDF_SB_TYPEVIRT(sb,i).s_start_offset) / sizeof(Uint32);
@@ -1266,7 +1273,6 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 		goto error_out;
 	}
 
-#if LINUX_VERSION_CODE > 0x020170
 	/* Allocate a dentry for the root inode */
 	sb->s_root = d_alloc_root(inode, NULL);
 	if (!sb->s_root)
@@ -1275,7 +1281,6 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 		udf_debug("Couldn't allocate root dentry\n");
 		goto error_out;
 	}
-#endif
 
 	return sb;
 
@@ -1289,6 +1294,18 @@ error_out:
 	unlock_super(sb);
 	MOD_DEC_USE_COUNT;
 	return NULL;
+}
+
+void udf_warning(struct super_block *sb, const char *function,
+	const char *fmt, ...)
+{
+	va_list args;
+
+	va_start (args, fmt);
+	vsprintf(error_buf, fmt, args);
+	va_end(args);
+	printk(KERN_WARNING "UDF-fs warning (device %s): %s: %s\n",
+		bdevname(sb->s_dev), function, error_buf);
 }
 
 /*
@@ -1333,11 +1350,7 @@ udf_put_super(struct super_block *sb)
  *	July 1, 1997 - Andrew E. Mileski
  *	Written, tested, and released.
  */
-#if LINUX_VERSION_CODE > 0x020100
 static int
-#else
-static void
-#endif
 udf_statfs(struct super_block *sb, struct statfs *buf, int bufsize)
 {
 	int size;
@@ -1358,9 +1371,7 @@ udf_statfs(struct super_block *sb, struct statfs *buf, int bufsize)
 	tmp.f_namelen = UDF_NAME_LEN;
 
 	rc= copy_to_user(buf, &tmp, size) ? -EFAULT: 0;
-#if LINUX_VERSION_CODE > 0x020100
 	return rc;
-#endif
 }
 
 static unsigned char udf_bitmap_lookup[16] = {

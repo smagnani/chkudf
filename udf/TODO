@@ -6,6 +6,21 @@ support all the accepted options -- blf
 support extended attributes -- blf
 
 full write support -- blf
+  link
+  symlink
+  mknod
+  rename
+  llseek
+  write
+  sync
+
+  block/inode allocation algorithm
+
+  find out what functions need to be change from their defaults
+    due to the possibility of data in the inode - at least everything
+    that uses udf_bmap to get a block to read
+
+  support tables as well as bitmaps for block allocation
 
 make sure reading works on big endian and/or 64 bit machines -- blf
 

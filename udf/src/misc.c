@@ -195,7 +195,7 @@ udf_read_tagged(struct super_block *sb, Uint32 block, Uint32 location, Uint16 *i
 	{
 		return bh;
 	}
-	udf_debug("Crc failure block %d:crc = %d, crclen = %d\n",
+	udf_debug("Crc failure block %d: crc = %d, crclen = %d\n",
 		block, le16_to_cpu(tag_p->descCRC), le16_to_cpu(tag_p->descCRCLength));
 
 error_out:

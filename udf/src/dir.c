@@ -44,10 +44,10 @@ static int do_udf_readdir(struct inode *, struct file *, filldir_t, void *);
 
 /* readdir and lookup functions */
 
-struct file_operations udf_dir_fops = {
-	NULL,			/* llseek */
+static struct file_operations udf_dir_operations = {
+	NULL,			/* lllseek */
 	NULL,			/* read */
-	NULL,
+	NULL,			/* write */
 	udf_readdir,	/* readdir */
 	NULL,			/* poll */
 	udf_ioctl,		/* ioctl */
@@ -60,6 +60,42 @@ struct file_operations udf_dir_fops = {
 	NULL,			/* check_media_change */
 	NULL,			/* revalidate */
 	NULL			/* lock */
+};
+
+struct inode_operations udf_dir_inode_operations = {
+	&udf_dir_operations,
+#ifdef CONFIG_UDF_RW
+	udf_create, 	/* create */
+#else
+	NULL,			/* create */
+#endif
+	udf_lookup,		/* lookup */
+	NULL,			/* link */
+#ifdef CONFIG_UDF_RW
+	udf_unlink,		/* unlink */
+#else
+	NULL,			/* unlink */
+#endif
+	NULL,			/* symlink */
+#ifdef CONFIG_UDF_RW
+	udf_mkdir,		/* mkdir */
+	udf_rmdir,		/* rmdir */
+#else
+	NULL,			/* mkdir */
+	NULL,			/* rmdir */
+#endif
+	NULL,			/* mknod */
+	NULL,			/* rename */
+	NULL,			/* readlink */
+	NULL,			/* follow_link */
+	NULL,			/* readpage */
+	NULL,			/* writepage */
+	NULL,			/* bmap */
+	NULL,			/* truncate */
+	NULL,			/* permission */
+	NULL,			/* smap */
+	NULL,			/* updatepage */
+	NULL			/* revalidate */
 };
 
 /*
@@ -105,11 +141,9 @@ int udf_readdir(struct file *filp, void *dirent, filldir_t filldir)
 	}
  
 	result = do_udf_readdir(dir, filp, filldir, dirent);
-  
+	UPDATE_ATIME(dir);
  	return result;
 }
-
-
 
 static int 
 do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *dirent)
@@ -142,7 +176,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 
 	if (!block)
 		return 0;
-	if (!(sbh = ebh = udf_bread(dir->i_sb, block, dir->i_sb->s_blocksize)))
+	if (!(sbh = ebh = bread(dir->i_dev, block, dir->i_sb->s_blocksize)))
 		return 0;
 
 	while ( nf_pos < size )
@@ -227,536 +261,3 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 	else
 		return 0;
 }
-
-/* Inode Operations */
-
-#ifdef CONFIG_UDF_WRITE
-static int udf_link(struct inode *, struct inode *, struct dentry *);
-static int udf_symlink(struct inode *, struct dentry *, const char *);
-static int udf_mkdir(struct inode *, struct dentry *, int);
-static int udf_rmdir(struct inode *, struct dentry *);
-static int udf_mknod(struct inode *, struct dentry *, ints, int);
-static int udf_rename(struct inode *, struct dentry *, struct inode *,
-	struct dentry *);
-#endif
-
-#ifdef CONFIG_UDF_FULL_FS
-static int udf_readlink(struct inode *, char *, int);
-static struct dentry * udf_follow_link(struct inode *, struct dentry *);
-static int udf_permission(struct inode *, int);
-static int udf_smap(struct inode *, int);
-#endif
-
-#ifdef CONFIG_UDF_WRITE
-/*
- * udf_link
- *
- * PURPOSE
- *	Create a hard link.
- *
- * DESCRIPTION
- *	This routine is passed an incomplete dentry - it doesn't have an
- *	assigned inode, so one must be assigned by calling:
- *		d_instantiate(dentry, inode)
- *
- * PRE-CONDITIONS
- *	inode			Pointer to inode of file to link to.
- *	dir			Pointer to inode of parent directory.
- *	dentry			Pointer to dentry of new link.
- *
- * POST-CONDITIONS
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static int
-udf_link(struct inode *inode, struct inode *dir, struct dentry *dentry)
-{
-	return -1;
-}
-
-/*
- * udf_symlink
- *
- * PURPOSE
- *	Create a symbolic link.
- *
- * DESCRIPTION
- *	This routine is passed an incomplete dentry - it doesn't have an
- *	assigned inode, so one must be assigned by calling:
- *		d_instantiate(dentry, inode)
- *
- * PRE-CONDITIONS
- *	dir			Pointer to inode of parent directory.
- *	dentry			Pointer to dentry of new symlink.
- *	symname			Pointer to symbolic name of new symlink.
- *
- * POST-CONDITIONS
- *	<return>		Zero on success.
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static int
-udf_symlink(struct inode *dir, struct dentry *dentry, const char *symname)
-{
-	return -1;
-}
-
-/*
- * udf_mkdir
- *
- * PURPOSE
- *	Create a directory.
- *
- * DESCRIPTION
- *	This routine is passed an incomplete dentry - it doesn't have an
- *	assigned inode, so one must be assigned by calling:
- *		d_instantiate(dentry, inode)
- *
- *	Refer to sys_mkdir() in fs/namei.c
- *	sys_mkdir() -> do_mkdir() -> .
- *
- * PRE-CONDITIONS
- *	dir			Pointer toinode of parent directory.
- *	dentry			Pointer to dentry of new directory.
- *	mode			Mode of new directory.
- *
- * POST-CONDITIONS
- *	<return>		Zero on success.
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static int
-udf_mkdir(struct inode *dir, struct dentry *dentry, int mode)
-{
-	return -1;
-}
-
-/*
- * udf_rmdir
- *
- * PURPOSE
- *	Remove a directory.
- *
- * DESCRIPTION
- *
- * PRE-CONDITIONS
- *	dir			Pointer to inode of parent directory.
- *	dentry			Pointer to dentry of directory to remove.
- *
- * POST-CONDITIONS
- *	<return>		Zero on success.
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static int
-udf_rmdir(struct inode *dir, struct dentry *dentry)
-{
-	return -1;
-}
-
-/*
- * udf_mknod
- *
- * PURPOSE
- *	Make a special node.
- *
- * DESCRIPTION
- *	Optional - sys_mknod() will retrun -EPERM if this routine is not
- *	available.
- *
- *	This routine is passed an incomplete dentry - it doesn't have an
- *	assigned inode, so one must be assigned by calling:
- *		d_instantiate(dentry, inode)
- *
- *	Note that only root is allowed to create sockets and device files.
- *
- *	Refer to sys_mknod() in fs/namei.c
- *	sys_mknod() -> do_mknod() -> .
- *
- * PRE-CONDITIONS
- *	dir			Pointer to inode of parent directory.
- *	dentry			Pointer to dentry of new node.
- *	mode			Mode of new node.
- *	rdev			Real device of new node.
- *
- * POST-CONDITIONS
- *	<return>		Zero on success.
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static int
-udf_mknod(struct inode *dir, struct dentry *dentry, int mode, int rdev)
-{
-	return -1;
-}
-
-/*
- * udf_rename
- *
- * PURPOSE
- *	Rename an existing inode.
- *
- * DESCRIPTION
- *
- * PRE-CONDITIONS
- *	old_dir			Pointer to inode of old parent directory.
- *	old_dentry		Pointer to old dentry.
- *	new_dir			Pointer to inode of new parent directory.
- *	new_dentry		Pointer to new dentry.
- *
- * POST-CONDITIONS
- *	<return>		Zero on success.
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static int
-udf_rename(struct inode *inode, struct dentry *dentry, struct inode *, struct dentry *)
-{
-	return -1;
-}
-#endif
-
-#ifdef CONFIG_UDF_FULL_FS
-/*
- * udf_readlink
- *
- * PURPOSE
- *	Read the contents of a symbolic link.
- *
- * DESCRIPTION
- *
- * PRE-CONDITIONS
- *	inode			Pointer to inode of link.
- *	buf			Pointer to buffer for name.
- *	buf_size		Size of buffer.
- *	
- * POST-CONDITIONS
- *	<return>		Zero on success.
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static int
-udf_readlink(struct inode *inode, char *buf, int buf_size)
-{
-	return -1;
-}
-
-/*
- * udf_follow_link
- *
- * PURPOSE
- *
- * DESCRIPTION
- *
- * PRE-CONDITIONS
- *
- * POST-CONDITIONS
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static struct dentry *
-udf_follow_link(struct inode *inode, struct dentry *dentry)
-{
-	return ERR_PTR(-1);
-}
-#endif
-
-
-/* Inode Operations */
-#ifdef CONFIG_UDF_WRITE
-static int udf_create(struct inode *, struct dentry *, int);
-static int udf_link(struct inode *, struct inode *, struct dentry *);
-static int udf_symlink(struct inode *, struct dentry *, const char *);
-static int udf_mkdir(struct inode *, struct dentry *, int);
-static int udf_rmdir(struct inode *, struct dentry *);
-static int udf_mknod(struct inode *, struct dentry *, ints, int);
-static int udf_rename(struct inode *, struct dentry *, struct inode *,
-	struct dentry *);
-static int udf_writepage(struct inode *, struct page *);
-static void udf_truncate(struct inode *);
-static int udf_updatepage(struct inode *, struct page *, const char *,
-	unsigned long, unsigned int, int);
-static int udf_revalidate(struct inode *);
-#endif
-
-#ifdef CONFIG_UDF_FULL_FS
-static int udf_readlink(struct inode *, char *, int);
-static struct dentry * udf_follow_link(struct inode *, struct dentry *);
-static int udf_readpage(struct inode *, struct page *);
-static int udf_permission(struct inode *, int);
-static int udf_smap(struct inode *, int);
-#endif
-
-
-struct inode_operations udf_dir_inode_operations= {
-	&udf_dir_fops,
-#ifdef CONFIG_UDF_WRITE
-	NULL,			/* create */
-	udf_lookup,		/* lookup */
-	udf_link,		/* link */
-	udf_unlink,		/* unlink */
-	udf_symlink,		/* symlink */
-	udf_mkdir,		/* mkdir */
-	udf_rmdir,		/* rmdir */
-	udf_mknod,		/* mknod */
-	udf_rename,		/* rename */
-	udf_readlink,		/* readlink */
-	udf_follow_link,	/* follow_link */
-	NULL,			/* readpage */
-	NULL,			/* writepage */
-	udf_bmap,		/* bmap */
-	NULL,			/* truncate */
-	udf_permission,		/* permission */
-	NULL,			/* smap */
-	NULL,			/* updatepage */
-	NULL,			/* revalidate */
-#else
-#ifdef CONFIG_UDF_RW
-	udf_create, 	/* create */
-#else
-	NULL,			/* create */
-#endif
-	udf_lookup,		/* lookup */
-	NULL,			/* link */
-#ifdef CONFIG_UDF_RW
-	udf_unlink,		/* unlink */
-#else
-	NULL,			/* unlink */
-#endif
-	NULL,			/* symlink */
-	NULL,			/* mkdir */
-	NULL,			/* rmdir */
-	NULL,			/* mknod */
-	NULL,			/* rename */
-	NULL,			/* readlink */
-	NULL,			/* follow_link */
-	NULL,			/* readpage */
-	NULL,			/* writepage */
-	udf_bmap,		/* bmap */
-	NULL,			/* truncate */
-#ifdef CONFIG_UDF_FULL_FS
-	udf_permission,		/* permission */
-#else
-	NULL,
-#endif
-	NULL,			/* smap */
-	NULL,			/* updatepage */
-	NULL			/* revalidate */
-#endif
-};
-
-#ifdef CONFIG_UDF_WRITE
-/*
- * udf_create
- *
- * PURPOSE
- *	Create an inode.
- *
- * DESCRIPTION
- *	Optional - sys_open() will return -EACCESS if not available.
- *
- *	This routine is passed an incomplete dentry - it doesn't have an
- *	assigned inode, so one must be assigned by calling:
- *		d_instantiate(dentry, inode)
- *
- *	Refer to sys_open() in fs/open.c and open_namei() in fs/namei.c
- *	sys_open() -> do_open() -> open_namei() -> .
- *
- * PRE-CONDITIONS
- *	dir			Pointer to inode of parent directory.
- *	dentry			Pointer to dentry to complete.
- *	mode			Mode of new inode.
- *
- * POST-CONDITIONS
- *	<return>		Zero on success.
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static int
-udf_create(struct inode *dir, struct dentry *dentry, int mode)
-{
-	return -1;
-}
-#endif
-
-#ifdef CONFIG_UDF_WRITE
-/*
- * udf_readpage
- *
- * PURPOSE
- *
- * DESCRIPTION
- *	Used for memory mapping. See generic_readpage() in fs/buffer.c for
- *	filesystems that support the bmap() operation.
- *
- * PRE-CONDITIONS
- *
- * POST-CONDITIONS
- *	<return>		Zero on success.
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static int
-udf_readpage(struct inode *inode, struct page *)
-{
-	return -1;
-}
-#endif
-
-#ifdef CONFIG_UDF_WRITE
-/*
- * udf_writepage
- *
- * PURPOSE
- *
- * DESCRIPTION
- *	Used for memory mapping. Required if readpage() is defined.
- *
- * PRE-CONDITIONS
- *
- * POST-CONDITIONS
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static int
-udf_writepage(struct inode *inode, struct page *)
-{
-	return -1;
-}
-
-
-/*
- * udf_truncate
- *
- * PURPOSE
- *	Truncate a file.
- *
- * DESCRIPTION
- *	This routine is called by sys_truncate() to reduce the size of a file.
- *
- * PRE-CONDITIONS
- *	inode			Pointer to inode of file to truncate.
- *
- * POST-CONDITIONS
- *	None.
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static void
-udf_truncate(struct inode *inode)
-{
-	return -1;
-}
-#endif
-
-#ifdef CONFIG_UDF_FULL_FS
-/*
- * udf_permissions
- *
- * PURPOSE
- *
- * DESCRIPTION
- *
- * PRE-CONDITIONS
- *
- * POST-CONDITIONS
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static int
-udf_permission(struct inode *inode, int)
-{
-	return -1;
-}
-
-/*
- * udf_smap
- *
- * PURPOSE
- *
- * DESCRIPTION
- *
- * PRE-CONDITIONS
- *
- * POST-CONDITIONS
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static int
-udf_smap(struct inode *inode, int)
-{
-	return -1;
-}
-#endif
-
-#ifdef CONFIG_UDF_WRITE
-/*
- * udf_updatepage
- *
- * PURPOSE
- *
- * DESCRIPTION
- *
- * PRE-CONDITIONS
- *
- * POST-CONDITIONS
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static int
-udf_updatepage(struct inode *inode, struct page *, const char *, unsigned long, unsigned int, int)
-{
-	return -1;
-}
-
-/*
- *
- *
- * PURPOSE
- *
- * DESCRIPTION
- *
- * PRE-CONDITIONS
- *
- * POST-CONDITIONS
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static int
-udf_revalidate(struct inode *inode)
-{
-	return -1;
-}
-#endif

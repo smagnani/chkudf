@@ -54,6 +54,14 @@ static inline lb_addr lelb_to_cpu(lb_addr in)
 	return out;
 }
 
+static inline lb_addr cpu_to_lelb(lb_addr in)
+{
+	lb_addr out;
+	out.logicalBlockNum = cpu_to_le32(in.logicalBlockNum);
+	out.partitionReferenceNum = cpu_to_le16(in.partitionReferenceNum);
+	return out;
+}
+
 static inline timestamp lets_to_cpu(timestamp in)
 {
 	timestamp out;
@@ -68,6 +76,14 @@ static inline long_ad lela_to_cpu(long_ad in)
 	long_ad out;
 	out.extLength = le32_to_cpu(in.extLength);
 	out.extLocation = lelb_to_cpu(in.extLocation);
+	return out;
+}
+
+static inline long_ad cpu_to_lela(long_ad in)
+{
+	long_ad out;
+	out.extLength = cpu_to_le32(in.extLength);
+	out.extLocation = cpu_to_lelb(in.extLocation);
 	return out;
 }
 

@@ -106,7 +106,7 @@ udf_fileident_read(struct inode *dir, int *nf_pos,
 		if (!block)
 			return NULL;
 		udf_release_data(*sbh);
-		if (!(*sbh = *ebh = udf_bread(dir->i_sb, block, dir->i_sb->s_blocksize)))
+		if (!(*sbh = *ebh = bread(dir->i_dev, block, dir->i_sb->s_blocksize)))
 			return NULL;
 		*soffset = *eoffset = 0;
 	}
@@ -136,7 +136,7 @@ udf_fileident_read(struct inode *dir, int *nf_pos,
 		block = udf_bmap(dir, *nf_pos >> (dir->i_sb->s_blocksize_bits - 2));
 		if (!block)
 			return NULL;
-		if (!(*ebh = udf_bread(dir->i_sb, block, dir->i_sb->s_blocksize)))
+		if (!(*ebh = bread(dir->i_dev, block, dir->i_sb->s_blocksize)))
 			return NULL;
 
 		if (sizeof(struct FileIdentDesc) > - *soffset)

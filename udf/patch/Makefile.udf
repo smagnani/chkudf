@@ -8,7 +8,7 @@
 # Note 2! The CFLAGS definitions are now in the main makefile...
 
 O_TARGET := udf.o
-O_OBJS   := crc.o debug.o dir.o directory.o file.o inode.o misc.o namei.o \
+O_OBJS   := crc.o dir.o directory.o file.o inode.o misc.o namei.o \
 		partition.o super.o udftime.o unicode.o balloc.o ialloc.o \
 		truncate.o lowlevel.o
 M_OBJS   := $(O_TARGET)

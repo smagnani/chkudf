@@ -82,7 +82,7 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 
 			loc = udf_bmap(UDF_SB_VAT(sb), newblock);
 
-			if (!(bh = udf_bread(sb, loc, sb->s_blocksize)))
+			if (!(bh = bread(sb->s_dev, loc, sb->s_blocksize)))
 			{
 				udf_debug("get_pblock(UDF_VIRTUAL_MAP:%p,%d,%d) VAT: %d[%d]\n",
 					sb, block, partition, loc, index);

@@ -357,7 +357,7 @@ int udf_translate_to_linux(char *newName, char *udfName, int udfLen, char *fidNa
 	int index, newIndex = 0, needsCRC = 0;	
 	int extIndex = 0, newExtIndex = 0, hasExt = 0;
 	unsigned short valueCRC;
-	char current;
+	char curr;
 	const char hexChar[] = "0123456789ABCDEF";
 
 	if (udfName[0] == '.' && (udfLen == 1 ||
@@ -371,16 +371,16 @@ int udf_translate_to_linux(char *newName, char *udfName, int udfLen, char *fidNa
 	{	
 		for (index = 0; index < udfLen; index++)
 		{
-			current = udfName[index];
-			if (current == '/' || current == 0)
+			curr = udfName[index];
+			if (curr == '/' || curr == 0)
 			{
 				needsCRC = 1;
-				current = ILLEGAL_CHAR_MARK;
+				curr = ILLEGAL_CHAR_MARK;
 				while (index+1 < udfLen && (udfName[index+1] == '/' ||
 					udfName[index+1] == 0))
 					index++;
 			}
-			if (current == EXT_MARK && (udfLen - index - 1) <= EXT_SIZE)
+			if (curr == EXT_MARK && (udfLen - index - 1) <= EXT_SIZE)
 			{
 				if (udfLen == index + 1)
 					hasExt = 0;
@@ -392,7 +392,7 @@ int udf_translate_to_linux(char *newName, char *udfName, int udfLen, char *fidNa
 				}
 			}
 			if (newIndex < 256)
-				newName[newIndex++] = current;
+				newName[newIndex++] = curr;
 			else
 				needsCRC = 1;
 		}
@@ -408,18 +408,18 @@ int udf_translate_to_linux(char *newName, char *udfName, int udfLen, char *fidNa
 			for(index = 0; index<EXT_SIZE && extIndex + index +1 < udfLen;
 				index++ )
 			{
-				current = udfName[extIndex + index + 1];
+				curr = udfName[extIndex + index + 1];
 
-				if (current == '/' || current == 0)
+				if (curr == '/' || curr == 0)
 				{
 					needsCRC = 1;
-					current = ILLEGAL_CHAR_MARK;
+					curr = ILLEGAL_CHAR_MARK;
 					while(extIndex + index + 2 < udfLen && (index + 1 < EXT_SIZE
 						&& (udfName[extIndex + index + 2] == '/' ||
 							udfName[extIndex + index + 2] == 0)))
 						index++;
 				}
-				ext[localExtIndex++] = current;
+				ext[localExtIndex++] = curr;
 			}
 			maxFilenameLen = 250 - localExtIndex;
 			if (newIndex > maxFilenameLen)

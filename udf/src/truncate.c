@@ -146,7 +146,7 @@ void udf_truncate(struct inode * inode)
 	if (offset)
 	{
 		struct buffer_head *bh;
-		bh = bread(inode->i_sb->s_dev,
+		bh = bread(inode->i_dev,
 			udf_bmap(inode, inode->i_size >> inode->i_sb->s_blocksize_bits),
 			inode->i_sb->s_blocksize);
 		if (bh)

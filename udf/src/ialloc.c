@@ -149,7 +149,7 @@ struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
 	inode->i_size = 0;
 	UDF_I_LENEATTR(inode) = 0;
 	UDF_I_LENALLOC(inode) = 0;
-	memset(&UDF_I_EXT0LOC(inode), 0, sizeof(lb_addr));
+	UDF_I_EXT0LOC(inode) = UDF_I_LOCATION(inode);
 	UDF_I_EXT0LEN(inode) = 0;
 	UDF_I_EXT0OFFS(inode) = sizeof(struct FileEntry);
 	UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_IN_ICB;

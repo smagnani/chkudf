@@ -8,7 +8,7 @@
 #
 
 # uncomment and provide correct directory if /usr/src/linux/include isn't it.
-# KERNH=-I/usr/src/linux-2.1.129/include
+# KERNH=-I/usr/src/linux/include
 
 CC		= gcc
 UDF_INC		= ../include

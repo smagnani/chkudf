@@ -51,24 +51,23 @@
  * 12/5/98 dgb  Adjusted structure and content of include files.
  */
 
-#ifdef __linux__
+#ifdef __KERNEL__
 #include <linux/types.h>
 #define Uint8	__u8
 #define Uint16	__u16
 #define Uint32	__u32
 #define Uint64	__u64
 typedef __u8	dstring;
-#pragma pack(1)
 #else
 #define Uint8	unsigned char
 #define Uint16	unsigned short
-#define Uint32	unsigned long
+#define Uint32	unsigned int
 #define Uint64	unsigned long long
 typedef char	dstring;
 #endif
 
-
 /* make sure all structures are packed! */
+#pragma pack(1)
 
 /* CS0 Charspec (ECMA 167 1/7.2.1) */
 typedef struct {
@@ -765,8 +764,6 @@ struct ExtendedFileEntry {
 	Uint8		extendedAttr[0];
 	Uint8		allocDescs[0];
 };
-#ifdef __linux__
 #pragma pack()
-#endif /*__linux__ */
 
 #endif /* !defined(_LINUX_UDF_167_H) */

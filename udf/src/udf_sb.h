@@ -74,6 +74,7 @@
 #define UDF_SB_VOLIDENT(X)		( UDF_SB(X)->s_volident )
 #define UDF_SB_PARTMAPS(X)		( UDF_SB(X)->s_partmaps )
 #define UDF_SB_LOCATION(X)		( UDF_SB(X)->s_location )
+#define UDF_SB_SERIALNUM(X)		( UDF_SB(X)->s_serialnum )
 #define UDF_SB_CHARSET(X)		( UDF_SB(X)->s_nls_iocharset )
 #define UDF_SB_VAT(X)			( UDF_SB(X)->s_vat )
 

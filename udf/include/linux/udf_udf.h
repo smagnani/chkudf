@@ -30,9 +30,7 @@
 /* based on ECMA 167 structure definitions */
 #include <linux/udf_167.h>
 
-#ifdef __linux__
 #pragma pack(1)
-#endif
 
 /* -------- Basic types and constants ----------- */
 /* UDF character set (UDF 1.50 2.1.2) */
@@ -229,8 +227,6 @@ struct SparingTable {
 #define UDF_NAME_LEN	255
 #define UDF_PATH_LEN	1023
 
-#ifdef __linux__
 #pragma pack()
-#endif
 
 #endif /* !defined(_LINUX_UDF_FMT_H) */

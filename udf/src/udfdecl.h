@@ -1,7 +1,7 @@
 #ifndef __UDF_DECL_H
 #define __UDF_DECL_H
 
-#define UDF_VERSION_NOTICE "v0.8.0.1"
+#define UDF_VERSION_NOTICE "v0.8.2"
 
 #ifdef __KERNEL__
 
@@ -35,18 +35,16 @@ struct task_struct;
 struct buffer_head;
 struct super_block;
 
-
-extern struct file_operations udf_file_fops;
-extern struct file_operations udf_dir_fops;
 extern struct inode_operations udf_dir_inode_operations;
 extern struct inode_operations udf_file_inode_operations;
 
-extern int udf_physical_lookup(struct inode *, struct dentry *);
+extern void udf_warning(struct super_block *, const char *, const char *, ...);
 extern int udf_lookup(struct inode *, struct dentry *);
+extern int udf_mkdir(struct inode *, struct dentry *, int);
+extern int udf_rmdir(struct inode *, struct dentry *);
 extern int udf_unlink(struct inode *, struct dentry *);
 extern int udf_create(struct inode *, struct dentry *, int);
-extern int udf_ioctl(struct inode *, struct file *, unsigned int,
-	unsigned long);
+extern int udf_ioctl(struct inode *, struct file *, unsigned int, unsigned long);
 extern struct inode *udf_iget(struct super_block *, lb_addr);
 extern void udf_read_inode(struct inode *);
 extern void udf_put_inode(struct inode *);
@@ -55,14 +53,10 @@ extern void udf_write_inode(struct inode *);
 extern int udf_bmap(struct inode *, int);
 extern int block_bmap(struct inode *, int, lb_addr *, Uint32 *, lb_addr *, Uint32 *, Uint32 *);
 extern int udf_next_aext(struct inode *, lb_addr *, int *, lb_addr *, Uint32 *);
-extern void udf_umount_begin(struct super_block *);
 
 extern int udf_read_tagged_data(char *, int size, int fd, int block, int partref);
 
-extern struct inode_operations udf_inode_operations;
-extern void udf_debug_dump(struct buffer_head *);
 extern struct buffer_head *udf_bread(struct super_block *, int, int);
-extern struct buffer_head *udf_read_sector(struct super_block *, unsigned long);
 extern struct buffer_head *udf_read_tagged(struct super_block *, Uint32, Uint32, Uint16 *);
 extern struct buffer_head *udf_read_ptagged(struct super_block *, lb_addr, Uint32, Uint16 *);
 extern struct buffer_head *udf_read_untagged(struct super_block *, Uint32, Uint32);
@@ -73,10 +67,6 @@ extern unsigned int udf_get_last_block(kdev_t, int *);
 
 extern Uint32 udf_get_pblock(struct super_block *, Uint32, Uint16, Uint32);
 extern Uint32 udf_get_lb_pblock(struct super_block *, lb_addr, Uint32);
-extern long udf_block_from_inode(struct inode *);
-extern long udf_block_from_bmap(struct inode *, int block, int part);
-extern long udf_inode_from_block(struct super_block *, long block, int part);
-extern int  udf_part_from_inode(struct inode *);
 
 extern int udf_get_filename(char *, char *, int);
 
@@ -142,6 +132,7 @@ struct ustr
 #define udf_fixed_to_variable(x) ( ( ( x >> 5 ) * 39 ) + ( x & 0x0000001F ) )
 #define udf_variable_to_fixed(x) ( ( ( x / 39 ) << 5 ) + ( x % 39 ) )
 
+#ifdef __KERNEL__
 
 #define udf_clear_bit(nr,addr) ext2_clear_bit(nr,addr)
 #define udf_set_bit(nr,addr) ext2_set_bit(nr,addr)
@@ -151,31 +142,31 @@ struct ustr
 
 extern inline int find_next_one_bit (void * addr, int size, int offset)
 {
-	unsigned long * p = ((unsigned long *) addr) + (offset / sizeof(long));
-	unsigned long result = offset & ~(sizeof(long)-1);
+	unsigned long * p = ((unsigned long *) addr) + (offset / BITS_PER_LONG);
+	unsigned long result = offset & ~(BITS_PER_LONG-1);
 	unsigned long tmp;
 
 	if (offset >= size)
 		return size;
 	size -= result;
-	offset &= (sizeof(long)-1);
+	offset &= (BITS_PER_LONG-1);
 	if (offset)
 	{
 		tmp = *(p++);
-		tmp |= ~0UL >> (sizeof(long)-offset);
-		if (size < sizeof(long))
+		tmp |= ~0UL >> (BITS_PER_LONG-offset);
+		if (size < BITS_PER_LONG)
 			goto found_first;
 		if (tmp)
 			goto found_middle;
-		size -= sizeof(long);
-		result += sizeof(long);
+		size -= BITS_PER_LONG;
+		result += BITS_PER_LONG;
 	}
-	while (size & ~(sizeof(long)-1))
+	while (size & ~(BITS_PER_LONG-1))
 	{
 		if ((tmp = *(p++)))
 			goto found_middle;
-		result += sizeof(long);
-		size -= sizeof(long);
+		result += BITS_PER_LONG;
+		size -= BITS_PER_LONG;
 	}
 	if (!size)
 		return result;
@@ -188,6 +179,8 @@ found_middle:
 
 #define find_first_one_bit(addr, size)\
 	find_next_one_bit((addr), (size), 0)
+
+#endif
 
 /* Miscellaneous UDF Prototypes */
 

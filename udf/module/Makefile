@@ -6,18 +6,23 @@
 # 11/29/98      more rearranging
 #
 include ../Make.conf
+include /usr/src/linux/.config
 #
 # uncomment below if your /usr/include/linux isn't a symlink to 
 # the kernel source
 #
-# KERNH		=-I/usr/src/v2.1.129/linux/include 
+# KERNH		=-I/usr/src/linux/include 
 #
 UDF_INC		= ../include
 UDF_CONFIG	= $(UDF_INC)/config/udf.h
-CFLAGS_DEBUG = -DUDFFS_DEBUG -g
+CFLAGS_DEBUG = -g
 
-CFLAGS		= -D__KERNEL__=1 $(KERNH)\
-	-DMODULE -DCONFIG_UDF_FS_EXT -O2 -Wall -Wstrict-prototypes -I$(UDF_INC) 
+CFLAGS		= -pipe -D__KERNEL__=1 $(KERNH) -DMODULE -Wall -Wstrict-prototypes\
+	-DCONFIG_UDF_FS_EXT -O -I$(UDF_INC)
+
+ifdef CONFIG_SMP
+CFLAGS += -D__SMP__
+endif
 
 CFLAGS += $(CFLAGS_DEBUG)
 #

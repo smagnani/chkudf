@@ -32,6 +32,7 @@
 #include "udfdecl.h"
 #include <linux/udf_fs.h>
 #include <linux/fs.h>
+#include <linux/locks.h>
 #include <linux/mm.h>
 
 #include "udf_i.h"
@@ -100,6 +101,56 @@ void udf_discard_prealloc(struct inode * inode)
 	}
 #endif
 }
+
+#if 0
+
+static lb_addr udf_alloc_block(struct inode *inode, lb_addr goal, int *err)
+{
+	lb_addr result;
+#ifdef UDF_PREALLOCATE
+	struct buffer_head *bh;
+#endif
+
+	wait_on_super(inode->i_sb);
+
+#ifdef UDF_PREALLOCATE
+	if (UDF_I_PREALLOCCOUNT(inode) &&
+		(goal.logicalBlockNum == UDF_I_PREALLOCBLOCK(inode) ||
+		 goal.logicalBlockNum + 1 == UDF_I_PREALLOCBLOCK(inode))
+	{
+		result.logicalBlockNum = UDF_I_PREALLOCBLOCK(inode)++;
+			
+		UDF_I_PREALLOCCOUNT(inode)--;
+		if (!(bh = getblk(inode->i_sb->s_dev, udf_get_lb_pblock(sb, result, 0),
+			inode->i_sb->s_blocksize)))
+		{
+			udf_error(inode->i_sb, "udf_alloc_block",
+				"cannot get block %lu", result);
+			return 0;
+		}
+		memset(bh->b_data, 0, inode->i_sb->s_blocksize);
+		mark_buffer_uptodate(bh, 1);
+		mark_buffer_dirty(bh, 1);
+		brelse(bh);
+	}
+	else
+	{
+		udf_discard_prealloc(inode);
+		if (S_ISREG(inode->i_mode))
+			result = udf_new_block(inode, goal,
+				&(UDF_I_PREALLOCCOUNT(inode)),
+				&(UDF_I_PREALLOCBLOCK(inode)), err);
+		else
+			result = udf_new_block(inode, goal, 0, 0, err);
+	}		
+#else
+	result = udf_new_block(inode, goal, 0, 0, err);
+#endif
+
+	return result;
+}
+
+#endif
 
 /*
  * udf_read_inode
@@ -264,6 +315,10 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 	}
 	
 	inode->i_size = le64_to_cpu(fe->informationLength);
+#if BITS_PER_LONG < 64
+	if (le64_to_cpu(fe->informationLength) & 0xFFFFFFFF00000000)
+		inode->i_size = (Uint32)-1;
+#endif
 
 	inode->i_mode = udf_convert_permissions(fe);
 	inode->i_mode &= ~UDF_SB(inode->i_sb)->s_umask;
@@ -291,6 +346,7 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 		else
 			inode->i_atime = UDF_SB_RECORDTIME(inode->i_sb);
 
+		UDF_I_UNIQUE(inode) = le64_to_cpu(fe->uniqueID);
 		UDF_I_LENEATTR(inode) = le32_to_cpu(fe->lengthExtendedAttr);
 		UDF_I_LENALLOC(inode) = le32_to_cpu(fe->lengthAllocDescs);
 		offset = sizeof(struct FileEntry) + UDF_I_LENEATTR(inode);
@@ -316,6 +372,7 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 		else
 			inode->i_ctime = UDF_SB_RECORDTIME(inode->i_sb);
 
+		UDF_I_UNIQUE(inode) = le64_to_cpu(efe->uniqueID);
 		UDF_I_LENEATTR(inode) = le32_to_cpu(efe->lengthExtendedAttr);
 		UDF_I_LENALLOC(inode) = le32_to_cpu(efe->lengthAllocDescs);
 		offset = sizeof(struct ExtendedFileEntry) + UDF_I_LENEATTR(inode);
@@ -454,6 +511,10 @@ udf_update_inode(struct inode *inode)
 	int i;
 	timestamp cpu_time;
 
+#ifdef VDEBUG
+	udf_debug("ino=%ld\n", inode->i_ino);
+#endif
+
 	bh = udf_bread(inode->i_sb,
 		udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0),
 		inode->i_sb->s_blocksize);
@@ -481,7 +542,10 @@ udf_update_inode(struct inode *inode)
 		 PERM_U_DELETE | PERM_U_CHATTR));
 	fe->permissions = cpu_to_le32(udfperms);
 
-	fe->fileLinkCount = cpu_to_le16(inode->i_nlink);
+	if (inode->i_mode & S_IFDIR)
+		fe->fileLinkCount = cpu_to_le16(inode->i_nlink - 1);
+	else
+		fe->fileLinkCount = cpu_to_le16(inode->i_nlink);
 
 	fe->informationLength = cpu_to_le64(inode->i_size);
 
@@ -547,6 +611,7 @@ udf_update_inode(struct inode *inode)
 	
 	fe->icbTag.flags = cpu_to_le16(icbflags);
 	fe->descTag.descVersion = cpu_to_le16(2);
+	fe->descTag.tagSerialNum = cpu_to_le16(UDF_SB_SERIALNUM(inode->i_sb));
 	fe->descTag.tagLocation = cpu_to_le32(UDF_I_LOCATION(inode).logicalBlockNum);
 	crclen += UDF_I_LENEATTR(inode) + UDF_I_LENALLOC(inode) - sizeof(tag);
 	fe->descTag.descCRCLength = cpu_to_le16(crclen);
@@ -558,7 +623,6 @@ udf_update_inode(struct inode *inode)
 			fe->descTag.tagChecksum += ((Uint8 *)&(fe->descTag))[i];
 
 	/* write the data blocks */
-
 	mark_buffer_dirty(bh, 1);
 	udf_release_data(bh);
 	return 0;
@@ -785,5 +849,8 @@ int udf_bmap(struct inode *inode, int block)
 	else
 		ret = 0;
 
-	return ret;
+    if (UDF_SB(inode->i_sb)->s_flags & UDF_FLAG_VARCONV)
+		return udf_fixed_to_variable(ret);
+	else
+		return ret;
 }
