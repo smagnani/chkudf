@@ -37,9 +37,17 @@
 
 #define UDF_SB_ALLOC_PARTMAPS(X,Y)\
 {\
-	UDF_SB_NUMPARTS(X) = Y;\
 	UDF_SB_PARTMAPS(X) = kmalloc(sizeof(struct udf_part_map) * Y, GFP_KERNEL);\
-	memset(UDF_SB_PARTMAPS(X), 0x00, sizeof(struct udf_part_map) * Y);\
+	if (UDF_SB_PARTMAPS(X) != NULL)\
+	{\
+		UDF_SB_NUMPARTS(X) = Y;\
+		memset(UDF_SB_PARTMAPS(X), 0x00, sizeof(struct udf_part_map) * Y);\
+	}\
+	else\
+	{\
+		UDF_SB_NUMPARTS(X) = 0;\
+		udf_error(X, __FUNCTION__, "Unable to allocate space for %d partition maps", Y);\
+	}\
 }
 
 #define UDF_SB_ALLOC_BITMAP(X,Y,Z)\
@@ -49,11 +57,18 @@
 	UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap = kmalloc(sizeof(struct udf_bitmap) +\
 		sizeof(struct buffer_head *) * nr_groups,\
 		GFP_KERNEL);\
-	memset(UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap, 0x00,\
-		sizeof(struct udf_bitmap) + sizeof(struct buffer_head *) * nr_groups);\
-	UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap->s_block_bitmap =\
-		(struct buffer_head **)(UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap + 1);\
-	UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap->s_nr_groups = nr_groups;\
+	if (UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap != NULL)\
+	{\
+		memset(UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap, 0x00,\
+			sizeof(struct udf_bitmap) + sizeof(struct buffer_head *) * nr_groups);\
+		UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap->s_block_bitmap =\
+			(struct buffer_head **)(UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap + 1);\
+		UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap->s_nr_groups = nr_groups;\
+	}\
+	else\
+	{\
+		udf_error(X, __FUNCTION__, "Unable to allocate space for bitmap and %d buffer_head pointers", nr_groups);\
+	}\
 }
 
 
