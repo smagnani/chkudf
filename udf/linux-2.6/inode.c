@@ -1615,7 +1615,7 @@ int8_t udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 		int err, loffset;
 		lb_addr obloc = *bloc;
 
-		if (!(bloc->logicalBlockNum = udf_new_block(inode->i_sb, inode,
+		if (!(bloc->logicalBlockNum = udf_new_block(inode->i_sb, NULL,
 			obloc.partitionReferenceNum, obloc.logicalBlockNum, &err)))
 		{
 			return -1;
@@ -1823,7 +1823,7 @@ int8_t udf_current_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 		if (!(*extoffset))
 			*extoffset = sizeof(struct allocExtDesc);
 		ptr = (*bh)->b_data + *extoffset;
-		alen = le32_to_cpu(((struct allocExtDesc *)(*bh)->b_data)->lengthAllocDescs);
+		alen = sizeof(struct allocExtDesc) + le32_to_cpu(((struct allocExtDesc *)(*bh)->b_data)->lengthAllocDescs);
 	}
 
 	switch (UDF_I_ALLOCTYPE(inode))

@@ -124,6 +124,8 @@ void udf_discard_prealloc(struct inode * inode)
 		}
 	}
 	UDF_I_LENEXTENTS(inode) = lbcount;
+
+	udf_release_data(bh);
 }
 
 void udf_truncate_extents(struct inode * inode)
