@@ -507,7 +507,7 @@ udf_find_anchor(struct super_block *sb, int useranchor, int lastblock)
 
 	for (i=0; (!lastblock && i<sizeof(last)/sizeof(int)); i++)
 	{
-		if (!(bh = bread(sb->s_dev, last[i], sb->s_blocksize)))
+		if (last[i] < 0 || !(bh = bread(sb->s_dev, last[i], sb->s_blocksize)))
 		{
 			ident = location = 0;
 		}
@@ -780,7 +780,7 @@ udf_load_partdesc(struct super_block *sb, struct buffer_head *bh)
 	struct PartitionDesc *p;
 	int i;
 
-	p=(struct PartitionDesc *)bh->b_data;
+	p = (struct PartitionDesc *)bh->b_data;
 
 	for (i=0; i<UDF_SB_NUMPARTS(sb); i++)
 	{
@@ -802,7 +802,7 @@ udf_load_partdesc(struct super_block *sb, struct buffer_head *bh)
 				phd = (struct PartitionHeaderDesc *)(p->partitionContentsUse);
 				if (phd->unallocatedSpaceTable.extLength)
 				{
-					lb_addr loc = { i, phd->unallocatedSpaceTable.extPosition };
+					lb_addr loc = { le32_to_cpu(phd->unallocatedSpaceTable.extPosition), i };
 
 					UDF_SB_PARTMAPS(sb)[i].s_uspace.s_table =
 						udf_iget(sb, loc);
@@ -825,7 +825,7 @@ udf_load_partdesc(struct super_block *sb, struct buffer_head *bh)
 					udf_debug("partitionIntegrityTable (part %d)\n", i);
 				if (phd->freedSpaceTable.extLength)
 				{
-					lb_addr loc = { i, phd->freedSpaceTable.extPosition };
+					lb_addr loc = { le32_to_cpu(phd->freedSpaceTable.extPosition), i };
 
 					UDF_SB_PARTMAPS(sb)[i].s_fspace.s_table =
 						udf_iget(sb, loc);
