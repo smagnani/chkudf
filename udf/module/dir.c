@@ -32,8 +32,7 @@
 /* Prototypes for file operations */
 static int udf_readdir(struct file *, void *, filldir_t);
 static int do_udf_readdir(struct file *, void *, filldir_t);
-static struct FileIdentDesc * udf_get_fileident(char *, int *);
-static int udf_get_file_ino(char * , const char *, long *ino, int dflag);
+static int udf_get_file_ino(char * , const char *, long *ino);
 
 struct file_operations udf_dir_fops = {
 	NULL,			/* llseek */
@@ -92,8 +91,10 @@ int udf_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		return -ENOTDIR;
 
 	parent_ino=filp->f_dentry->d_parent->d_inode->i_ino;
+#ifdef VDEBUG
 	printk(KERN_DEBUG "udf: udf_readdir(%p, %p,) i_ino=%ld, parent=%lu\n",
 		filp, dirent, inode->i_ino, parent_ino);
+#endif
 
 	/* procfs used as an example here */
 	ino = inode->i_ino;
@@ -130,7 +131,7 @@ do_udf_readdir(struct file *filp, void *dirent, filldir_t filldir)
 	struct ustr unifilename;
 	int lengthIdents;
 	long ino;
-	int bh_i=0;
+	int dir_i=0;
 	int block;
 	int offset=0;
 
@@ -154,7 +155,7 @@ do_udf_readdir(struct file *filp, void *dirent, filldir_t filldir)
 
 	while ( (lengthIdents > offset) &&
 		(fi=udf_get_fileident(bh->b_data, &offset) ) ) {
-		bh_i++;
+		dir_i++;
 
 		ino=fi->icb.extLocation.logicalBlockNum;
 
@@ -167,9 +168,14 @@ do_udf_readdir(struct file *filp, void *dirent, filldir_t filldir)
 			continue;
 		}
 		if ( !udf_CS0toUTF8(&filename, &unifilename) ) {
-			printk(KERN_DEBUG "udf: readdir %s ino %ld bh_i %d\n",
-				filename.u_name, ino, bh_i);
-			if ( bh_i >= (filp->f_pos) ) {
+			if ( dir_i >= (filp->f_pos) ) {
+#ifdef VDEBUG
+				printk(KERN_DEBUG 
+				"udf: readdir '%s' ino %ld dir_i %d ver %d type 0x%x\n",
+					filename.u_name, ino, dir_i,
+					fi->fileVersionNum,
+					fi->fileCharacteristics);
+#endif
 				if (filldir(dirent, filename.u_name, 	
 						filename.u_len, 
 						filp->f_pos, ino) <0)
@@ -184,52 +190,8 @@ do_udf_readdir(struct file *filp, void *dirent, filldir_t filldir)
 	return 0;
 }
 
-#define UDF_NAME_PAD	4
-
-static struct FileIdentDesc * 
-udf_get_fileident(char * buffer, int * offset)
-{
-	struct FileIdentDesc *fi;
-	struct FileEntry *fe;
-	int lengthIdents;
-	int lengthThisIdent;
-	__u8 * ptr;
-	int padlen;
-
-	if ( (!buffer) || (!offset) ) {
-		printk(KERN_ERR "udf: udf_get_fileident() invalidparms\n");
-		return NULL;
-	}
-
-	fe=(struct FileEntry *)buffer;
-	if ( fe->descTag.tagIdent != TID_FILE_ENTRY ) {
-		printk(KERN_DEBUG "udf: _fileident - 0x%x != TID_FILE_ENTRY\n",
-			fe->descTag.tagIdent);
-		return NULL;
-	}
-	lengthIdents = fe->lengthAllocDescs;
-
-	ptr=(__u8 *)(fe->extendedAttr);
-	ptr += fe->lengthExtendedAttr;
-
-	if ( (*offset > 0) && (*offset < lengthIdents) ) {
-		ptr += *offset;
-	}
-	fi=(struct FileIdentDesc *)ptr;
-
-	lengthThisIdent=sizeof(struct FileIdentDesc) +
-		fi->lengthFileIdent + fi->lengthOfImpUse;
-
-	/* we need to figure padding, too! */
-	padlen=lengthThisIdent % UDF_NAME_PAD;
-	if (padlen)
-		lengthThisIdent+= (UDF_NAME_PAD - padlen);
-	*offset = *offset + lengthThisIdent;
-	return fi;
-}
-
 static int 
-udf_get_file_ino(char * buffer, const char *name, long *ino, int dflag)
+udf_get_file_ino(char * buffer, const char *name, long *ino)
 {
 	struct FileEntry *fe;
 	struct FileIdentDesc *fi;
@@ -256,9 +218,14 @@ udf_get_file_ino(char * buffer, const char *name, long *ino, int dflag)
 
 		if ( !fi->lengthFileIdent )
 			continue;
-		if ( (!dflag) &&
+
+		if ( (!udf_showdeleted) &&
 		     ( (fi->fileCharacteristics & FILE_DELETED) != 0 ) ) 
 			continue;
+		if ( (!udf_showhidden) &&
+		     ( (fi->fileCharacteristics & FILE_HIDDEN) != 0 ) )
+			continue;
+
 		if ( (!udf_build_ustr_exact(&unifilename, fi->fileIdent,
 			fi->lengthFileIdent) ) &&
 		     (!udf_CS0toUTF8(&filename, &unifilename) ) ) {
@@ -269,7 +236,9 @@ udf_get_file_ino(char * buffer, const char *name, long *ino, int dflag)
 			}
 		}
 	}
-	printk(KERN_ERR "udf: leaving udf_get_file_ino(,%s)\n", name);
+#ifdef VDEBUG
+	printk(KERN_DEBUG "udf: leaving udf_get_file_ino(,%s)\n", name);
+#endif
 	return -1;
 }
 
@@ -334,13 +303,15 @@ udf_lookup(struct inode *dir, struct dentry *dentry)
 	int block;
 
 	/* Temporary - name doesn't exist, but it is okay to create it */
+#ifdef VDEBUG
 	printk(KERN_DEBUG "udf: udf_lookup(%lu, '%s')\n",
 		dir->i_ino, dentry->d_name.name);
+#endif
 	block=udf_block_from_inode(dir->i_sb, dir->i_ino);
 	bh=udf_read_tagged(dir->i_sb, block, UDF_BLOCK_OFFSET(dir->i_sb));
 	if (bh) {	
 		if ( !udf_get_file_ino(bh->b_data, 
-					dentry->d_name.name, &ino, 0) ) {
+					dentry->d_name.name, &ino) ) {
 			inode = udf_iget(dir->i_sb, ino);
 		}
 		brelse(bh);

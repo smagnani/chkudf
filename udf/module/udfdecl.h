@@ -15,5 +15,6 @@ extern void udf_put_inode(struct inode *);
 extern void udf_delete_inode(struct inode *);
 extern void udf_write_inode(struct inode *);
 extern struct inode *udf_iget(struct super_block *, unsigned long);
+extern int udf_bmap(struct inode *, int block);
 
 #endif

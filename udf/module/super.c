@@ -133,6 +133,8 @@ static struct super_operations udf_sb_ops = {
 /* Debugging level. Affects all UDF filesystems! */
 int udf_debuglvl=0;
 int udf_strict=0;
+int udf_showdeleted=0;
+int udf_showhidden=0;
 
 #ifdef NEED_COPY_TO_USER
 static inline unsigned long copy_to_user(void *to, 
@@ -162,6 +164,8 @@ static inline unsigned long le32_to_cpu(unsigned long value)
 #if LINUX_VERSION_CODE > 0x020170
 MODULE_PARM(udf_debuglvl, "i");
 MODULE_PARM(udf_strict, "i");
+MODULE_PARM(udf_showdeleleted, "i");
+MODULE_PARM(udf_showhidden, "i");
 #endif
 
 /*
@@ -181,7 +185,7 @@ MODULE_PARM(udf_strict, "i");
 int
 cleanup_module(void)
 {
-	PRINTK((KERN_NOTICE "udf: unregistering filesystem\n"));
+	printk(KERN_NOTICE "udf: unregistering filesystem\n");
 	return unregister_filesystem(&udf_fstype);
 }
 
@@ -200,7 +204,7 @@ int init_module(void)
 __initfunc(int init_udf_fs(void))
 #endif
 {
-	PRINTK((KERN_NOTICE "udf: registering filesystem\n"));
+	printk(KERN_NOTICE "udf: registering filesystem\n");
 	udf_debuglvl = UDF_DEBUG_NONE;
 	return register_filesystem(&udf_fstype);
 }

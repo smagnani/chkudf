@@ -40,6 +40,8 @@
 /* Default block size - bigger is better */
 #define UDF_BLOCK_SIZE	2048
 
+#define UDF_NAME_PAD 4
+
 /* structures */
 struct udf_directory_record {
 	Uint32	d_parent;
@@ -93,11 +95,19 @@ extern gid_t  udf_convert_gid(int);
 #define UDF_DEBUG_LVL9	9
 #define UDF_DEBUG_DUMP	10
 
+/* module parms */
 extern int udf_debuglvl;
+extern int udf_strict;
+extern int udf_showdeleted;
+extern int udf_showhidden;
+
 extern void udf_dump(char * buffer, int size);
 extern int udf_read_tagged_data(char *, int size, int fd, int block, int offset);
 extern Uint32 udf64_low32(Uint64);
 extern Uint32 udf64_high32(Uint64);
+extern struct FileIdentDesc * udf_get_fileident(void * buffer, int * offset);
+extern extent_ad * udf_get_fileextent(void * buffer, int * offset);
+extern long_ad * udf_get_filelongad(void * buffer, int * offset);
 
 #define DUMP(X,S)	do { if (udf_debuglvl >= UDF_DEBUG_DUMP) udf_dump((X),(S)); } while(0)
 

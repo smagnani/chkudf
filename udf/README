@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------
  * Linux(r) UDF Filesystem Driver
- * Version: 0.4
+ * Version: 0.5
  *
  * This is Andrew's second "patch" vs kernel 2.1.62, 
  * converted to a standalone package. Then many changes made. :-)
@@ -24,7 +24,13 @@ SCSI card (aha152x compatible) that came with the Ricoh.
 
 I can mount/umount a udf filesystem without crashing my system.
 I can view the directory structure of the file system, including file
-dates and sizes.
+dates and sizes. However, directories are limited in size, to maybe
+30-40 entries, depending on name lengths (1 2k block.)
+
+Files can be read and used! (As of version 0.5). However, files are limited
+to DVD compatible use, that is, only one 'extent' per file. That means
+the file space must be contiguous on the disc.
+
 
 That's pretty much all that's currently implemented. If you want
 to help out, subscribe to the linux_udf mailing list below.

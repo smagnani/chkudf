@@ -21,6 +21,8 @@
  * HISTORY
  *
  * 10/2/98 dgb	Attempt to integrate into udf.o
+ * 10/7/98	Switched to using generic_readpage, etc., like isofs
+ *		And it works!
  */
 
 #ifdef __linux__
@@ -46,6 +48,7 @@ static int udf_revalidate(kdev_t dev);
 static int udf_flush(struct file *);
 #endif
 
+#ifdef CONFIG_UDF_FULL_FS
 static loff_t udf_llseek(struct file *filp, loff_t offset, int origin);
 static ssize_t udf_read(struct file *, char *, size_t, loff_t *);
 static int udf_ioctl(struct inode *, struct file *, unsigned int,
@@ -53,7 +56,6 @@ static int udf_ioctl(struct inode *, struct file *, unsigned int,
 static int udf_release(struct inode *, struct file *);
 static int udf_open(struct inode *, struct file *);
 
-#ifdef CONFIG_UDF_FULL_FS
 static unsigned int udf_poll(struct file *, poll_table *);
 static int udf_mmap(struct file *, struct vm_area_struct *);
 static int udf_check_media_change(kdev_t dev);
@@ -61,8 +63,8 @@ static int udf_check_media_change(kdev_t dev);
 
 
 struct file_operations udf_file_fops = {
-	udf_llseek,		/* llseek */
-	udf_read,		/* read */
+	NULL,			/* llseek */
+	generic_file_read,	/* read */
 #ifdef CONFIG_UDF_WRITE
 	udf_write,		/* write */
 #else
@@ -79,10 +81,10 @@ struct file_operations udf_file_fops = {
 #else
 	NULL,			/* poll */
 	NULL,			/* ioctl */
-	NULL,			/* mmap */
-	udf_open,		/* open */
+	generic_file_mmap,	/* mmap */
+	NULL,			/* open */
 	NULL,			/* flush */
-	udf_release,		/* release */
+	NULL,			/* release */
 #endif
 #ifdef CONFIG_UDF_WRITE
 	udf_fsync,		/* fsync */
@@ -99,6 +101,7 @@ struct file_operations udf_file_fops = {
 #endif
 };
 
+#ifdef USE_UDF_LLSEEK
 /*
  * udf_llseek
  *
@@ -132,7 +135,9 @@ loff_t udf_llseek(struct file *filp, loff_t offset, int origin)
 		(long)offset, origin);
 	return -1;
 }
+#endif
 
+#ifdef USE_UDF_READ
 /*
  * udf_read
  *
@@ -179,6 +184,7 @@ static ssize_t udf_read(struct file * filp, char * buf, size_t bufsize,
 		(long)bufsize, (long)loff);
 	return -1;
 }
+#endif
 
 #ifdef CONFIG_UDF_WRITE
 /*
@@ -311,7 +317,6 @@ int udf_mmap(struct file *filp, struct vm_area_struct *)
 {
 	return -1;
 }
-#endif
 
 /*
  * udf_open
@@ -356,6 +361,7 @@ int udf_release(struct inode *inode, struct file *filp)
 		inode->i_ino);
 	return -1;
 }
+#endif
 
 #ifdef CONFIG_UDF_WRITE
 /*
@@ -484,7 +490,6 @@ static int udf_revalidate(struct inode *);
 static int udf_readlink(struct inode *, char *, int);
 static struct dentry * udf_follow_link(struct inode *, struct dentry *);
 static int udf_readpage(struct inode *, struct page *);
-static int udf_bmap(struct inode *, int);
 static int udf_permission(struct inode *, int);
 static int udf_smap(struct inode *, int);
 #endif
@@ -527,10 +532,10 @@ struct inode_operations udf_file_inode_operations= {
 #ifdef CONFIG_UDF_FULL_FS
 	udf_readpage,		/* readpage */
 #else
-	NULL,
+	generic_readpage,	/* readpage */
 #endif
 	NULL,			/* writepage */
-	NULL,			/* bmap */
+	udf_bmap,		/* bmap */
 	NULL,			/* truncate */
 #ifdef CONFIG_UDF_FULL_FS
 	udf_permission,		/* permission */
@@ -624,29 +629,6 @@ udf_readpage(struct inode *inode, struct page *)
  */
 static int
 udf_writepage(struct inode *inode, struct page *)
-{
-	return -1;
-}
-
-/*
- * udf_bmap
- *
- * PURPOSE
- *	Get the Nth block of an inode.
- *
- * DESCRIPTION
- *
- * PRE-CONDITIONS
- *
- * POST-CONDITIONS
- *	<return>		Nth block of inode.
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static int
-udf_bmap(struct inode *inode, int block)
 {
 	return -1;
 }

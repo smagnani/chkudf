@@ -14,6 +14,12 @@
  *	License (GPL). Copies of the GPL can be obtained from:
  *		ftp://prep.ai.mit.edu/pub/gnu/GPL
  *	Each contributing author retains all rights to their own work.
+ *
+ * HISTORY
+ *
+ * 10/4/98 dgb	Added rudimentary directory functions
+ * 10/7/98	Fully working udf_bitmap! It works!
+ *
  */
 
 #include <config/udf.h>
@@ -42,8 +48,15 @@ udf_read_inode(struct inode *inode)
 	struct FileEntry *fe;
 	time_t modtime;
 	int block;
+	int offset;
+	int ad_type;
 
 	COOKIE(("udf_read_inode: inode=0x%lx\n", (unsigned long)inode));
+
+	UDF_I_FILELENHIGH(inode)=0;
+	UDF_I_FILELENLOW(inode)=0;
+	UDF_I_EXT0LEN(inode)=0;
+	UDF_I_EXT0LOC(inode)=0;
 
 	block=udf_block_from_inode(inode->i_sb, inode->i_ino);
 	bh=udf_read_tagged(inode->i_sb, block, UDF_BLOCK_OFFSET(inode->i_sb));
@@ -55,11 +68,20 @@ udf_read_inode(struct inode *inode)
 
 	fe=(struct FileEntry *)bh->b_data;
 	if ( fe->descTag.tagIdent == TID_FILE_ENTRY) {
+		UDF_I_FILELENHIGH(inode)=udf64_high32(fe->informationLength);
+		UDF_I_FILELENLOW(inode)=udf64_low32(fe->informationLength);
+
+#ifdef DEBUG
 		printk(KERN_INFO
-	"udf: inode %ld FILE_ENTRY: perm 0x%x link %d type %x\n",
+	"udf: inode %ld FILE_ENTRY: len %u,%u blocks %u perm 0x%x link %d type 0x%x flags 0x%x\n",
 			inode->i_ino, 
+			UDF_I_FILELENHIGH(inode),
+			UDF_I_FILELENLOW(inode),
+			udf64_low32(fe->logicalBlocksRecorded), /* may be zero! */
 			fe->permissions, 
-			fe->fileLinkCount, fe->icbTag.fileType);
+			fe->fileLinkCount, 
+			fe->icbTag.fileType, fe->icbTag.flags);
+#endif
 
 		inode->i_uid = udf_convert_uid(fe->uid);
 		if ( !inode->i_uid ) inode->i_uid = UDF_SB(inode->i_sb)->s_uid;
@@ -68,7 +90,7 @@ udf_read_inode(struct inode *inode)
 		if ( !inode->i_gid ) inode->i_gid = UDF_SB(inode->i_sb)->s_gid;
 
 		inode->i_nlink = fe->fileLinkCount;
-		inode->i_size = udf64_low32(fe->informationLength);
+		inode->i_size = UDF_I_FILELENLOW(inode);
 
 		if ( udf_stamp_to_time(&modtime, &fe->modificationTime) ) {
 			inode->i_atime = modtime;
@@ -80,6 +102,66 @@ udf_read_inode(struct inode *inode)
 			inode->i_ctime = UDF_SB_RECORDTIME(inode->i_sb);
 		}
 
+		ad_type=fe->icbTag.flags & 0x03;
+		switch (ad_type) {
+			case ICB_FLAG_AD_LONG:
+			  {
+			    long_ad * la;
+			    offset=0;
+			    la=udf_get_filelongad(fe, &offset);
+			    if ( (la) && (la->extLength) ) {
+				UDF_I_EXT0LEN(inode)=la->extLength;
+				UDF_I_EXT0LOC(inode)=la->extLocation.logicalBlockNum;
+#ifdef VDEBUG
+				printk(KERN_DEBUG
+					"udf: longad len %u %u lblock %u %u pblock %u\n",
+					la->extLength, 
+					UDF_I_EXT0LEN(inode),
+					la->extLocation.logicalBlockNum,
+					UDF_I_EXT0LOC(inode),
+					la->extLocation.logicalBlockNum+
+					  UDF_BLOCK_OFFSET(inode->i_sb));
+#endif
+			        la=udf_get_filelongad(fe, &offset);
+				while ( (la) &&
+				    (la->extLength) &&
+				    (offset < fe->lengthAllocDescs)) {
+#ifdef DEBUG
+					printk(KERN_INFO
+					   "udf: longad (1+) len %u lblock %u pblock %u\n",
+					la->extLength, 
+					la->extLocation.logicalBlockNum,
+					la->extLocation.logicalBlockNum+
+					  UDF_BLOCK_OFFSET(inode->i_sb));
+#endif
+				}
+			    } 
+			  }
+			  break;
+			case ICB_FLAG_AD_EXTENDED:
+			  {
+			    extent_ad * ext;
+			    offset=0;
+			    ext=udf_get_fileextent(fe, &offset);
+			    if ( (ext) && (ext->extLength) ) {
+				UDF_I_EXT0LEN(inode)=ext->extLength;
+				UDF_I_EXT0LOC(inode)=ext->extLocation;
+			        while (offset < fe->lengthAllocDescs) {
+#ifdef VDEBUG
+					printk(KERN_INFO
+					  "udf: ext len %u lblock %u pblock %u\n",
+					  ext->extLength,
+					  ext->extLocation,
+					  ext->extLocation+
+					      UDF_BLOCK_OFFSET(inode->i_sb));
+#endif
+			    		ext=udf_get_fileextent(fe, &offset);
+				}
+			    }
+			  }
+			  break;
+		} /* end switch ad_type */
+
 		switch (fe->icbTag.fileType) {
 		case FILE_TYPE_DIRECTORY:
 			inode->i_op = &udf_dir_inode_operations;;
@@ -90,6 +172,7 @@ udf_read_inode(struct inode *inode)
 			inode->i_mode = S_IFREG|S_IRUGO;
 			break;
 		case FILE_TYPE_SYMLINK:
+			/* untested! */
 			inode->i_op = &udf_file_inode_operations;
 			inode->i_mode = S_IFLNK|S_IRUGO|S_IXUGO;
 			break;
@@ -210,11 +293,11 @@ udf_iget(struct super_block *sb, unsigned long ino)
 		printk(KERN_WARNING "udf: i_op != NULL\n");
 		inode->i_op = NULL;
 	}
-	/*
+#ifdef VDEBUG	
 	if (inode->i_nlink)
-		printk(KERN_WARNING "udf: i_nlink != 0, %d\n",
+		printk(KERN_DEBUG "udf: i_nlink != 0, %d\n",
 			inode->i_nlink);
-	*/
+#endif
 
 	/*
 	 * Set defaults, but the inode is still incomplete!
@@ -240,11 +323,72 @@ udf_iget(struct super_block *sb, unsigned long ino)
 
 	inode->i_version = 1;
 
-	UDF_I_VOL(inode) = 0; /* for volume sets, leave 0 for now */
-	UDF_I_BLOCK(inode) = inode->i_ino;
-
 	udf_read_inode(inode);
 
 	return inode;
+}
+
+/*
+ * given an inode and block ...
+ */
+int 
+udf_bmap(struct inode * inode,int block)
+{
+	off_t b_off, size, remainder;
+	unsigned int firstext;
+	int result;
+
+	if (block<0) {
+		printk(KERN_ERR "udf: udf_bmap: block<0\n");
+		return 0;
+	}
+
+	if (!inode) {
+		printk(KERN_ERR "udf: udf_bmap: NULL inode\n");
+		return 0;
+	}
+
+	b_off = block * inode->i_sb->s_blocksize;
+
+	/*
+	 * If we are beyond the end of this file, don't give out any
+	 * blocks.
+	 */
+	if( b_off > inode->i_size ) {
+	    off_t	max_legal_read_offset;
+
+	    /*
+	     * If we are *way* beyond the end of the file, print a message.
+	     * Access beyond the end of the file up to the next page boundary
+	     * is normal, however because of the way the page cache works.
+	     * In this case, we just return 0 so that we can properly fill
+	     * the page with useless information without generating any
+	     * I/O errors.
+	     */
+	    max_legal_read_offset = (inode->i_size + PAGE_SIZE - 1)
+	      & ~(PAGE_SIZE - 1);
+	    if( b_off >= max_legal_read_offset ) {
+		printk(KERN_ERR "udf: udf_bmap: block>= EOF(%d, %ld)\n", block,
+		       inode->i_size);
+	    }
+	    return 0;
+	}
+
+	firstext = UDF_I_EXT0LOC(inode) + UDF_BLOCK_OFFSET(inode->i_sb);
+	size = UDF_I_EXT0LEN(inode) >> inode->i_sb->s_blocksize_bits; /* in blocks */
+	remainder=UDF_I_EXT0LEN(inode) % inode->i_sb->s_blocksize;
+	if ( remainder )
+		size++;
+
+#ifdef VDEBUG
+	printk(KERN_DEBUG "udf: first inode: inode=%lx firstext=%u size=%lu len=%lu\n",
+		inode->i_ino, firstext, size, (long unsigned int)UDF_I_EXT0LEN(inode));
+#endif
+	result= firstext + block;
+#ifdef VDEBUG
+	printk(KERN_DEBUG "udf: udf_bmap: mapped inode:block %lx:%d to block %u, b_off %lu\n",
+		inode->i_ino, block, result, b_off);
+#endif
+	return result;
 }
 

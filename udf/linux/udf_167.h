@@ -45,6 +45,7 @@
  *
  * 10/2/98 dgb	Adaptation
  * 10/4/98 	Changes by HJA Sandkuyl
+ * 10/7/98	Changed FILE_EXISTENCE to FILE_HIDDEN, per UDF 2.0 spec
  */
 
 #ifdef __linux__
@@ -447,7 +448,7 @@ struct FileIdentDesc {
 #endif /*__linux__ */
 
 /* File Characteristics (ECMA 167 4/14.4.3) */
-#define FILE_EXISTENCE	1
+#define FILE_HIDDEN	1
 #define FILE_DIRECTORY	2
 #define FILE_DELETED	4
 #define FILE_PARENT	8
@@ -460,6 +461,9 @@ struct AllocExtDesc {
 };
 
 /* ICB Tag (ECMA 167 4/14.6) */
+#ifdef __linux__
+#pragma pack(1)
+#endif /*__linux__ */
 typedef struct {
 	Uint32 priorRecordedNumDirectEntries;
 	Uint16 strategyType;
@@ -470,6 +474,9 @@ typedef struct {
 	lb_addr parentICBLocation;
 	Uint16 flags;
 } icbtag;
+#ifdef __linux__
+#pragma pack()
+#endif /*__linux__ */
 
 /* ICB File Type (ECMA 167 4/14.6.6) */
 #define FILE_TYPE_NONE		0x00U
@@ -519,6 +526,9 @@ struct TerminalEntry {
 };
 
 /* File Entry (ECMA 167 4/14.9) */
+#ifdef __linux__
+#pragma pack(1)
+#endif /*__linux__ */
 struct FileEntry {
 	tag descTag;
 	icbtag icbTag;
@@ -543,6 +553,9 @@ struct FileEntry {
 	Uint8 extendedAttr[0];
 	Uint8 allocDescs[0];
 };
+#ifdef __linux__
+#pragma pack()
+#endif /*__linux__ */
 
 /* File Permissions (ECMA 167 4/14.9.5) */
 #define PERM_O_EXEC	0x00000001U
