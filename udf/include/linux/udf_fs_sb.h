@@ -47,17 +47,24 @@ struct udf_virtual_data
 	__u16	s_start_offset;
 };
 
+struct udf_bitmap
+{
+	short_ad			s_ad;
+	__u16				s_nr_groups;
+	struct buffer_head 	**s_block_bitmap;
+};
+
 struct udf_part_map
 {
 	union
 	{
-		__u32			bitmap;
-		struct inode	*table;
+		struct udf_bitmap	*s_bitmap;
+		struct inode		*s_table;
 	}		s_uspace;
 	union
 	{
-		__u32			bitmap;
-		struct inode	*table;
+		struct udf_bitmap	*s_bitmap;
+		struct inode		*s_table;
 	}		s_fspace;
 	__u32	s_partition_root;
 	__u32	s_partition_len;
@@ -77,47 +84,43 @@ struct udf_part_map
 
 struct udf_sb_info
 {
-	struct udf_part_map *s_partmaps;
-	__u8  s_volident[32];
+	struct udf_part_map	*s_partmaps;
+	__u8				s_volident[32];
 
 	/* Overall info */
-	__u16 s_partitions;
-	__u16 s_partition;
+	__u16				s_partitions;
+	__u16				s_partition;
 
 	/* Sector headers */
-	__u32 s_session;
-	__u32 s_anchor[4];
-	__u32 s_lastblock;
+	__u32				s_session;
+	__u32				s_anchor[4];
+	__u32				s_lastblock;
 
-	struct buffer_head *s_lvidbh;
-
-	__u16 s_loaded_block_bitmaps;
-	__u32 s_block_bitmap_number[UDF_MAX_BLOCK_LOADED];
-	struct buffer_head *s_block_bitmap[UDF_MAX_BLOCK_LOADED];
+	struct buffer_head	*s_lvidbh;
 
 	/* Default permissions */
-	mode_t s_umask;
-	gid_t s_gid;
-	uid_t s_uid;
+	mode_t				s_umask;
+	gid_t				s_gid;
+	uid_t				s_uid;
 
 	/* Root Info */
-	time_t s_recordtime;
+	time_t				s_recordtime;
 
 	/* Fileset Info */
-	__u16 s_serialnum;
+	__u16				s_serialnum;
 
 	/* highest UDF revision we have recorded to this media */
-	__u16 s_udfrev;
+	__u16				s_udfrev;
 
 	/* Miscellaneous flags */
-	__u32 s_flags;
+	__u32				s_flags;
 
 	/* VAT inode */
-	struct inode    *s_vat;
+	struct inode		*s_vat;
 
-#if LINUX_VERSION_CODE < 0x020206
-	int s_rename_lock;
-	struct wait_queue * s_rename_wait;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,6)
+	int					 s_rename_lock;
+	struct wait_queue 	*s_rename_wait;
 #endif
 };
 
