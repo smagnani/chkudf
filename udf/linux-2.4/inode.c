@@ -193,6 +193,7 @@ void udf_expand_file_adinicb(struct inode * inode, int newsize, int * err)
 			PAGE_CACHE_SIZE - UDF_I_LENALLOC(inode));
 		memcpy((char *)kaddr, bh->b_data + udf_file_entry_alloc_offset(inode),
 			UDF_I_LENALLOC(inode));
+		SetPageUptodate(page);
 		kunmap(page);
 	}
 	memset(bh->b_data + udf_file_entry_alloc_offset(inode),
@@ -468,6 +469,14 @@ static struct buffer_head * inode_getblk(struct inode * inode, long block,
 	if (etype == -1)
 	{
 		endnum = startnum = ((count > 1) ? 1 : count);
+		if (laarr[c].extLength & (inode->i_sb->s_blocksize - 1))
+		{
+			laarr[c].extLength =
+				(laarr[c].extLength & UDF_EXTENT_FLAG_MASK) |
+				(((laarr[c].extLength & UDF_EXTENT_LENGTH_MASK) +
+					inode->i_sb->s_blocksize - 1) &
+				~(inode->i_sb->s_blocksize - 1));
+		}
 		c = !c;
 		laarr[c].extLength = (EXTENT_NOT_RECORDED_NOT_ALLOCATED << 30) |
 			((offset + 1) << inode->i_sb->s_blocksize_bits);
@@ -1109,6 +1118,7 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 		case FILE_TYPE_DIRECTORY:
 		{
 			inode->i_op = &udf_dir_inode_operations;
+			inode->i_fop = &udf_dir_operations;
 			inode->i_mode |= S_IFDIR;
 			inode->i_nlink ++;
 			break;
@@ -1121,6 +1131,7 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 			else
 				inode->i_data.a_ops = &udf_aops;
 			inode->i_op = &udf_file_inode_operations;
+			inode->i_fop = &udf_file_operations;
 			inode->i_mode |= S_IFREG;
 			break;
 		}
