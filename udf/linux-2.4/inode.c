@@ -515,11 +515,8 @@ static struct buffer_head * inode_getblk(struct inode * inode, long block,
 		else
 			lastblock = 1;
 	}
+	udf_release_data(cbh);
 	udf_release_data(nbh);
-	if (!pbh)
-		pbh = cbh;
-	else
-		udf_release_data(cbh);
 
 	/* if the current extent is not recorded but allocated, get the
 		block in the extent corresponding to the requested block */
@@ -814,6 +811,16 @@ static void udf_merge_extents(struct inode *inode,
 				i --;
 				(*endnum) --;
 			}
+		}
+		else if ((laarr[i].extLength >> 30) == (EXT_NOT_RECORDED_ALLOCATED >> 30))
+		{
+			udf_free_blocks(inode->i_sb, inode, laarr[i].extLocation, 0,
+				((laarr[i].extLength & UDF_EXTENT_LENGTH_MASK) +
+				inode->i_sb->s_blocksize - 1) >> inode->i_sb->s_blocksize_bits);
+			laarr[i].extLocation.logicalBlockNum = 0;
+			laarr[i].extLocation.partitionReferenceNum = 0;
+			laarr[i].extLength = (laarr[i].extLength & UDF_EXTENT_LENGTH_MASK) |
+				EXT_NOT_RECORDED_NOT_ALLOCATED;
 		}
 	}
 }
