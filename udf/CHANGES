@@ -163,3 +163,8 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
                 mkudf updates
 
 12/25/00 blf	fixed a bunch of write bugs and a directory read bug
+
+06/05/01 blf	fixed a rename bug when rename caused a AD_IN_ICB to be expanded out of the directory
+		added strict mount option
+		added iocharset= to allow using NLS (vs default of utf8)
+		rewrote sparing support - added udf_relocate_blocks
