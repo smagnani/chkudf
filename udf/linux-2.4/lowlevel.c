@@ -70,7 +70,6 @@ udf_get_last_session(struct super_block *sb)
 unsigned int
 udf_get_last_block(struct super_block *sb)
 {
-	kdev_t dev = sb->s_dev;
 	struct block_device *bdev = sb->s_bdev;
 	int ret;
 	unsigned long lblock = 0;
