@@ -220,8 +220,6 @@ extern int udf_UTF8toCS0(dstring *, struct ustr *, int);
 extern Uint16 udf_crc(Uint8 *, Uint32, Uint16);
 
 /* misc.c */
-extern uid_t  udf_convert_uid(int);
-extern gid_t  udf_convert_gid(int);
 extern Uint32 udf64_low32(Uint64);
 extern Uint32 udf64_high32(Uint64);
 extern void udf_update_tag(char *, int);

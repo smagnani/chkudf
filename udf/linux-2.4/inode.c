@@ -1001,11 +1001,11 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 	else /* if (le16_to_cpu(fe->icbTag.strategyType) == 4096) */
 		UDF_I_STRAT4096(inode) = 1;
 
-	inode->i_uid = udf_convert_uid(le32_to_cpu(fe->uid));
-	if ( !inode->i_uid ) inode->i_uid = UDF_SB(inode->i_sb)->s_uid;
+	inode->i_uid = le32_to_cpu(fe->uid);
+	if ( inode->i_uid == -1 ) inode->i_uid = UDF_SB(inode->i_sb)->s_uid;
 
-	inode->i_gid = udf_convert_gid(le32_to_cpu(fe->gid));
-	if ( !inode->i_gid ) inode->i_gid = UDF_SB(inode->i_sb)->s_gid;
+	inode->i_gid = le32_to_cpu(fe->gid);
+	if ( inode->i_gid == -1 ) inode->i_gid = UDF_SB(inode->i_sb)->s_gid;
 
 	inode->i_nlink = le16_to_cpu(fe->fileLinkCount);
 	if (!inode->i_nlink)

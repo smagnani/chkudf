@@ -64,24 +64,6 @@ udf64_high32(Uint64 indat)
 	return indat >> 32;
 }
 
-uid_t udf_convert_uid(int uidin)
-{
-	if ( uidin == -1 )
-		return 0;
-	if ( uidin > (64*1024U - 1) ) /* 16 bit UID */
-		return 0;
-	return uidin;
-}
-
-gid_t udf_convert_gid(int gidin)
-{
-	if ( gidin == -1 )
-		return 0;
-	if ( gidin > (64*1024U - 1) ) /* 16 bit GID */
-		return 0;
-	return gidin;
-}
-
 #if defined(__linux__) && defined(__KERNEL__)
 
 extern struct buffer_head *
