@@ -208,7 +208,7 @@ do_more:
 			}
 		}
 	}
-	mark_buffer_dirty(bh, 1);
+	mark_buffer_dirty(bh);
 	if (overflow)
 	{
 		block += count;
@@ -218,7 +218,7 @@ do_more:
 error_return:
 	sb->s_dirt = 1;
 	if (UDF_SB_LVIDBH(sb))
-		mark_buffer_dirty(UDF_SB_LVIDBH(sb), 1);
+		mark_buffer_dirty(UDF_SB_LVIDBH(sb));
 	unlock_super(sb);
 	return;
 }
@@ -275,7 +275,7 @@ repeat:
 		bit ++;
 		block ++;
 	}
-	mark_buffer_dirty(bh, 1);
+	mark_buffer_dirty(bh);
 	if (block_count > 0)
 		goto repeat;
 out:
@@ -283,7 +283,7 @@ out:
 	{
 		UDF_SB_LVID(sb)->freeSpaceTable[partition] =
 			cpu_to_le32(le32_to_cpu(UDF_SB_LVID(sb)->freeSpaceTable[partition])-alloc_count);
-		mark_buffer_dirty(UDF_SB_LVIDBH(sb), 1);
+		mark_buffer_dirty(UDF_SB_LVIDBH(sb));
 	}
 	sb->s_dirt = 1;
 	unlock_super(sb);
@@ -418,13 +418,13 @@ got_block:
 		goto repeat;
 	}
 
-	mark_buffer_dirty(bh, 1);
+	mark_buffer_dirty(bh);
 
 	if (UDF_SB_LVIDBH(sb))
 	{
 		UDF_SB_LVID(sb)->freeSpaceTable[partition] =
 			cpu_to_le32(le32_to_cpu(UDF_SB_LVID(sb)->freeSpaceTable[partition])-1);
-		mark_buffer_dirty(UDF_SB_LVIDBH(sb), 1);
+		mark_buffer_dirty(UDF_SB_LVIDBH(sb));
 	}
 	sb->s_dirt = 1;
 	unlock_super(sb);
@@ -478,7 +478,7 @@ static void udf_table_free_blocks(const struct inode * inode,
 	{
 		UDF_SB_LVID(sb)->freeSpaceTable[UDF_SB_PARTITION(sb)] =
 			cpu_to_le32(le32_to_cpu(UDF_SB_LVID(sb)->freeSpaceTable[UDF_SB_PARTITION(sb)])+count);
-		mark_buffer_dirty(UDF_SB_LVIDBH(sb), 1);
+		mark_buffer_dirty(UDF_SB_LVIDBH(sb));
 	}
 
 	start = bloc.logicalBlockNum + offset;
@@ -656,7 +656,7 @@ static void udf_table_free_blocks(const struct inode * inode,
 				}
 			}
 			udf_update_tag(obh->b_data, loffset);
-			mark_buffer_dirty(obh, 1);
+			mark_buffer_dirty(obh);
 		}
 
 		if (elen) /* It's possible that stealing the block emptied the extent */
@@ -674,7 +674,7 @@ static void udf_table_free_blocks(const struct inode * inode,
 				aed->lengthAllocDescs =
 					cpu_to_le32(le32_to_cpu(aed->lengthAllocDescs) + adsize);
 				udf_update_tag(nbh->b_data, nextoffset);
-				mark_buffer_dirty(nbh, 1);
+				mark_buffer_dirty(nbh);
 			}
 		}
 	}
@@ -762,7 +762,7 @@ static int udf_table_prealloc_blocks(const struct inode * inode,
 	{
 		UDF_SB_LVID(sb)->freeSpaceTable[partition] =
 			cpu_to_le32(le32_to_cpu(UDF_SB_LVID(sb)->freeSpaceTable[partition])-alloc_count);
-		mark_buffer_dirty(UDF_SB_LVIDBH(sb), 1);
+		mark_buffer_dirty(UDF_SB_LVIDBH(sb));
 	}
 	sb->s_dirt = 1;
 	unlock_super(sb);
@@ -876,7 +876,7 @@ static int udf_table_new_block(const struct inode * inode,
 	}
 	memset(bh->b_data, 0, sb->s_blocksize);
 	mark_buffer_uptodate(bh, 1);
-	mark_buffer_dirty(bh, 1);
+	mark_buffer_dirty(bh);
 	udf_release_data(bh);
 
 	if (goal_elen)
@@ -889,7 +889,7 @@ static int udf_table_new_block(const struct inode * inode,
 	{
 		UDF_SB_LVID(sb)->freeSpaceTable[partition] =
 			cpu_to_le32(le32_to_cpu(UDF_SB_LVID(sb)->freeSpaceTable[partition])-1);
-		mark_buffer_dirty(UDF_SB_LVIDBH(sb), 1);
+		mark_buffer_dirty(UDF_SB_LVIDBH(sb));
 	}
 
 	sb->s_dirt = 1;
