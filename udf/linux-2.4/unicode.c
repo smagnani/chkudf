@@ -420,7 +420,7 @@ int udf_get_filename(struct super_block *sb, Uint8 *sname, Uint8 *dname, int fle
 		return 0;
 	}
 
-	if (UDF_SB(sb)->s_flags & (1 << UDF_FLAG_UTF8))
+	if (UDF_QUERY_FLAG(sb, UDF_FLAG_UTF8))
 	{
 		if (!udf_CS0toUTF8(&filename, &unifilename) )
 		{
@@ -428,7 +428,7 @@ int udf_get_filename(struct super_block *sb, Uint8 *sname, Uint8 *dname, int fle
 			return 0;
 		}
 	}
-	else if (UDF_SB(sb)->s_flags & (1 << UDF_FLAG_NLS_MAP))
+	else if (UDF_QUERY_FLAG(sb, UDF_FLAG_NLS_MAP))
 	{
 		if (!udf_CS0toNLS(UDF_SB(sb)->s_nls_map, &filename, &unifilename) )
 		{
