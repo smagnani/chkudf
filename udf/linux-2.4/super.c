@@ -1299,8 +1299,8 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	int i;
 
 	uopt.flags = 0;
-	uopt.uid = 0;
-	uopt.gid = 0;
+	uopt.uid = -1;
+	uopt.gid = -1;
 	uopt.umask = 0;
 
 	/* Lock the module in memory (if applicable) */
