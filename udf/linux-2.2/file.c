@@ -46,6 +46,29 @@
 
 typedef void * poll_table; 
 
+int udf_adinicb_readpage (struct file * file, struct page * page)
+{
+	struct inode * inode;
+	struct buffer_head *bh;
+	int block;
+
+	inode = file->f_dentry->d_inode;
+
+	memset((char *)page_address(page), 0, PAGE_SIZE);
+	block = udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0);
+	bh = getblk (inode->i_dev, block, inode->i_sb->s_blocksize);
+	if (!buffer_uptodate(bh))
+	{
+		ll_rw_block (READ, 1, &bh);
+		wait_on_buffer(bh);
+	}
+	memcpy((char *)page_address(page), bh->b_data + udf_ext0_offset(inode),
+		inode->i_size);
+	brelse(bh);
+	set_bit(PG_uptodate, &page->flags);
+	return 0;
+}
+
 /*
  * Make sure the offset never goes beyond the 32-bit mark..
  */
@@ -560,10 +583,10 @@ struct inode_operations udf_file_inode_operations_adinicb = {
 	NULL,					/* rename */
 	NULL,					/* readlink */
 	NULL,					/* follow_link */
-	udf_readpage_adinicb,	/* readpage */
+	udf_adinicb_readpage,	/* readpage */
 	NULL,					/* writepage */
 	NULL,					/* bmap */
-	udf_truncate_adinicb,	/* truncate */
+	udf_truncate,			/* truncate */
 	NULL,					/* permission */
 	NULL,					/* smap */
 	NULL,					/* updatepage */
