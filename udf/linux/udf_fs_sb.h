@@ -12,6 +12,8 @@
  *		ftp://prep.ai.mit.edu/pub/gnu/GPL
  *	Each contributing author retains all rights to their own work.
  */
+#ifdef __KERNEL__
+
 #include <linux/time.h>
 
 
@@ -40,9 +42,15 @@ struct udf_sb_info {
 	__u32 s_partition_root;
 	__u32 s_partition_len;
 	__u32 s_filecount;
+	__u8  s_volident[32];
+
+	/* directory info */
+	__u32 s_lastdirino;
+	__u32 s_lastdirnum;
 
 	/* Root Info */
 	time_t s_recordtime;
+	timestamp s_timestamp;
 
 	/* Miscellaneous flags */
 	int s_flags;
@@ -79,8 +87,15 @@ struct udf_sb_info {
 #define UDF_SB_FILESET(X)	( UDF_SB(X)->s_fileset )
 #define UDF_SB_ROOTDIR(X)	( UDF_SB(X)->s_rootdir )
 #define UDF_SB_RECORDTIME(X)	( UDF_SB(X)->s_recordtime )
+#define UDF_SB_TIMESTAMP(X)	( UDF_SB(X)->s_timestamp )
 #define UDF_SB_PARTROOT(X)	( UDF_SB(X)->s_partition_root )
 #define UDF_SB_PARTLEN(X)	( UDF_SB(X)->s_partition_len )
 #define UDF_SB_FILECOUNT(X)	( UDF_SB(X)->s_filecount )
+#define UDF_SB_VOLIDENT(X)	( UDF_SB(X)->s_volident )
+#define UDF_SB_LASTDIRINO(X)	( UDF_SB(X)->s_lastdirino )
+#define UDF_SB_LASTDIRNUM(X)	( UDF_SB(X)->s_lastdirnum )
 
+#define UDF_BLOCK_OFFSET(X)	  ( UDF_SB_PARTROOT(X) )
+
+#endif	/* defined(__KERNEL__) */
 #endif /* !defined(_LINUX_UDF_FS_SB_H) */

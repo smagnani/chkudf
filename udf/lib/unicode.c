@@ -23,7 +23,46 @@
  */
 
 #include <linux/udf_fs.h>
+
+#ifdef __KERNEL__
+#include <linux/kernel.h>
 #include <linux/string.h>	/* for memset */
+#else
+#include <string.h>
+#endif
+
+/*
+ * udf_build_ustr
+ */
+int udf_build_ustr(struct ustr *dest, dstring *ptr, int size)
+{
+    int usesize;
+
+    if ( (!dest) || (!ptr) || (!size) )
+	return -1;
+
+    memset(dest, 0, sizeof(struct ustr));
+    usesize= (size > UDF_NAME_LEN) ? UDF_NAME_LEN : size;
+    dest->u_cmpID=ptr[0];
+    dest->u_len=ptr[size-1];
+    memcpy(dest->u_name, ptr+1, usesize-1);
+    return 0;
+}
+
+/*
+ * udf_build_ustr_exact
+ */
+int udf_build_ustr_exact(struct ustr *dest, dstring *ptr, int exactsize)
+{
+    if ( (!dest) || (!ptr) || (!exactsize) )
+	return -1;
+
+    memset(dest, 0, sizeof(struct ustr));
+    dest->u_cmpID=ptr[0];
+    dest->u_len=exactsize;
+    memcpy(dest->u_name, ptr+1, exactsize-1);
+    return 0;
+}
 
 /*
  * udf_ocu_to_udf8
@@ -55,17 +94,18 @@ int udf_CS0toUTF8(struct ustr *utf_o, struct ustr *ocu_i)
 
 	ocu=ocu_i->u_name;
 
-	ocu_len = ocu[UDF_NAME_LEN - 1];
-	cmp_id = ocu[0];
+	ocu_len = ocu_i->u_len;
+	cmp_id = ocu_i->u_cmpID;
 	utf_o->u_len=0;
 
 	if ((cmp_id != 8) && (cmp_id != 16)) {
+#ifdef __KERNEL__
 		printk(KERN_ERR "udf: unknown compression code (%d)\n", cmp_id);
+#endif
 		return -1;
 	}
 
-#ifdef USE_REAL_UNICODE
-	for (i = 1; (i < ocu_len) && (utf_o->u_len < UDF_NAME_LEN) ;) {
+	for (i = 0; (i < ocu_len) && (utf_o->u_len < UDF_NAME_LEN) ;) {
 
 		/* Expand OSTA compressed Unicode to Unicode */
 		c = ocu[i++];
@@ -84,20 +124,7 @@ int udf_CS0toUTF8(struct ustr *utf_o, struct ustr *ocu_i)
 			utf_o->u_name[utf_o->u_len++] = (char)(0x80 | (c & 0x3f));
 		}
 	}
-	utf_o->u_cmpID=cmp_id;
-#else
-	/* cheat, just for now. 8= already decoded, 16= << 8 */
-	if ( cmp_id == 8 ) {
-	    strncpy(utf_o->u_name, ocu+1, ocu_len-1);
-	    utf_o->u_len=ocu_len-1;
-	} else {
-	    for (i=2; i<ocu_len; i+=2) {
-		utf_o->u_name[i/2]=ocu[i];
-		utf_o->u_len=ocu_len/2;
-	    }	
-	}
 	utf_o->u_cmpID=8;
-#endif
 	utf_o->u_hash=0L;
 	utf_o->padding=0;
 
@@ -191,7 +218,9 @@ try_again:
 
 	if (utf_cnt) {
 error_out:
+#ifdef __KERNEL__
 		printk(KERN_ERR "udf: bad UTF-8 character\n");
+#endif
 		return -1;
 	}
 

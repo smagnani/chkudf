@@ -1,0 +1,6 @@
+10/2/98 dgb	Implemented some changes suggested by HJA Sandkuyl.
+		Moved files around to support user-land access to 
+		filesystem via library
+10/4/98 	Implemented table-based lookup for timestamp conversions
+		Fixed unicode convertions, added volident field to superblock
+10/6/98		Implemented directory operations, most of which work!

@@ -17,22 +17,9 @@
  */
 
 #include <config/udf.h>
-#include <linux/fs.h>
-#include <linux/udf_167.h>
-#include <linux/udf_udf.h>
-#include <linux/udf_fs_sb.h>
-#include <linux/udf_fs_i.h>
-#include "debug.h"
+#include <linux/udf_fs.h>
 
-/* Defined in dir.c */
-/* extern struct inode_operations udf_dir_iops; */
-
-/* External Prototypes */
-extern void udf_read_inode(struct inode *);
-extern void udf_write_inode(struct inode *);
-extern void udf_put_inode(struct inode *);
-extern void udf_delete_inode(struct inode *);
-extern struct inode *udf_iget(struct super_block *, unsigned long);
+#include "udfdecl.h"
 
 /*
  * udf_read_inode
@@ -48,14 +35,70 @@ extern struct inode *udf_iget(struct super_block *, unsigned long);
  *	July 1, 1997 - Andrew E. Mileski
  *	Written, tested, and released.
  */
-extern void
+void
 udf_read_inode(struct inode *inode)
 {
+	struct buffer_head *bh;
+	struct FileEntry *fe;
+	time_t modtime;
+	int block;
+
 	COOKIE(("udf_read_inode: inode=0x%lx\n", (unsigned long)inode));
 
-	/* Mark the inode as empty */
-	inode->i_op = NULL;
-	inode->i_nlink = 0;
+	block=udf_block_from_inode(inode->i_sb, inode->i_ino);
+	bh=udf_read_tagged(inode->i_sb, block, UDF_BLOCK_OFFSET(inode->i_sb));
+	if ( !bh ) {
+		printk(KERN_ERR "udf: udf_read_inode(ino %ld) block %d failed !bh\n",
+			inode->i_ino, block);
+		return;
+	}
+
+	fe=(struct FileEntry *)bh->b_data;
+	if ( fe->descTag.tagIdent == TID_FILE_ENTRY) {
+		printk(KERN_INFO
+	"udf: inode %ld FILE_ENTRY: perm 0x%x link %d type %x\n",
+			inode->i_ino, 
+			fe->permissions, 
+			fe->fileLinkCount, fe->icbTag.fileType);
+
+		inode->i_uid = udf_convert_uid(fe->uid);
+		if ( !inode->i_uid ) inode->i_uid = UDF_SB(inode->i_sb)->s_uid;
+
+		inode->i_gid = udf_convert_gid(fe->gid);
+		if ( !inode->i_gid ) inode->i_gid = UDF_SB(inode->i_sb)->s_gid;
+
+		inode->i_nlink = fe->fileLinkCount;
+		inode->i_size = udf64_low32(fe->informationLength);
+
+		if ( udf_stamp_to_time(&modtime, &fe->modificationTime) ) {
+			inode->i_atime = modtime;
+			inode->i_mtime = modtime;
+			inode->i_ctime = modtime;
+		} else {
+			inode->i_atime = UDF_SB_RECORDTIME(inode->i_sb);
+			inode->i_mtime = UDF_SB_RECORDTIME(inode->i_sb);
+			inode->i_ctime = UDF_SB_RECORDTIME(inode->i_sb);
+		}
+
+		switch (fe->icbTag.fileType) {
+		case FILE_TYPE_DIRECTORY:
+			inode->i_op = &udf_dir_inode_operations;;
+			inode->i_mode = S_IFDIR|S_IRUGO|S_IXUGO;
+			break;
+		case FILE_TYPE_REGULAR:
+			inode->i_op = &udf_file_inode_operations;
+			inode->i_mode = S_IFREG|S_IRUGO;
+			break;
+		case FILE_TYPE_SYMLINK:
+			inode->i_op = &udf_file_inode_operations;
+			inode->i_mode = S_IFLNK|S_IRUGO|S_IXUGO;
+			break;
+		}
+	} else {
+		printk(KERN_ERR "udf: inode %ld is tag 0x%x, not FILE_ENTRY\n",
+			inode->i_ino, ((tag *)bh->b_data)->tagIdent );
+	}
+	udf_release_data(bh);
 }
 
 #ifdef CONFIG_UDF_WRITE
@@ -73,7 +116,7 @@ udf_read_inode(struct inode *inode)
  *	July 1, 1997 - Andrew E. Mileski
  *	Written, tested, and released.
  */
-extern void
+void
 udf_write_inode(struct inode *inode)
 {
 	COOKIE(("udf_write_inode: inode=0x%lx\n", (unsigned long)inode));
@@ -93,7 +136,7 @@ udf_write_inode(struct inode *inode)
  *	July 1, 1997 - Andrew E. Mileski
  *	Written, tested, and released.
  */
-extern void
+void
 udf_put_inode(struct inode *inode)
 {
 	COOKIE(("udf_put_inode: inode=0x%lx\n", (unsigned long)inode));
@@ -117,7 +160,7 @@ udf_put_inode(struct inode *inode)
  *	July 1, 1997 - Andrew E. Mileski
  *	Written, tested, and released.
  */
-extern void
+void
 udf_delete_inode(struct inode *inode)
 {
 	COOKIE(("udf_delete_inode: inode=0x%lx\n", (unsigned long)inode));
@@ -138,7 +181,7 @@ udf_delete_inode(struct inode *inode)
  *	October 3, 1997 - Andrew E. Mileski
  *	Written, tested, and released.
  */
-extern struct inode *
+struct inode *
 udf_iget(struct super_block *sb, unsigned long ino)
 {
 	struct inode *inode;
@@ -152,6 +195,12 @@ udf_iget(struct super_block *sb, unsigned long ino)
 		return NULL;
 	}
 
+	if ( ino >= UDF_SB_PARTLEN(sb) ) {
+		printk(KERN_ERR "udf: iget(,%ld) out of range\n",
+			ino);
+		return NULL;
+ 	}
+
 	/* Cached inode - nothing to do */
 	if (inode->i_op && inode->i_nlink)
 		return inode;
@@ -161,8 +210,11 @@ udf_iget(struct super_block *sb, unsigned long ino)
 		printk(KERN_WARNING "udf: i_op != NULL\n");
 		inode->i_op = NULL;
 	}
+	/*
 	if (inode->i_nlink)
-		printk(KERN_WARNING "udf: i_nlink != 0\n");
+		printk(KERN_WARNING "udf: i_nlink != 0, %d\n",
+			inode->i_nlink);
+	*/
 
 	/*
 	 * Set defaults, but the inode is still incomplete!
@@ -174,27 +226,25 @@ udf_iget(struct super_block *sb, unsigned long ino)
 	 *	i_count = 1
 	 *	i_state = 0
 	 * and udf_read_inode() sets these:
-	 *	i_op = NULL
+	 *	(!)i_op = NULL
 	 *	i_nlink = 0
 	 */
 	inode->i_blksize = sb->s_blocksize;
 	inode->i_mode = UDF_SB(sb)->s_mode;
 	inode->i_gid = UDF_SB(sb)->s_gid;
 	inode->i_uid = UDF_SB(sb)->s_uid;
-	if ( inode->i_ino == UDF_ROOT_INODE ) {
-		inode->i_mode = S_IFDIR;
-		inode->i_mtime = UDF_SB_RECORDTIME(sb);
-		inode->i_ctime = UDF_SB_RECORDTIME(sb);
-	}
+
+	/* Mark the inode as empty */
+	inode->i_op = NULL; 
+	inode->i_nlink = 0; 
 
 	inode->i_version = 1;
 
-	UDF_I_VOL(inode) = 0;
-	UDF_I_PART(inode) = 0;
-	UDF_I_BLOCK(inode) = 0;
-	UDF_I_SECTOR(inode) = 0;
+	UDF_I_VOL(inode) = 0; /* for volume sets, leave 0 for now */
+	UDF_I_BLOCK(inode) = inode->i_ino;
 
 	udf_read_inode(inode);
 
 	return inode;
 }
+

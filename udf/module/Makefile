@@ -10,7 +10,7 @@
 #
 
 O_TARGET := udf.o
-O_OBJS   := crc.o inode.o misc.o super.o unicode.o debug.o
+O_OBJS   := inode.o super.o 
 M_OBJS   := $(O_TARGET)
 
 .SUFFIXES:
@@ -24,8 +24,8 @@ ifeq (${IN_KERNEL},y)
 	-DMODULE -Wall -Wstrict-prototypes -I. -I../../include \
 	-O2 -fomit-frame-pointer
     CONFIG=../../include/config/udf.h
-    UDFINC=../../include/linux/udf_fs.h
-
+    INCDIR=../../include/linux
+    LIBKUDF=libkudf.a
     include ../../.config
 
     TOPDIR = ../..
@@ -35,49 +35,49 @@ else
   CFLAGS	= -DDEBUG -D__KERNEL__=1 \
 	-O2 -Wall -Wstrict-prototypes -I.. -fomit-frame-pointer 
   MODFLAGS	= -DMODULE 
+  LIBKUDF=../lib/libkudf.a
   CONFIG=../config/udf.h
-  UDFINC=../linux/udf_fs.h
+  INCDIR=../linux
   LD		= ld
   LD_RFLAGS	=
   TOPDIR 	= .
 endif
+
+O_OBJS += $(LIBUDF)
+UDFINC=$(INCDIR)/udf_fs.h $(INCDIR)/udf_fs_sb.h $(INCDIR)/udf_fs_i.h udfdecl.h
 
 all: $(O_TARGET) 
 
 clean:
 	/bin/rm -f *.o $(O_TARGET)
 
-# file.c lookup.c and vat.c aren't intergrated in yet, as of 0.2
-newobj: file.o lookup.o vat.o
+UDFOBJ= inode.o super.o file.o dir.o
 
-udf.o:  crc.o inode.o misc.o super.o unicode.o debug.o
-	$(LD) $(LD_RFLAGS) -r -o $@ crc.o inode.o misc.o super.o unicode.o debug.o
+# lookup.c and vat.c aren't intergrated in yet, as of 0.2
+newobj: vat.o lookup.o
 
-crc.o:  crc.c $(CONFIG) $(UDFINC)
-	$(CC) $(CFLAGS) $(MODFLAGS) -c crc.c -o $@
+udf.o:  $(UDFOBJ) $(LIBKUDF)
+	$(LD) $(LD_RFLAGS) -r -o $@ $(UDFOBJ) $(LIBKUDF)
 
 inode.o:  inode.c $(UDFINC)
 	$(CC) $(CFLAGS) $(MODFLAGS) -c inode.c -o $@
 
-misc.o:  misc.c $(UDFINC)
-	$(CC) $(CFLAGS) $(MODFLAGS) -c misc.c -o $@
-
 super.o:  super.c $(UDFINC)
 	$(CC) $(CFLAGS) $(MODFLAGS) -c super.c -o $@
 
-unicode.o:  unicode.c  $(UDFINC)
-	$(CC) $(CFLAGS) $(MODFLAGS) -c unicode.c -o $@
-
-file.o:  file.c 
+file.o:  file.c  $(UDFINC)
 	$(CC) $(CFLAGS) $(MODFLAGS) -c file.c -o $@
 
-lookup.o:  lookup.c 
+dir.o:  dir.c  $(UDFINC)
+	$(CC) $(CFLAGS) $(MODFLAGS) -c dir.c -o $@
+
+dir.S:  dir.c  $(UDFINC)
+	$(CC) $(CFLAGS) $(MODFLAGS) -c dir.c -S -o $@
+
+lookup.o:  lookup.c $(UDFINC)
 	$(CC) $(CFLAGS) $(MODFLAGS) -c lookup.c -o $@
 
 vat.o:  vat.c 
 	$(CC) $(CFLAGS) $(MODFLAGS) -c vat.c -o $@
-
-debug.o:  debug.c 
-	$(CC) $(CFLAGS) $(MODFLAGS) -c debug.c -o $@
 
 

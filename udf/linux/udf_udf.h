@@ -21,17 +21,17 @@
  * HISTORY
  *	July 1, 1997 - Andrew E. Mileski
  *	Written, tested, and released.
+ *
+ * 10/2/98 dgb	changed UDF_ID_DEVELOPER
  */
 
 /* -------- Basic types and constants ----------- */
-typedef __u8 dstring;
 
 /* UDF character set (UDF 1.50 2.1.2) */
 #define UDF_CHAR_SET_TYPE	0
 #define UDF_CHAR_SET_INFO	"OSTA Compressed Unicode"
 
-/* Since I did all the work... */
-#define UDF_ID_DEVELOPER	"*Andrew E. Mileski"
+#define UDF_ID_DEVELOPER	"*linux_udf@hootie.lvld.hp.com"
 
 /* Entity Identifiers (UDF 1.50 6.1) */
 #define	UDF_ID_COMPLIANT	"*OSTA UDF Compliant"

@@ -12,14 +12,15 @@
  *		ftp://prep.ai.mit.edu/pub/gnu/GPL
  *	Each contributing author retains all rights to their own work.
  */
+
+#ifdef __KERNEL__
+
 #include <linux/udf_fs.h>
 
 struct udf_inode_info {
 	/* Physical address of inode */
-	__u16 i_volume;
-	__u16 i_partition;
-	__u32 i_block;
-	__u32 i_sector;
+	__u32 i_volume;
+	__u32 i_block;  /* partition relative */
 };
 
 #ifdef CONFIG_UDF
@@ -27,11 +28,13 @@ struct udf_inode_info {
 #else
 /* we're not compiled in, so we can't expect our stuff in <linux/fs.h> */
 #define UDF_I(X)	( (struct udf_inode_info *) &((X)->u.pipe_i))
+	/* god, this is slimy. stealing another filesystem's union area. */
+	/* for the record, pipe_i is 9 ints long, we're using 4  	 */
 #endif
 
 #define UDF_I_VOL(X)	(UDF_I(X)->i_volume)
-#define UDF_I_PART(X)	(UDF_I(X)->i_partition)
 #define UDF_I_BLOCK(X)	(UDF_I(X)->i_block)
-#define UDF_I_SECTOR(X)	(UDF_I(X)->i_sector)
+
+#endif /* defined(__KERNEL__) */
 
 #endif /* !defined(_LINUX_UDF_FS_I_H) */

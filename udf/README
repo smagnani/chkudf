@@ -1,23 +1,31 @@
 /* ------------------------------------------------------------------
  * Linux(r) UDF Filesystem Driver
- * Version: 0.2
+ * Version: 0.4
  *
  * This is Andrew's second "patch" vs kernel 2.1.62, 
- * converted to a standalone package.
+ * converted to a standalone package. Then many changes made. :-)
  * --------------------------------------------------------------- */
 
-To compile, cd to the "module" directory, 
-and type: "make"
+REQUIRED:
+	Linux version 2.1.56 or higher
+	
+COMPILING:
+	type: "make"
 
-To test, type "insmod udf.o", 
-then "mount -t udf /dev/scd0 /mnt",
-assuming /dev/scd0 is your scsi cdrom. 
-Substitute "scd0" and "/mnt" as appropriate for your system.
+TESTING:
+	type "insmod module/udf.o", 
+	then "mount -t udf /dev/scd0 /mnt"
+		(assuming /dev/scd0 is your scsi cdrom)
+		(Substitute "scd0" and "/mnt" as appropriate for your system)
 
 I've tested this on my system with kernel 2.1.122, a Ricoh MP-6200S,
 a UDF 1.5 disc created by Adaptec DirectCD, and the cheap-o
 SCSI card (aha152x compatible) that came with the Ricoh.
+
 I can mount/umount a udf filesystem without crashing my system.
+I can view the directory structure of the file system, including file
+dates and sizes.
+
 That's pretty much all that's currently implemented. If you want
 to help out, subscribe to the linux_udf mailing list below.
 

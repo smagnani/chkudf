@@ -42,28 +42,38 @@
  * HISTORY
  *	July 12, 1997 - Andrew E. Mileski
  *	Adapted from the ECMA-167 standard.
+ *
+ * 10/2/98 dgb	Adaptation
+ * 10/4/98 	Changes by HJA Sandkuyl
  */
 
-#include <linux/udf_udf.h>
+#ifdef __linux__
+#define Uint8	__u8
+#define Uint16	__u16
+#define Uint32	__u32
+#define Uint64	__u64
+typedef __u8	dstring;
+#endif
+
 
 /* CS0 Charspec (ECMA 167 1/7.2.1) */
 typedef struct {
-	__u8 charSetType;
-	__u8 charSetInfo[63];
+	Uint8 charSetType;
+	Uint8 charSetInfo[63];
 } charspec;
 
 /* Timestamp (ECMA 167 1/7.3) */
 typedef struct {
-	__u16 typeAndTimezone;
-	__u16 year;
-	__u8 month;
-	__u8 day;
-	__u8 hour;
-	__u8 minute;
-	__u8 second;
-	__u8 centiseconds;
-	__u8 hundredsOfMicroseconds;
-	__u8 microseconds;
+	Uint16 typeAndTimezone;
+	Uint16 year;
+	Uint8 month;
+	Uint8 day;
+	Uint8 hour;
+	Uint8 minute;
+	Uint8 second;
+	Uint8 centiseconds;
+	Uint8 hundredsOfMicroseconds;
+	Uint8 microseconds;
 } timestamp;
 
 /* Timestamp types (ECMA 167 1/7.3.1) */
@@ -73,9 +83,9 @@ typedef struct {
 
 /* Entity Identifier (ECMA 167 1/7.4) */
 typedef struct {
-	__u8 flags;
-	__u8 ident[23];
-	__u8 identSuffix[8];
+	Uint8 flags;
+	Uint8 ident[23];
+	Uint8 identSuffix[8];
 } regid;
 
 /* Entity identifier flags (ECMA 167 1/7.4.1) */
@@ -83,15 +93,15 @@ typedef struct {
 #define REGID_FLAGS_PROTECTED	0x02U
 
 /* Volume Structure Descriptor (ECMA 167 2/9.1) */
+#define STD_ID_LEN	5
 struct VolStructDesc {
-	__u8 structType;
-	__u8 stdIdent[5];
-	__u8 structVersion;
-	__u8 structData[2041];
+	Uint8 structType;
+	Uint8 stdIdent[STD_ID_LEN];
+	Uint8 structVersion;
+	Uint8 structData[2041];
 };
 
 /* Std structure identifiers (ECMA 167 2/9.1.2) */
-#define STD_ID_LEN	5
 #define STD_ID_BEA01	"BEA01"
 #define STD_ID_BOOT2	"BOOT2"
 #define STD_ID_CD001	"CD001"
@@ -101,36 +111,36 @@ struct VolStructDesc {
 
 /* Beginning Extended Area Descriptor (ECMA 167 2/9.2) */
 struct BeginningExtendedAreaDesc {
-	__u8 structType;
-	__u8 stdIdent;
-	__u8 structVersion;
-	__u8 structData[2041];
+	Uint8 structType;
+	Uint8 stdIdent[STD_ID_LEN];
+	Uint8 structVersion;
+	Uint8 structData[2041];
 };
 
 /* Terminating Extended Area Descriptor (ECMA 167 2/9.3) */
 struct TerminatingExtendedAreaDesc {
-	__u8 structType;
-	__u8 stdIdent;
-	__u8 structVersion;
-	__u8 structData[2041];
+	Uint8 structType;
+	Uint8 stdIdent[STD_ID_LEN];
+	Uint8 structVersion;
+	Uint8 structData[2041];
 };
 
 /* Boot Descriptor (ECMA 167 2/9.4) */
 struct BootDesc {
-	__u8 structType;
-	__u8 stdIdent;
-	__u8 structVersion;
-	__u8 reserved1;
+	Uint8 structType;
+	Uint8 stdIdent[STD_ID_LEN];
+	Uint8 structVersion;
+	Uint8 reserved1;
 	regid architectureType;
 	regid bootIdent;
-	__u32 bootExtLocation;
-	__u32 bootExtLength;
-	__u64 loadAddress;
-	__u64 startAddress;
+	Uint32 bootExtLocation;
+	Uint32 bootExtLength;
+	Uint64 loadAddress;
+	Uint64 startAddress;
 	timestamp descCreationDateAndTime;
-	__u16 flags;
-	__u8 reserved2[32];
-	__u8 bootUse[1906];
+	Uint16 flags;
+	Uint8 reserved2[32];
+	Uint8 bootUse[1906];
 };
 
 /* Boot flags (ECMA 167 2/9.4.12) */
@@ -138,67 +148,67 @@ struct BootDesc {
 
 /* Extent Descriptor (ECMA 167 3/7.1) */
 typedef struct {
-	__u32 extLength;
-	__u32 extLocation;
+	Uint32 extLength;
+	Uint32 extLocation;
 } extent_ad;
 
 /* Descriptor Tag (ECMA 167 3/7.2) */
 typedef struct {
-	__u16 tagIdent;
-	__u16 descVersion;
-	__u8 tagChecksum;
-	__u8 reserved;
-	__u16 tagSerialNum;
-	__u16 descCRC;
-	__u16 descCRCLength;
-	__u32 tagLocation;
+	Uint16 tagIdent;
+	Uint16 descVersion;
+	Uint8 tagChecksum;
+	Uint8 reserved;
+	Uint16 tagSerialNum;
+	Uint16 descCRC;
+	Uint16 descCRCLength;
+	Uint32 tagLocation;
 } tag;
 
 /* Tag Identifiers (ECMA 167 3/7.2.1) */
-#define UNUSED_DESC			0x0000U
-#define PRIMARY_VOL_DESC		0x0001U
-#define ANCHOR_VOL_DESC_PTR		0x0002U
-#define VOL_DESC_PTR			0x0003U
-#define IMP_USE_VOL_DESC		0x0004U
-#define PARTITION_DESC			0x0005U
-#define LOGICAL_VOL_DESC		0x0006U
-#define UNALLOC_SPACE_DESC		0x0007U
-#define TERMINATING_DESC		0x0008U
-#define LOGICAL_VOL_INTEGRITY_DESC	0x0009U
+#define TID_UNUSED_DESC			0x0000U
+#define TID_PRIMARY_VOL_DESC		0x0001U
+#define TID_ANCHOR_VOL_DESC_PTR		0x0002U
+#define TID_VOL_DESC_PTR		0x0003U
+#define TID_IMP_USE_VOL_DESC		0x0004U
+#define TID_PARTITION_DESC		0x0005U
+#define TID_LOGICAL_VOL_DESC		0x0006U
+#define TID_UNALLOC_SPACE_DESC		0x0007U
+#define TID_TERMINATING_DESC		0x0008U
+#define TID_LOGICAL_VOL_INTEGRITY_DESC	0x0009U
 
 /* Tag Identifiers (ECMA 167 4/7.2.1) */
-#define FILE_SET_DESC			0x0100U
-#define FILE_IDENT_DESC			0x0101U
-#define ALLOC_EXTENT_DESC		0x0102U
-#define INDIRECT_ENTRY			0x0103U
-#define TERMINAL_ENTRY			0x0104U
-#define FILE_ENTRY			0x0105U
-#define EXTENDED_ATTRE_HEADER_DESC	0x0106U
-#define UNALLOCATED_SPACE_ENTRY		0x0107U
-#define SPACE_BITMAP_DESC		0x0108U
-#define PARTITION_INTEGRITY_ENTRY	0x0109U
+#define TID_FILE_SET_DESC		0x0100U
+#define TID_FILE_IDENT_DESC		0x0101U
+#define TID_ALLOC_EXTENT_DESC		0x0102U
+#define TID_INDIRECT_ENTRY		0x0103U
+#define TID_TERMINAL_ENTRY		0x0104U
+#define TID_FILE_ENTRY			0x0105U
+#define TID_EXTENDED_ATTRE_HEADER_DESC	0x0106U
+#define TID_UNALLOCATED_SPACE_ENTRY	0x0107U
+#define TID_SPACE_BITMAP_DESC		0x0108U
+#define TID_PARTITION_INTEGRITY_ENTRY	0x0109U
 
 /* NSR Descriptor (ECMA 167 3/9.1) */
 struct NSRDesc {
-	__u8 structType;
-	__u8 stdIdent;
-	__u8 structVersion;
-	__u8 reserved;
-	__u8 structData[2040];
+	Uint8 structType;
+	Uint8 stdIdent[STD_ID_LEN];
+	Uint8 structVersion;
+	Uint8 reserved;
+	Uint8 structData[2040];
 };
 	
 /* Primary Volume Descriptor (ECMA 167 3/10.1) */
 struct PrimaryVolDesc {
 	tag descTag;
-	__u32 volDescSeqNum;
-	__u32 primaryVolDescNum;
+	Uint32 volDescSeqNum;
+	Uint32 primaryVolDescNum;
 	dstring volIdent[32];
-	__u16 volSeqNum;
-	__u16 maxVolSeqNum;
-	__u16 interchangeLvl;
-	__u16 maxInterchangeLvl;
-	__u32 charSetList;
-	__u32 maxCharSetList;
+	Uint16 volSeqNum;
+	Uint16 maxVolSeqNum;
+	Uint16 interchangeLvl;
+	Uint16 maxInterchangeLvl;
+	Uint32 charSetList;
+	Uint32 maxCharSetList;
 	dstring volSetIdent[128];
 	charspec descCharSet;
 	charspec explanatoryCharSet;
@@ -207,10 +217,10 @@ struct PrimaryVolDesc {
 	regid appIdent;
 	timestamp recordingDateAndTime;
 	regid impdent;
-	__u8 impUse[64];
-	__u32 predcessorVolDescSeqLocation;
-	__u32 flags;
-	__u8 reserved[22];
+	Uint8 impUse[64];
+	Uint32 predcessorVolDescSeqLocation;
+	Uint32 flags;
+	Uint8 reserved[22];
 };
 
 /* Primary volume descriptor flags (ECMA 167 3/10.1.21) */
@@ -221,39 +231,39 @@ struct AnchorVolDescPtr {
 	tag descTag;
 	extent_ad mainVolDescSeqExt;
 	extent_ad reserveVolDescSeqExt;
-	__u8 reserved[480];
+	Uint8 reserved[480];
 };
 
 /* Volume Descriptor Pointer (ECMA 167 3/10.3) */
 struct VolDescPtr {
 	tag descTag;
-	__u32 volDescSeqNum;
+	Uint32 volDescSeqNum;
 	extent_ad nextVolDescSeqExt;
-	__u8 reserved[484];
+	Uint8 reserved[484];
 };
 
 /* Implementation Use Volume Descriptor (ECMA 167 3/10.4) */
 struct ImpUseVolDesc {
 	tag descTag;
-	__u32 volDescSeqNum;
+	Uint32 volDescSeqNum;
 	regid impIdent;
-	__u8 impUse[460];
+	Uint8 impUse[460];
 };
 
 /* Partition Descriptor (ECMA 167 3/10.5) */
 struct PartitionDesc {
 	tag descTag;
-	__u32 volDescSeqNum;
-	__u16 partitionFlags;
-	__u16 partitionNumber;
+	Uint32 volDescSeqNum;
+	Uint16 partitionFlags;
+	Uint16 partitionNumber;
 	regid partitionContents;
-	__u8 partitionContentsUse[128];
-	__u32 accessType;
-	__u32 partitionStartingLocation;
-	__u32 partitionLength;
+	Uint8 partitionContentsUse[128];
+	Uint32 accessType;
+	Uint32 partitionStartingLocation;
+	Uint32 partitionLength;
 	regid impIdent;
-	__u8 impUse[128];
-	__u8 reserved[156];
+	Uint8 impUse[128];
+	Uint8 reserved[156];
 };
 
 /* Partition Flags (ECMA 167 3/10.5.3) */
@@ -275,25 +285,25 @@ struct PartitionDesc {
 /* Logical Volume Descriptor (ECMA 167 3/10.6) */
 struct LogicalVolDesc {
 	tag descTag;
-	__u32 volDescSeqNum;
+	Uint32 volDescSeqNum;
 	charspec descCharSet;
 	dstring logicalVolIdent[128];
-	__u32 logicalBlockSize;
+	Uint32 logicalBlockSize;
 	regid domainIdent;
-	__u8 logicalVolContentsUse[16];
-	__u32 mapTableLength;
-	__u32 numPartitionMaps;
+	Uint8 logicalVolContentsUse[16];
+	Uint32 mapTableLength;
+	Uint32 numPartitionMaps;
 	regid impIdent;
-	__u8 impUse[128];
+	Uint8 impUse[128];
 	extent_ad integritySeqExt;
-	__u8 partitionMaps[0];
+	Uint8 partitionMaps[0];
 };
 
 /* Generic Partition Map (ECMA 167 3/10.7.1) */
 struct GenericPartitionMap {
-	__u8 partitionMapType;
-	__u8 partitionMapLength;
-	__u8 partitionMapping[0];
+	Uint8 partitionMapType;
+	Uint8 partitionMapLength;
+	Uint8 partitionMapping[0];
 };
 
 /* Partition Map Type (ECMA 167 3/10.7.1.1) */
@@ -303,45 +313,45 @@ struct GenericPartitionMap {
 
 /* Type 1 Partition Map (ECMA 167 3/10.7.2) */
 struct GenericPartitionMap1 {
-	__u8 partitionMapType;
-	__u8 partitionMapLength;
-	__u16 volSeqNum;
-	__u16 partitionNum;
+	Uint8 partitionMapType;
+	Uint8 partitionMapLength;
+	Uint16 volSeqNum;
+	Uint16 partitionNum;
 };
 
 /* Type 2 Partition Map (ECMA 167 3/10.7.3) */
 struct GenericPartitionMap2 {
-	__u8 partitionMapType;
-	__u8 partitionMapLength;
-	__u8 partitionIdent[62];
+	Uint8 partitionMapType;
+	Uint8 partitionMapLength;
+	Uint8 partitionIdent[62];
 };
 
 /* Unallocated Space Descriptor (ECMA 167 3/10.8) */
 struct UnallocatedSpaceDesc {
 	tag descTag;
-	__u32 volDescSeqNum;
-	__u32 numAllocDescs;
+	Uint32 volDescSeqNum;
+	Uint32 numAllocDescs;
 	extent_ad allocDescs[0];
 };
 
 /* Terminating Descriptor (ECMA 3/10.9) */
 struct TerminatingDesc {
 	tag descTag;
-	__u8 reserved[4096];
+	Uint8 reserved[4096];
 };
 
 /* Logical Volume Integrity Descriptor (ECMA 167 3/10.10) */
 struct LogicalVolIntegrityDesc {
 	tag descTag;
 	timestamp recordingDateAndTime;
-	__u32 integrityType;
+	Uint32 integrityType;
 	extent_ad nextIntegrityExt;
-	__u8 logicalVolContentsUse[32];
-	__u32 numOfPartitions;
-	__u32 lengthOfImpUse;
-	__u32 freeSpaceTable[0];
-	__u32 sizeTable[0];
-	__u8 impUse[0];
+	Uint8 logicalVolContentsUse[32];
+	Uint32 numOfPartitions;
+	Uint32 lengthOfImpUse;
+	Uint32 freeSpaceTable[0];
+	Uint32 sizeTable[0];
+	Uint8 impUse[0];
 };
 
 /* Integrity Types (ECMA 167 3/10.10.3) */
@@ -349,28 +359,43 @@ struct LogicalVolIntegrityDesc {
 #define INTEGRITY_TYPE_CLOSE	1
 
 /* Recorded Address (ECMA 167 4/7.1) */
+#ifdef __linux__
+#pragma pack(1)
+#endif /*__linux__ */
 typedef struct {
-	__u32 logicalBlockNum;
-	__u16 partitionReferenceNum;
+	Uint32 logicalBlockNum;
+	Uint16 partitionReferenceNum;
 } lb_addr;
+#ifdef __linux__
+#pragma pack()
+#endif /*__linux__ */
+
+/* Extent interpretation (ECMA 167 4/14.14.1.1) */
+#define EXTENT_RECORDED_ALLOCATED               0x00
+#define EXTENT_RECORDED_NOT_ALLOCATED           0x01
+#define EXTENT_NOT_RECORDED_NOT_ALLOCATED       0x02
+#define EXTENT_NEXT_EXTENT_ALLOCDECS            0x03
 
 /* Long Allocation Descriptor (ECMA 167 4/14.14.2) */
 typedef struct {
-	__u32 extLength;
+	Uint32 extLength;
 	lb_addr extLocation;
-	__u8 impUse[6];
+	Uint8 impUse[6];
 } long_ad;
 
 /* File Set Descriptor (ECMA 167 4/14.1) */
+#ifdef __linux__
+#pragma pack(1)
+#endif /*__linux__ */
 struct FileSetDesc {
 	tag descTag;
 	timestamp recordingDateandTime;
-	__u16 interchangeLvl;
-	__u16 maxInterchangeLvl;
-	__u32 charSetList;
-	__u32 maxCharSetList;
-	__u32 fileSetNum;
-	__u32 fileSetDescNum;
+	Uint16 interchangeLvl;
+	Uint16 maxInterchangeLvl;
+	Uint32 charSetList;
+	Uint32 maxCharSetList;
+	Uint32 fileSetNum;
+	Uint32 fileSetDescNum;
 	charspec logicalVolIdentCharSet;
 	dstring logicalVolIdent[128];
 	charspec fileSetCharSet;
@@ -380,13 +405,16 @@ struct FileSetDesc {
 	long_ad rootDirectoryICB;
 	regid domainIdent;
 	long_ad nextExt;
-	__u8 reserved[48];
+	Uint8 reserved[48];
 };
+#ifdef __linux__
+#pragma pack()
+#endif /*__linux__ */
 
 /* Short Allocation Descriptor (ECMA 167 4/14.14.1) */
 typedef struct {
-	__u32 extLength;
-	__u32 extPosition;
+	Uint32 extLength;
+	Uint32 extPosition;
 } short_ad;
 
 /* Partition Header Descriptor (ECMA 167 4/14.3) */
@@ -396,21 +424,27 @@ struct PartitionHeaderDesc {
 	short_ad partitionIntegrityTable;
 	short_ad freedSpaceTable;
 	short_ad freedSpaceBitmap;
-	__u8 reserved[88];
+	Uint8 reserved[88];
 };
 
 /* File Identifier Descriptor (ECMA 167 4/14.4) */
+#ifdef __linux__
+#pragma pack(1)
+#endif /*__linux__ */
 struct FileIdentDesc {
 	tag descTag;
-	__u16 fileVersionNum;
-	__u8 fileCharacteristics;
-	__u8 lengthFileIdent;
+	Uint16 fileVersionNum;
+	Uint8 fileCharacteristics;
+	Uint8 lengthFileIdent;
 	long_ad icb;
-	__u16 lengthOfImpUse;
-	__u8 impUse[0];
+	Uint16 lengthOfImpUse;
+	Uint8 impUse[0];
 	char fileIdent[0];
-	__u8 padding[0];
+	Uint8 padding[0];
 };
+#ifdef __linux__
+#pragma pack()
+#endif /*__linux__ */
 
 /* File Characteristics (ECMA 167 4/14.4.3) */
 #define FILE_EXISTENCE	1
@@ -421,20 +455,20 @@ struct FileIdentDesc {
 /* Allocation Ext Descriptor (ECMA 167 4/14.5) */
 struct AllocExtDesc {
 	tag descTag;
-	__u32 previousAllocExtLocation;
-	__u32 lengthAllocDescription;
+	Uint32 previousAllocExtLocation;
+	Uint32 lengthAllocDescription;
 };
 
 /* ICB Tag (ECMA 167 4/14.6) */
 typedef struct {
-	__u32 priorRecordedNumDirectEntries;
-	__u16 strategyType;
-	__u8 strategyParameter[2];
-	__u16 numEntries;
-	__u8 reserved;
-	__u8 fileType;
+	Uint32 priorRecordedNumDirectEntries;
+	Uint16 strategyType;
+	Uint16 strategyParameter;
+	Uint16 numEntries;
+	Uint8 reserved;
+	Uint8 fileType;
 	lb_addr parentICBLocation;
-	__u16 flags;
+	Uint16 flags;
 } icbtag;
 
 /* ICB File Type (ECMA 167 4/14.6.6) */
@@ -465,6 +499,12 @@ typedef struct {
 #define ICB_FLAG_TRANSFORMED	0x0800U
 #define ICB_FLAG_MULTIVERSIONS	0x1000U
 
+/* ICB Flags Allocation type(ECMA 167 4/14.6.8) */
+#define ICB_FLAG_AD_SHORT	0
+#define ICB_FLAG_AD_LONG	1
+#define ICB_FLAG_AD_EXTENDED	2
+#define ICB_FLAG_AD_IN_ICB	3
+
 /* Indirect Entry (ECMA 167 4/14.7) */
 struct IndirectEntry {
 	tag descTag;
@@ -482,26 +522,26 @@ struct TerminalEntry {
 struct FileEntry {
 	tag descTag;
 	icbtag icbTag;
-	__u32 uid;
-	__u32 gid;
-	__u32 permissions;
-	__u16 fileLinkCount;
-	__u8 recordFormat;
-	__u8 recordDisplayAttr;
-	__u32 recordLength;
-	__u64 informationLength;
-	__u64 logicalBlocksRecorded;
+	Uint32 uid;
+	Uint32 gid;
+	Uint32 permissions;
+	Uint16 fileLinkCount;
+	Uint8 recordFormat;
+	Uint8 recordDisplayAttr;
+	Uint32 recordLength;
+	Uint64 informationLength;
+	Uint64 logicalBlocksRecorded;
 	timestamp accessTime;
 	timestamp modificationTime;
 	timestamp attrTime;
-	__u32 checkpoint;
+	Uint32 checkpoint;
 	long_ad extendedAttrICB;
 	regid impIdent;
-	__u64 uniqueID;
-	__u32 lengthExtendedAttr;
-	__u32 lengthAllocDescs;
-	__u8 extendedAttr[0];
-	__u8 allocDescs[0];
+	Uint64 uniqueID;
+	Uint32 lengthExtendedAttr;
+	Uint32 lengthAllocDescs;
+	Uint8 extendedAttr[0];
+	Uint8 allocDescs[0];
 };
 
 /* File Permissions (ECMA 167 4/14.9.5) */
@@ -538,50 +578,50 @@ struct FileEntry {
 /* Extended Attribute Header Descriptor (ECMA 167 4/14.10.1) */
 struct ExtendedAttrHeaderDesc {
 	tag descTag;
-	__u32 impAttrLocation;
-	__u32 appAttrLocation;
+	Uint32 impAttrLocation;
+	Uint32 appAttrLocation;
 };
 
 /* Generic Attribute Format (ECMA 4/14.10.2) */
 struct GenericAttrFormat {
-	__u32 attrType;
-	__u8 attrSubtype;
-	__u8 reserved[3];
-	__u32 attrLength;
-	__u8 attrData[0];
+	Uint32 attrType;
+	Uint8 attrSubtype;
+	Uint8 reserved[3];
+	Uint32 attrLength;
+	Uint8 attrData[0];
 };
 
 /* Character Set Attribute Format (ECMA 4/14.10.3) */
 struct CharSetAttrFormat {
-	__u32 attrType;
-	__u8 attrSubtype;
-	__u8 reserved[3];
-	__u32 attrLength;
-	__u32 escapeSeqLength;
-	__u8 charSetType;
-	__u8 escapeSeq[0];
+	Uint32 attrType;
+	Uint8 attrSubtype;
+	Uint8 reserved[3];
+	Uint32 attrLength;
+	Uint32 escapeSeqLength;
+	Uint8 charSetType;
+	Uint8 escapeSeq[0];
 };
 
 /* Alternate Permissions (ECMA 167 4/14.10.4) */
 struct AlternatePermissionsExtendedAttr {
-	__u32 attrType;
-	__u8 attrSubtype;
-	__u8 reserved[3];
-	__u32 attrLength;
-	__u16 ownerIdent;
-	__u16 groupIdent;
-	__u16 permission;
+	Uint32 attrType;
+	Uint8 attrSubtype;
+	Uint8 reserved[3];
+	Uint32 attrLength;
+	Uint16 ownerIdent;
+	Uint16 groupIdent;
+	Uint16 permission;
 };
 
 /* File Times Extended Attribute (ECMA 167 4/14.10.5) */
 struct FileTimesExtendedAttr {
-	__u32 attrType;
-	__u8 attrSubtype;
-	__u8 reserved[3];
-	__u32 attrLength;
-	__u32 dataLength;
-	__u32 fileTimeExistence;
-	__u8 fileTimes;
+	Uint32 attrType;
+	Uint8 attrSubtype;
+	Uint8 reserved[3];
+	Uint32 attrLength;
+	Uint32 dataLength;
+	Uint32 fileTimeExistence;
+	Uint8 fileTimes;
 };
 
 /* FileTimeExistence (ECMA 167 4/14.10.5.6) */
@@ -592,63 +632,63 @@ struct FileTimesExtendedAttr {
 
 /* Information Times Extended Attribute (ECMA 167 4/14.10.6) */
 struct InfoTimesExtendedAttr {
-	__u32 attrType;
-	__u8 attrSubtype;
-	__u8 reserved[3];
-	__u32 attrLength;
-	__u32 dataLength;
-	__u32 infoTimeExistence;
-	__u8 infoTimes[0];
+	Uint32 attrType;
+	Uint8 attrSubtype;
+	Uint8 reserved[3];
+	Uint32 attrLength;
+	Uint32 dataLength;
+	Uint32 infoTimeExistence;
+	Uint8 infoTimes[0];
 };
 
 /* Device Specification Extended Attribute (ECMA 167 4/14.10.7) */
 struct DeviceSpecificationExtendedAttr {
-	__u32 attrType;
-	__u8 attrSubtype;
-	__u8 reserved[3];
-	__u32 attrLength;
-	__u32 impUseLength;
-	__u32 majorDeviceIdent;
-	__u32 minorDeviceIdent;
-	__u8 impUse[0];
+	Uint32 attrType;
+	Uint8 attrSubtype;
+	Uint8 reserved[3];
+	Uint32 attrLength;
+	Uint32 impUseLength;
+	Uint32 majorDeviceIdent;
+	Uint32 minorDeviceIdent;
+	Uint8 impUse[0];
 };
 
 /* Implementation Use Extended Attr (ECMA 167 4/14.10.8) */
 struct ImpUseExtendedAttr {
-	__u32 attrType;
-	__u8 attrSubtype;
-	__u8 reserved[3];
-	__u32 attrLength;
-	__u32 impUseLength;
+	Uint32 attrType;
+	Uint8 attrSubtype;
+	Uint8 reserved[3];
+	Uint32 attrLength;
+	Uint32 impUseLength;
 	regid impIdent;
-	__u8 impUse[0];
+	Uint8 impUse[0];
 };
 
 /* Application Use Extended Attribute (ECMA 167 4/14.10.9) */
 struct AppUseExtendedAttr {
-	__u32 attrType;
-	__u8 attrSubtype;
-	__u8 reserved[3];
-	__u32 attrLength;
-	__u32 appUseLength;
+	Uint32 attrType;
+	Uint8 attrSubtype;
+	Uint8 reserved[3];
+	Uint32 attrLength;
+	Uint32 appUseLength;
 	regid appIdent;
-	__u8 appUse[0];
+	Uint8 appUse[0];
 };
 
 /* Unallocated Space Entry (ECMA 167 4/14.11) */
 struct UnallocatedSpaceEntry {
 	tag descTag;
 	icbtag icbTag;
-	__u32 lengthAllocDescs;
-	__u8 allocDescs[0];
+	Uint32 lengthAllocDescs;
+	Uint8 allocDescs[0];
 };
 
 /* Space Bitmap Descriptor (ECMA 167 4/14.12) */
 struct SpaceBitmap {
 	tag descTag;
-	__u32 numOfBits;
-	__u32 numOfBytes;
-	__u8 bitmap[0];
+	Uint32 numOfBits;
+	Uint32 numOfBytes;
+	Uint8 bitmap[0];
 };
 
 /* Partition Integrity Entry (ECMA 167 4/14.13) */
@@ -656,32 +696,62 @@ struct PartitionIntegrityEntry {
 	tag descTag;
 	icbtag icbTag;
 	timestamp recordingDateAndTime;
-	__u8 integrityType;
-	__u8 reserved[175];
+	Uint8 integrityType;
+	Uint8 reserved[175];
 	regid impIdent;
-	__u8 impUse[256];
+	Uint8 impUse[256];
 };
 
 /* Extended Allocation Descriptor (ECMA 167 4/14.14.3) */
 typedef struct { /* ECMA 167 4/14.14.3 */
-	__u32 extLength;
-	__u32 recordedLength;
-	__u32 informationLength;
+	Uint32 extLength;
+	Uint32 recordedLength;
+	Uint32 informationLength;
 	lb_addr extLocation;
 } ext_ad;
 
 /* Logical Volume Header Descriptor (ECMA 167 4/14.5) */
 struct LogicalVolHeaderDesc {
-	__u64 uniqueId;
-	__u8 reserved[24];
+	Uint64 uniqueId;
+	Uint8 reserved[24];
 };
 
 /* Path Component (ECMA 167 4/14.16.1) */
 struct PathComponent {
-	__u8 componentType;
-	__u8 lengthComponentIdent;
-	__u16 componentFileVersionNum;
+	Uint8 componentType;
+	Uint8 lengthComponentIdent;
+	Uint16 componentFileVersionNum;
 	dstring componentIdent[0];
+};
+
+/* File Entry (ECMA 167 4/14.17) */
+struct ExtendedFileEntry {
+	tag		descTag;
+	icbtag		icbTag;
+	Uint32		uid;
+	Uint32		gid;
+	Uint32		permissions;
+	Uint16		fileLinkCount;
+	Uint8		recordFormat;
+	Uint8		recordDisplayAttr;
+	Uint32		recordLength;
+	Uint64		informationLength;
+	Uint64		objectSize;
+	Uint64		logicalBlocksRecorded;
+	timestamp	accessTime;
+	timestamp	modificationTime;
+	timestamp	createTime;
+	timestamp	attrTime;
+	Uint32		checkpoint;
+	Uint32		reserved;
+	long_ad		extendedAttrICB;
+	long_ad		streamDirectoryICB;
+	regid		impIdent;
+	Uint64		uniqueID;
+	Uint32		lengthExtendedAttr;
+	Uint32		lengthAllocDescs;
+	Uint8		extendedAttr[0];
+	Uint8		allocDescs[0];
 };
 
 #endif /* !defined(_LINUX_UDF_167_H) */
