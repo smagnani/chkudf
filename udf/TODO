@@ -6,9 +6,6 @@ support all the accepted options -- blf
 support extended attributes -- blf
 
 full write support -- blf
-  link
-  symlink
-  mknod
   rename
   llseek
   write

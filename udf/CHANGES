@@ -78,3 +78,7 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
 				reading.
 				Futzed with the debugging code a bunch. Added udf_debug and
 				udf_info.
+
+04/09/99 blf	Added Configure script
+
+04/19/99 blf	Support for link, symlink, and mknod

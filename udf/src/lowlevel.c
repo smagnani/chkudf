@@ -2,15 +2,7 @@
  * lowlevel.c
  *
  * PURPOSE
- *  Low Level Routines for the UDF filesystem
- *
- * DESCRIPTION
- *	OSTA-UDF(tm) = Optical Storage Technology Association
- *	Universal Disk Format.
- *
- *	This code is based on version 1.50 of the UDF specification,
- *	and revision 2 of the ECMA 167 standard [equivalent to ISO 13346].
- *	http://www.osta.org/	http://www.ecma.ch/	http://www.iso.org/
+ *  Low Level Device Routines for the UDF filesystem
  *
  * CONTACTS
  *	E-mail regarding any portion of the Linux UDF file system should be
@@ -23,9 +15,11 @@
  *		ftp://prep.ai.mit.edu/pub/gnu/GPL
  *	Each contributing author retains all rights to their own work.
  *
+ *  (C) 1999 Ben Fennema
+ *
  * HISTORY
  *
- * 03/26/99 blf  created
+ *  03/26/99 blf  Created.
  */
 
 #include "udfdecl.h"

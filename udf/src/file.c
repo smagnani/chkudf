@@ -2,31 +2,31 @@
  * file.c
  *
  * PURPOSE
- *	This file attempts to document the kernel VFS.
- *
- * DESCRIPTION
- *	One day I'll have to write a book on this! :-)
+ *  File handling routines for the OSTA-UDF(tm) filesystem.
  *
  * CONTACTS
- *	E-mail regarding any portion of the Linux UDF file system should be
- *	directed to the development team mailing list (run by majordomo):
- *		linux_udf@hootie.lvld.hp.com
+ *  E-mail regarding any portion of the Linux UDF file system should be
+ *  directed to the development team mailing list (run by majordomo):
+ *    linux_udf@hootie.lvld.hp.com
  *
  * COPYRIGHT
- *	This file is distributed under the terms of the GNU General Public
- *	License (GPL). Copies of the GPL can be obtained from:
- *		ftp://prep.ai.mit.edu/pub/gnu/GPL
- *	Each contributing author retains all rights to their own work.
+ *  This file is distributed under the terms of the GNU General Public
+ *  License (GPL). Copies of the GPL can be obtained from:
+ *    ftp://prep.ai.mit.edu/pub/gnu/GPL
+ *  Each contributing author retains all rights to their own work.
+ *
+ *  (C) 1998-1999 Dave Boynton
+ *  (C) 1998-1999 Ben Fennema
  *
  * HISTORY
  *
- * 10/2/98 dgb   Attempt to integrate into udf.o
- * 10/7/98       Switched to using generic_readpage, etc., like isofs
- *               And it works!
- * 12/06/98 blf  Added udf_file_read. uses generic_file_read for all cases but
- *               ICB_FLAG_AD_IN_ICB.
+ *  10/02/98 dgb  Attempt to integrate into udf.o
+ *  10/07/98      Switched to using generic_readpage, etc., like isofs
+ *                And it works!
+ *  12/06/98 blf  Added udf_file_read. uses generic_file_read for all cases but
+ *                ICB_FLAG_AD_IN_ICB.
+ *  04/06/99      64 bit file handling on 32 bit systems taken from ext2 file.c
  */
-
 
 #include "udfdecl.h"
 #include <linux/fs.h>

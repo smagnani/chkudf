@@ -2,39 +2,44 @@
  * super.c
  *
  * PURPOSE
- *	Super block routines for UDF filesystem.
+ *  Super block routines for the OSTA-UDF(tm) filesystem.
  *
  * DESCRIPTION
- *	OSTA-UDF(tm) = Optical Storage Technology Association
- *	Universal Disk Format.
+ *  OSTA-UDF(tm) = Optical Storage Technology Association
+ *  Universal Disk Format.
  *
- *	This code is based on version 1.50 of the UDF specification,
- *	and revision 2 of the ECMA 167 standard [equivalent to ISO 13346].
- *	http://www.osta.org/	http://www.ecma.ch/	http://www.iso.org/
+ *  This code is based on version 2.00 of the UDF specification,
+ *  and revision 3 of the ECMA 167 standard [equivalent to ISO 13346].
+ *    http://www.osta.org/
+ *    http://www.ecma.ch/
+ *    http://www.iso.org/
  *
  * CONTACTS
- *	E-mail regarding any portion of the Linux UDF file system should be
- *	directed to the development team mailing list (run by majordomo):
- *		linux_udf@hootie.lvld.hp.com
+ *  E-mail regarding any portion of the Linux UDF file system should be
+ *  directed to the development team mailing list (run by majordomo):
+ *	  linux_udf@hootie.lvld.hp.com
  *
  * COPYRIGHT
- *	This file is distributed under the terms of the GNU General Public
- *	License (GPL). Copies of the GPL can be obtained from:
- *		ftp://prep.ai.mit.edu/pub/gnu/GPL
- *	Each contributing author retains all rights to their own work.
+ *  This file is distributed under the terms of the GNU General Public
+ *  License (GPL). Copies of the GPL can be obtained from:
+ *    ftp://prep.ai.mit.edu/pub/gnu/GPL
+ *  Each contributing author retains all rights to their own work.
+ *
+ *  (C) 1998 Dave Boynton
+ *  (C) 1998-1999 Ben Fennema
  *
  * HISTORY
  *
- * 9/24/98 dgb:  changed to allow compiling outside of kernel, and
- *               added some debugging.
- * 10/1/98 dgb:  updated to allow (some) possibility of compiling w/2.0.34
- * 10/16/98      attempting some multi-session support
- * 10/17/98      added freespace count for "df"
- * 11/11/98 gr:  added novrs option
- * 11/26/98 dgb  added fileset,anchor mount options
- * 12/06/98 blf  really hosed things royally. vat/sparing support. sequenced vol descs
- *               rewrote option handling based on isofs
- * 12/20/98      find the free space bitmap (if it exists)
+ *  09/24/98 dgb  changed to allow compiling outside of kernel, and
+ *                added some debugging.
+ *  10/01/98 dgb  updated to allow (some) possibility of compiling w/2.0.34
+ *  10/16/98      attempting some multi-session support
+ *  10/17/98      added freespace count for "df"
+ *  11/11/98 gr   added novrs option
+ *  11/26/98 dgb  added fileset,anchor mount options
+ *  12/06/98 blf  really hosed things royally. vat/sparing support. sequenced vol descs
+ *                rewrote option handling based on isofs
+ *  12/20/98      find the free space bitmap (if it exists)
  */
 
 #ifndef LINUX_VERSION_CODE
@@ -989,8 +994,8 @@ udf_load_partition(struct super_block *sb, struct AnchorVolDescPtr *anchor, lb_a
 
 
 	/* Locate the reserve sequence */
-	reserve_s = le32_to_cpu(anchor->mainVolDescSeqExt.extLocation);
-	reserve_e = le32_to_cpu(anchor->mainVolDescSeqExt.extLength);
+	reserve_s = le32_to_cpu(anchor->reserveVolDescSeqExt.extLocation);
+	reserve_e = le32_to_cpu(anchor->reserveVolDescSeqExt.extLength);
 	reserve_e = reserve_e >> sb->s_blocksize_bits;
 	reserve_e += reserve_s;
 
@@ -1224,7 +1229,9 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	sb->dq_op = NULL;
 	sb->s_dirt = 0;
 	sb->s_magic = UDF_SUPER_MAGIC;
+#if 0
 	sb->s_flags |= MS_NODEV | MS_NOSUID; /* should be overridden by mount */
+#endif
 
 	for (i=0; i<UDF_MAX_BLOCK_LOADED; i++)
 	{

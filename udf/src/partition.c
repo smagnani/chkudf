@@ -15,6 +15,8 @@
  *              ftp://prep.ai.mit.edu/pub/gnu/GPL
  *      Each contributing author retains all rights to their own work.
  *
+ *  (C) 1998-1999 Ben Fennema
+ *
  * HISTORY
  *
  * 12/06/98 blf  Created file. 

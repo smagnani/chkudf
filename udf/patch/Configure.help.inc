@@ -1,6 +1,6 @@
---- linux-2.2.5/Documentation/Configure.help	Fri Mar 12 15:51:43 1999
-+++ linux/Documentation/Configure.help	Fri Mar 12 16:01:52 1999
-@@ -6807,6 +6807,23 @@
+--- linux-2.2.6/Documentation/Configure.help	Mon Apr 19 15:51:43 1999
++++ linux/Documentation/Configure.help	Mon Apr 19 16:01:52 1999
+@@ -6842,6 +6842,23 @@
    like lynx or netscape). Say Y here if you want to be able to read
    Joliet CDROMs under Linux.
  

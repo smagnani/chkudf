@@ -5,73 +5,62 @@
 #		of the kernel
 # 11/29/98      more rearranging
 #
-include ../Make.conf
-include /usr/src/linux/.config
-#
-# uncomment below if your /usr/include/linux isn't a symlink to 
-# the kernel source
-#
-# KERNH		=-I/usr/src/linux/include 
-#
-UDF_INC		= ../include
-UDF_CONFIG	= $(UDF_INC)/config/udf.h
-CFLAGS_DEBUG = -g
+include ../config.mk
 
-CFLAGS		= -pipe -D__KERNEL__=1 $(KERNH) -DMODULE -Wall -Wstrict-prototypes\
-	-DCONFIG_UDF_FS_EXT -O -I$(UDF_INC)
+MODDIR	= $(PREFIX)/lib/modules/$(UTS_RELEASE)
 
-ifdef CONFIG_SMP
-CFLAGS += -D__SMP__
+ifndef CFLAGS
+KFLAGS	= -O2 -Wall -Wstrict-prototypes -Winline -pipe
 endif
 
-CFLAGS += $(CFLAGS_DEBUG)
-#
-# comment out following if you don't want experimental write support
-#
-CFLAGS += -DCONFIG_UDF_RW
-#
-# uncomment one of the following if your kernel is compiled for module versioning
-#
-#CFLAGS += -DMODVERSIONS -include modversions.h
-#CFLAGS += -DMODVERSIONS -include $(KERNH)/linux/modversions.h
-#
+CPPFLAGS= $(PCDEBUG) -D__KERNEL__ -DMODULE -I../include\
+		-I. -I$(LINUX)/include $(SMPFLAG) $(WRITEFLAG) -DCONFIG_UDF_FS_EXT
+COFLAGS	= -kv
 
-# ---------------------------------------------------------
-# you shouldn't need to change (much) below this
-#
+CFLAGS	= $(KFLAGS) $(MFLAG)
 
-O_TARGET := udf.o
+SRCS	:= balloc.c dir.c file.c ialloc.c inode.c lowlevel.c namei.c
+SRCS	+= partition.c super.c truncate.c symlink.c
+SRCS	+= crc.c directory.c misc.c udftime.c unicode.c
 
-all: $(O_TARGET) 
+OBJS	= $(SRCS:%.c=%.o)
 
-install: $(O_TARGET)
-	@echo "MDEST= $(MODULE_DEST)"
-	$(INSTALL) $(O_TARGET) $(MODULE_DEST)
+MODULES	= udf.o
 
-make.log: 
-	make clean
-	make all >make.log 2>&1
+all:	../.prereq.ok kcheck $(MODULES)
 
-UDFH    = $(INCDIR)/udf_fs.h  $(INCDIR)/udf_udf.h $(INCDIR)/udf_167.h
-UDFH   += $(INCDIR)/udf_fs_sb.h $(INCDIR)/udf_fs_i.h udfdecl.h udf_i.h udf_sb.h
-
-O_OBJS   := inode.o super.o dir.o crc.o directory.o file.o
-O_OBJS   += udftime.o unicode.o misc.o partition.o namei.o balloc.o
-O_OBJS   += ialloc.o truncate.o lowlevel.o
-
-%.S:  	../src/%.c 
-	$(CC) -S -c $(CFLAGS) -o $@ $<
-
-%.o:  	../src/%.c 
-	$(CC) -c $(CFLAGS) -o $@ $<
-
-udf.o:  $(O_OBJS) 
-	@echo "* ------------------------------- *"
-	@echo "* making UDF module               *"
-	@echo "* ------------------------------- *"
-	$(LD) $(LD_RFLAGS) -r -o $@ $(O_OBJS)
+showvars:
+	@echo CFLAGS $(CFLAGS)
+	@echo CPPFLAGS $(CPPFLAGS)
+	@echo MODDIR $(MODDIR)
+	@echo UTS_RELEASE $(UTS_RELEASE)
+	@echo SRCS $(SRCS)
+	@echo OBJS $(OBJS)
 
 clean:
-	@-/bin/rm -f *.o $(O_TARGET) $(L_TARGET) make.log *~ *.bak
-	@echo "module cleaned."
+	rm -f core core.* *.o .*.o *.s *.a *~ .depend .depfiles/*.d
 
+install: $(MODULES) ../.prereq.ok kcheck
+	-mkdir -p $(MODDIR)/fs
+	install -o root -g root -m 644 $(MODULES) $(MODDIR)/fs/
+
+# Stuff to automatically maintain dependency files
+
+%.o:	../src/%.c
+	$(CC) -MD $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
+	@mkdir -p .depfiles ; mv $*.d .depfiles
+
+kcheck:
+	@. ../config.out ; \
+	if [ "##CHECK" != "" ] ; then \
+		if [ "`cksum < $$CHECK`" != "$$CKSUM" ] ; then \
+			/bin/echo -n "Kernel configuration has changed." ; \
+			/bin/echo " Please re-run 'make config'." ; \
+			exit 1 ; \
+		fi ; \
+	fi
+
+udf.o: $(OBJS)
+	$(LD) -m "`ld --help | awk '/supported emulations/ { print $$4}'`" -r -o $@ $(OBJS)
+
+-include $(SRCS:%.c=.depfiles/%.d)

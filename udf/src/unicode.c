@@ -91,7 +91,6 @@ int udf_dstring_to_ustr(struct ustr *dest, const dstring *src, int dlength)
 		return dlength;
 	else
 		return 0;
-
 }
 
 /*
@@ -204,7 +203,7 @@ int udf_CS0toUTF8(struct ustr *utf_o, struct ustr *ocu_i)
 				utf_o->u_name[utf_o->u_len-1]);
 #endif
 		} else {
-			utf_o->u_name[utf_o->u_len++] = (char)(0xc0 | (c >> 12));
+			utf_o->u_name[utf_o->u_len++] = (char)(0xe0 | (c >> 12));
 			utf_o->u_name[utf_o->u_len++] = (char)(0x80 | ((c >> 6) & 0x3f));
 			utf_o->u_name[utf_o->u_len++] = (char)(0x80 | (c & 0x3f));
 #ifdef __KERNEL__

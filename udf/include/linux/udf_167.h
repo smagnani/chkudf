@@ -604,8 +604,8 @@ struct GenericAttrFormat {
 
 /* Character Set Attribute Format (ECMA 4/14.10.3) */
 struct CharSetAttrFormat {
-	Uint32 attrType;
-	Uint8 attrSubtype;
+	Uint32 attrType;		/* 1 */
+	Uint8 attrSubtype;		/* 1 */
 	Uint8 reserved[3];
 	Uint32 attrLength;
 	Uint32 escapeSeqLength;
@@ -615,8 +615,8 @@ struct CharSetAttrFormat {
 
 /* Alternate Permissions (ECMA 167 4/14.10.4) */
 struct AlternatePermissionsExtendedAttr {
-	Uint32 attrType;
-	Uint8 attrSubtype;
+	Uint32 attrType;		/* 3 */
+	Uint8 attrSubtype;		/* 1 */
 	Uint8 reserved[3];
 	Uint32 attrLength;
 	Uint16 ownerIdent;
@@ -626,8 +626,8 @@ struct AlternatePermissionsExtendedAttr {
 
 /* File Times Extended Attribute (ECMA 167 4/14.10.5) */
 struct FileTimesExtendedAttr {
-	Uint32 attrType;
-	Uint8 attrSubtype;
+	Uint32 attrType;		/* 5 */
+	Uint8 attrSubtype;		/* 1 */
 	Uint8 reserved[3];
 	Uint32 attrLength;
 	Uint32 dataLength;
@@ -643,8 +643,8 @@ struct FileTimesExtendedAttr {
 
 /* Information Times Extended Attribute (ECMA 167 4/14.10.6) */
 struct InfoTimesExtendedAttr {
-	Uint32 attrType;
-	Uint8 attrSubtype;
+	Uint32 attrType;		/* 6 */
+	Uint8 attrSubtype;		/* 1 */
 	Uint8 reserved[3];
 	Uint32 attrLength;
 	Uint32 dataLength;
@@ -654,8 +654,8 @@ struct InfoTimesExtendedAttr {
 
 /* Device Specification Extended Attribute (ECMA 167 4/14.10.7) */
 struct DeviceSpecificationExtendedAttr {
-	Uint32 attrType;
-	Uint8 attrSubtype;
+	Uint32 attrType;		/* 12 */
+	Uint8 attrSubtype;		/* 1 */
 	Uint8 reserved[3];
 	Uint32 attrLength;
 	Uint32 impUseLength;
@@ -666,8 +666,8 @@ struct DeviceSpecificationExtendedAttr {
 
 /* Implementation Use Extended Attr (ECMA 167 4/14.10.8) */
 struct ImpUseExtendedAttr {
-	Uint32 attrType;
-	Uint8 attrSubtype;
+	Uint32 attrType;		/* 2048 */
+	Uint8 attrSubtype;		/* 1 */
 	Uint8 reserved[3];
 	Uint32 attrLength;
 	Uint32 impUseLength;
@@ -677,14 +677,23 @@ struct ImpUseExtendedAttr {
 
 /* Application Use Extended Attribute (ECMA 167 4/14.10.9) */
 struct AppUseExtendedAttr {
-	Uint32 attrType;
-	Uint8 attrSubtype;
+	Uint32 attrType;		/* 65536 */
+	Uint8 attrSubtype;		/* 1 */
 	Uint8 reserved[3];
 	Uint32 attrLength;
 	Uint32 appUseLength;
 	EntityID appIdent;
 	Uint8 appUse[0];
 };
+
+#define EXTATTR_CHAR_SET	1
+#define EXTATTR_ALT_PERMS	3
+#define EXTATTR_FILE_TIMES	5
+#define EXTATTR_INFO_TIMES	6
+#define EXTATTR_DEV_SPEC	12
+#define EXTATTR_IMP_USE		2048
+#define EXTATTR_APP_USE		65536
+
 
 /* Unallocated Space Entry (ECMA 167 4/14.11) */
 struct UnallocatedSpaceEntry {

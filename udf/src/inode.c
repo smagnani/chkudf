@@ -2,30 +2,35 @@
  * inode.c
  *
  * PURPOSE
- *	Inode handling routines for the OSTA-UDF(tm) filesystem.
+ *  Inode handling routines for the OSTA-UDF(tm) filesystem.
  *
  * CONTACTS
- *	E-mail regarding any portion of the Linux UDF file system should be
- *	directed to the development team mailing list (run by majordomo):
- *		linux_udf@hootie.lvld.hp.com
+ *  E-mail regarding any portion of the Linux UDF file system should be
+ *  directed to the development team mailing list (run by majordomo):
+ *    linux_udf@hootie.lvld.hp.com
  *
  * COPYRIGHT
- *	This file is distributed under the terms of the GNU General Public
- *	License (GPL). Copies of the GPL can be obtained from:
- *		ftp://prep.ai.mit.edu/pub/gnu/GPL
- *	Each contributing author retains all rights to their own work.
+ *  This file is distributed under the terms of the GNU General Public
+ *  License (GPL). Copies of the GPL can be obtained from:
+ *    ftp://prep.ai.mit.edu/pub/gnu/GPL
+ *  Each contributing author retains all rights to their own work.
+ *
+ *  (C) 1998 Dave Boynton
+ *  (C) 1998-1999 Ben Fennema
+ *  (C) 1999 Stelias Computing Inc
  *
  * HISTORY
  *
- * 10/4/98  dgb  Added rudimentary directory functions
- * 10/7/98       Fully working udf_bmap! It works!
- * 11/25/98      bmap altered to better support extents
- * 12/06/98 blf  partition support in udf_iget, udf_bmap and udf_read_inode
- * 12/12/98      rewrote udf_bmap to handle next extents and descs across
- *               block boundaries (which is not actually allowed)
- * 12/20/98      added support for strategy 4096
- * 03/07/99		 rewrote udf_bmap (again)
- *				 New funcs, block_bmap, udf_next_aext
+ *  10/04/98 dgb  Added rudimentary directory functions
+ *  10/07/98      Fully working udf_bmap! It works!
+ *  11/25/98      bmap altered to better support extents
+ *  12/06/98 blf  partition support in udf_iget, udf_bmap and udf_read_inode
+ *  12/12/98      rewrote udf_bmap to handle next extents and descs across
+ *                block boundaries (which is not actually allowed)
+ *  12/20/98      added support for strategy 4096
+ *  03/07/99      rewrote udf_bmap (again)
+ *                New funcs, block_bmap, udf_next_aext
+ *  04/19/99      Support for writing device EA's for major/minor #
  *
  */
 
@@ -148,6 +153,64 @@ static lb_addr udf_alloc_block(struct inode *inode, lb_addr goal, int *err)
 #endif
 
 	return result;
+}
+
+struct buffer_head * udf_getblk(struct inode * inode, long block, int create, int * err)
+{
+	struct buffer_head * bh;
+	
+	*err = -EIO;
+	if (block < 0)
+	{
+		udf_warning(inode->i_sb, "udf_getblk", "block < 0");
+		return NULL;
+	}
+	/* block > big check??? */
+
+	/* inode_getblk, block_getblk */
+}
+
+struct buffer_head * udf_bread(struct inode * inode, int block, int create, int * err)
+{
+	struct buffer_head * bh;
+	int prev_blocks;
+
+	prev_blocks = inode->i_blocks;
+
+	bh = udf_getblk(inode, block, create, err);
+	if (!bh)
+		return bh;
+
+	if (create &&
+		S_ISDIR(inode->i_mode) &&
+		inode->i_blocks > prev_blocks)
+	{
+		int i;
+		struct buffer_head *tmp_bh;
+
+		for (i=1;
+			i < UDF_SB_PREALLOC_DIR_BLOCKS(inode->i_sb);
+			i++)
+		{
+			tmp_bh = udf_getblk(inode, block+i, create, err);
+			if (!tmp_bh)
+			{
+				brelse(bh);
+				return 0;
+			}
+			brelse(tmp_bh);
+		}
+	}
+
+	if (buffer_uptodate(bh))
+		return bh;
+	ll_rw_block(READ, 1, &bh);
+	wait_on_buffer(bh);
+	if (buffer_uptodate(bh))
+		return bh;
+	brelse(bh);
+	*err = -EIO;
+	return NULL;
 }
 
 #endif
@@ -431,7 +494,6 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 		}
 	} /* end switch ad_type */
 
-
 	switch (fe->icbTag.fileType)
 	{
 		case FILE_TYPE_DIRECTORY:
@@ -448,12 +510,48 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 			inode->i_mode |= S_IFREG;
 			break;
 		}
+		case FILE_TYPE_BLOCK:
+		{
+			inode->i_op = &blkdev_inode_operations;
+			inode->i_mode |= S_IFBLK;
+			break;
+		}
+		case FILE_TYPE_CHAR:
+		{
+			inode->i_op = &chrdev_inode_operations;
+			inode->i_mode |= S_IFCHR;
+			break;
+		}
+		case FILE_TYPE_FIFO:
+		{
+			init_fifo(inode);
+		}
 		case FILE_TYPE_SYMLINK:
 		{
 			/* untested! */
-			inode->i_op = &udf_file_inode_operations;
+			inode->i_op = &udf_symlink_inode_operations;
 			inode->i_mode = S_IFLNK|S_IRWXUGO;
 			break;
+		}
+	}
+	if (S_ISCHR(inode->i_mode) || S_ISBLK(inode->i_mode))
+	{
+		struct buffer_head *tbh;
+		struct DeviceSpecificationExtendedAttr *dsea =
+			(struct DeviceSpecificationExtendedAttr *)
+				udf_get_extendedattr(inode, 12, 1, &tbh);
+
+		if (dsea)
+		{
+			inode->i_rdev = to_kdev_t(
+				(le32_to_cpu(dsea->majorDeviceIdent)) << 8) |
+				(le32_to_cpu(dsea->minorDeviceIdent) & 0xFF);
+			/* Developer ID ??? */
+			udf_release_data(tbh);
+		}
+		else
+		{
+			make_bad_inode(inode);
 		}
 	}
 }
@@ -542,12 +640,47 @@ udf_update_inode(struct inode *inode)
 		 PERM_U_DELETE | PERM_U_CHATTR));
 	fe->permissions = cpu_to_le32(udfperms);
 
-	if (inode->i_mode & S_IFDIR)
+	udf_debug("udf_update_inode: ino=%ld, mode=%d, nlink=%d\n", inode->i_ino, inode->i_mode, inode->i_nlink);
+
+	if (S_ISDIR(inode->i_mode))
 		fe->fileLinkCount = cpu_to_le16(inode->i_nlink - 1);
 	else
 		fe->fileLinkCount = cpu_to_le16(inode->i_nlink);
 
+
 	fe->informationLength = cpu_to_le64(inode->i_size);
+
+	if (S_ISCHR(inode->i_mode) || S_ISBLK(inode->i_mode))
+	{
+		EntityID *eid;
+		struct buffer_head *tbh;
+		struct DeviceSpecificationExtendedAttr *dsea =
+			(struct DeviceSpecificationExtendedAttr *)
+				udf_get_extendedattr(inode, 12, 1, &tbh);	
+
+		if (!dsea)
+		{
+			dsea = (struct DeviceSpecificationExtendedAttr *)
+				udf_add_extendedattr(inode,
+					sizeof(struct DeviceSpecificationExtendedAttr) +
+					sizeof(EntityID), 12, 0x3, &tbh);
+			dsea->attrType = 12;
+			dsea->attrSubtype = 1;
+			dsea->attrLength = sizeof(struct DeviceSpecificationExtendedAttr) +
+				sizeof(EntityID);
+			dsea->impUseLength = sizeof(EntityID);
+		}
+		eid = (EntityID *)dsea->impUse;
+		memset(eid, 0, sizeof(EntityID));
+		strcpy(eid->ident, UDF_ID_DEVELOPER);
+		eid->identSuffix[0] = UDF_OS_CLASS_UNIX;
+		eid->identSuffix[1] = UDF_OS_ID_LINUX;
+		udf_debug("nr=%d\n", kdev_t_to_nr(inode->i_rdev));
+		dsea->majorDeviceIdent = kdev_t_to_nr(inode->i_rdev) >> 8;
+		dsea->minorDeviceIdent = kdev_t_to_nr(inode->i_rdev) & 0xFF;
+		mark_buffer_dirty(tbh, 1);
+		udf_release_data(tbh);
+	}
 
 	if (UDF_I_EXTENDED_FE(inode) == 0)
 	{
@@ -594,12 +727,20 @@ udf_update_inode(struct inode *inode)
 	fe->icbTag.strategyType = UDF_I_STRAT4096(inode) ? cpu_to_le16(4096) :
 		cpu_to_le16(4);
 
-	if (inode->i_mode & S_IFDIR)
+	if (S_ISDIR(inode->i_mode))
 		fe->icbTag.fileType = FILE_TYPE_DIRECTORY;
-	else if (inode->i_mode & S_IFREG)
+	else if (S_ISREG(inode->i_mode))
 		fe->icbTag.fileType = FILE_TYPE_REGULAR;
-	else if (inode->i_mode & S_IFLNK)
+	else if (S_ISLNK(inode->i_mode))
 		fe->icbTag.fileType = FILE_TYPE_SYMLINK;
+	else if (S_ISBLK(inode->i_mode))
+		fe->icbTag.fileType = FILE_TYPE_BLOCK;
+	else if (S_ISCHR(inode->i_mode))
+		fe->icbTag.fileType = FILE_TYPE_CHAR;
+	else if (S_ISFIFO(inode->i_mode))
+		fe->icbTag.fileType = FILE_TYPE_FIFO;
+
+	udf_debug("filetype=%d\n", fe->icbTag.fileType);
 
 	icbflags = UDF_I_ALLOCTYPE(inode) |
 			((inode->i_mode & S_ISUID) ? ICB_FLAG_SETUID : 0) |

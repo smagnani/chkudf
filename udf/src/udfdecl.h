@@ -37,13 +37,17 @@ struct super_block;
 
 extern struct inode_operations udf_dir_inode_operations;
 extern struct inode_operations udf_file_inode_operations;
+extern struct inode_operations udf_symlink_inode_operations;
 
 extern void udf_warning(struct super_block *, const char *, const char *, ...);
 extern int udf_lookup(struct inode *, struct dentry *);
+extern int udf_create(struct inode *, struct dentry *, int);
+extern int udf_mknod(struct inode *, struct dentry *, int, int);
 extern int udf_mkdir(struct inode *, struct dentry *, int);
 extern int udf_rmdir(struct inode *, struct dentry *);
 extern int udf_unlink(struct inode *, struct dentry *);
-extern int udf_create(struct inode *, struct dentry *, int);
+extern int udf_symlink(struct inode *, struct dentry *, const char *);
+extern int udf_link(struct dentry *, struct inode *, struct dentry *);
 extern int udf_ioctl(struct inode *, struct file *, unsigned int, unsigned long);
 extern struct inode *udf_iget(struct super_block *, lb_addr);
 extern void udf_read_inode(struct inode *);
@@ -57,6 +61,8 @@ extern int udf_next_aext(struct inode *, lb_addr *, int *, lb_addr *, Uint32 *);
 extern int udf_read_tagged_data(char *, int size, int fd, int block, int partref);
 
 extern struct buffer_head *udf_bread(struct super_block *, int, int);
+extern struct GenericAttrFormat *udf_add_extendedattr(struct inode *, Uint32, Uint32, Uint8, struct buffer_head **);
+extern struct GenericAttrFormat *udf_get_extendedattr(struct inode *, Uint32, Uint8, struct buffer_head **);
 extern struct buffer_head *udf_read_tagged(struct super_block *, Uint32, Uint32, Uint16 *);
 extern struct buffer_head *udf_read_ptagged(struct super_block *, lb_addr, Uint32, Uint16 *);
 extern struct buffer_head *udf_read_untagged(struct super_block *, Uint32, Uint32);

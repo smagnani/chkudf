@@ -58,12 +58,12 @@ file_operations
 inode_operations
   create - udf_create (ext2_create)
   lookup - udf_lookup (ext2_lookup)
-  link (ext2_link)
+  link - udf_link (ext2_link)
   unlink - udf_unlink (ext2_unlink)
-  symlink (ext2_symlink)
+  symlink - udf_symlink (ext2_symlink)
   mkdir - udf_mkdir (ext2_mkdir)
   rmdir - udf_rmdir (ext2_rmdir)
-  mknod (ext2_mknod)
+  mknod - udf_mknod (ext2_mknod)
   rename (ext2_rename)
   readlink
   follow_link

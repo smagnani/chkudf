@@ -15,9 +15,13 @@
  *              ftp://prep.ai.mit.edu/pub/gnu/GPL
  *      Each contributing author retains all rights to their own work.
  *
+ *  (C) 1998-1999 Ben Fennema
+ *  (C) 1999 Stelias Computing Inc
+ *
  * HISTORY
  *
  * 12/12/98 blf  Created. Split out the lookup code from dir.c
+ * 04/19/99 blf  link, mknod, symlink support
  *
  */
 
@@ -532,12 +536,78 @@ int udf_create(struct inode *dir, struct dentry *dentry, int mode)
 	}
 	if (sbh != ebh)
 		udf_release_data(ebh);
-#ifdef VDEBUG
-	udf_debug("count=%d\n", sbh->b_count);
-#endif
 	udf_release_data(sbh);
 	d_instantiate(dentry, inode);
 	return 0;
+}
+
+int udf_mknod(struct inode * dir, struct dentry * dentry, int mode, int rdev)
+{
+	struct inode * inode;
+	struct buffer_head *sbh, *ebh;
+	int eoffset, soffset;
+	int err;
+	struct FileIdentDesc cfi, *fi;
+
+#ifdef VDEBUG
+	udf_debug("dir->ino=%ld, dentry=%s\n", dir->i_ino, dentry->d_name.name);
+#endif
+
+	err = -ENAMETOOLONG;
+	if (dentry->d_name.len >= UDF_NAME_LEN)
+		goto out;
+
+	err = -EIO;
+	inode = udf_new_inode(dir, mode, &err);
+	if (!inode)
+		goto out;
+
+	inode->i_uid = current->fsuid;
+	inode->i_mode = mode;
+	inode->i_op = NULL;
+	if (!(fi = udf_add_entry(dir, dentry, &soffset, &sbh, &eoffset, &ebh, &cfi, &err)))
+	{
+		udf_debug("udf_add_entry failure!\n");
+		inode->i_nlink --;
+		mark_inode_dirty(inode);
+		iput(inode);
+		return err;
+	}
+	cfi.icb.extLocation = UDF_I_LOCATION(inode);
+	cfi.icb.extLength = inode->i_sb->s_blocksize;
+	udf_write_fi(&cfi, fi, soffset, sbh, eoffset, ebh, NULL, NULL);
+	if (UDF_I_ALLOCTYPE(dir) == ICB_FLAG_AD_IN_ICB)
+	{
+		mark_inode_dirty(dir);
+		dir->i_version = ++event;
+	}
+	if (S_ISREG(inode->i_mode))
+	{
+		inode->i_op = &udf_file_inode_operations;
+	}
+	else if (S_ISCHR(inode->i_mode))
+	{
+		inode->i_op = &chrdev_inode_operations;
+	} 
+	else if (S_ISBLK(inode->i_mode))
+	{
+		inode->i_op = &blkdev_inode_operations;
+	}
+	else if (S_ISFIFO(inode->i_mode))
+	{
+		init_fifo(inode);
+	}
+	if (S_ISBLK(mode) || S_ISCHR(mode))
+		inode->i_rdev = to_kdev_t(rdev);
+	mark_inode_dirty(inode);
+
+	if (sbh != ebh)
+		udf_release_data(ebh);
+	udf_release_data(sbh);
+	d_instantiate(dentry, inode);
+	err = 0;
+out:
+	return err;
 }
 
 int udf_mkdir(struct inode * dir, struct dentry * dentry, int mode)
@@ -786,4 +856,152 @@ end_unlink:
 	udf_release_data(sbh);
 out:
 	return retval;
+}
+
+int udf_symlink(struct inode * dir, struct dentry * dentry, const char * symname)
+{
+	struct inode * inode;
+	struct PathComponent *pc;
+	struct buffer_head *sbh, *ebh;
+	int soffset, eoffset, elen = 0;
+	struct FileIdentDesc *fi;
+	struct FileIdentDesc cfi;
+	char *ea;
+	int err;
+
+	if (!(inode = udf_new_inode(dir, S_IFLNK, &err)))
+		goto out;
+
+	inode->i_mode = S_IFLNK | S_IRWXUGO;
+	inode->i_op = &udf_symlink_inode_operations;
+
+	sbh = udf_bread(inode->i_sb, inode->i_ino, inode->i_sb->s_blocksize);
+	if (!UDF_I_EXTENDED_FE(inode))
+		ea = sbh->b_data + sizeof(struct FileEntry) + UDF_I_LENEATTR(inode);
+	else
+		ea = sbh->b_data + sizeof(struct ExtendedFileEntry) + UDF_I_LENEATTR(inode);
+
+	eoffset = inode->i_sb->s_blocksize - (ea - sbh->b_data);
+	pc = (struct PathComponent *)ea;
+
+	if (*symname == '/')
+	{
+		do
+		{
+			symname++;
+		} while (*symname == '/');
+
+		pc->componentType = 1;
+		pc->lengthComponentIdent = 0;
+		pc->componentFileVersionNum = 0;
+		pc += sizeof(struct PathComponent);
+		elen += sizeof(struct PathComponent);
+	}
+
+	while (*symname && eoffset > elen + sizeof(struct PathComponent))
+	{
+		char *compstart;
+		pc = (struct PathComponent *)(ea + elen);
+
+		compstart = (char *)symname;
+
+		do
+		{
+			symname++;
+		} while (*symname && *symname != '/');
+
+		pc->componentType = 5;
+		pc->lengthComponentIdent = 0;
+		pc->componentFileVersionNum = 0;
+		if (pc->componentIdent[0] == '.')
+		{
+			if (pc->lengthComponentIdent == 1)
+				pc->componentType = 4;
+			else if (pc->lengthComponentIdent == 2 && pc->componentIdent[1] == '.')
+				pc->componentType = 3;
+		}
+
+		if (pc->componentType == 5)
+		{
+			if (elen + sizeof(struct PathComponent) + symname - compstart > eoffset)
+				pc->lengthComponentIdent = eoffset - elen - sizeof(struct PathComponent);
+			else
+				pc->lengthComponentIdent = symname - compstart;
+
+			memcpy(pc->componentIdent, compstart, pc->lengthComponentIdent);
+		}
+
+		elen += sizeof(struct PathComponent) + pc->lengthComponentIdent;
+
+		if (*symname)
+		{
+			do
+			{
+				symname++;
+			} while (*symname == '/');
+		}
+	}
+
+	UDF_I_LENALLOC(inode) = inode->i_size = elen;
+	mark_inode_dirty(inode);
+
+	if (!(fi = udf_add_entry(dir, dentry, &soffset, &sbh, &eoffset, &ebh, &cfi, &err)))
+		goto out;
+	cfi.icb.extLocation = UDF_I_LOCATION(inode);
+	cfi.icb.extLength = inode->i_sb->s_blocksize;
+	udf_write_fi(&cfi, fi, soffset, sbh, eoffset, ebh, NULL, NULL);
+	if (UDF_I_ALLOCTYPE(dir) == ICB_FLAG_AD_IN_ICB)
+	{
+		mark_inode_dirty(dir);
+		dir->i_version = ++event;
+	}
+	if (sbh != ebh)
+		udf_release_data(ebh);
+	udf_release_data(sbh);
+	d_instantiate(dentry, inode);
+	err = 0;
+
+out:
+	return err;
+}
+
+int udf_link(struct dentry * old_dentry, struct inode * dir,
+	 struct dentry *dentry)
+{
+	struct inode *inode = old_dentry->d_inode;
+	struct buffer_head *sbh, *ebh;
+	int eoffset, soffset;
+	int err;
+	struct FileIdentDesc cfi, *fi;
+
+	if (S_ISDIR(inode->i_mode))
+		return -EPERM;
+
+	if (IS_APPEND(inode) || IS_IMMUTABLE(inode))
+		return -EPERM;
+
+#if 0
+	if (inode->i_nlink >= UDF_LINK_MAX)
+		return -EMLINK;
+#endif
+
+	if (!(fi = udf_add_entry(dir, dentry, &soffset, &sbh, &eoffset, &ebh, &cfi, &err)))
+		return err;
+	cfi.icb.extLocation = UDF_I_LOCATION(inode);
+	cfi.icb.extLength = inode->i_sb->s_blocksize;
+	udf_write_fi(&cfi, fi, soffset, sbh, eoffset, ebh, NULL, NULL);
+	if (UDF_I_ALLOCTYPE(dir) == ICB_FLAG_AD_IN_ICB)
+	{
+		mark_inode_dirty(dir);
+		dir->i_version = ++event;
+	}
+	if (sbh != ebh)
+		udf_release_data(ebh);
+	udf_release_data(sbh);
+	inode->i_nlink ++;
+	inode->i_ctime = CURRENT_TIME;
+	mark_inode_dirty(inode);
+	inode->i_count ++;
+	d_instantiate(dentry, inode);
+	return 0;
 }

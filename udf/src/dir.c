@@ -1,6 +1,9 @@
 /*
  * dir.c
  *
+ * PURPOSE
+ *  Directory handling routines for the OSTA-UDF(tm) filesystem.
+ *
  * CONTACTS
  *	E-mail regarding any portion of the Linux UDF file system should be
  *	directed to the development team mailing list (run by majordomo):
@@ -12,16 +15,18 @@
  *		ftp://prep.ai.mit.edu/pub/gnu/GPL
  *	Each contributing author retains all rights to their own work.
  *
+ *  (C) 1998-1999 Ben Fennema
+ *
  * HISTORY
  *
- * 10/5/98  dgb  Split directory operations into it's own file
- *               Implemented directory reads via do_udf_readdir
- * 10/6/98       Made directory operations work!
- * 11/17/98      Rewrote directory to support ICB_FLAG_AD_LONG
- * 11/25/98 blf  Rewrote directory handling (readdir+lookup) to support reading
- *               across blocks.
- * 12/12/98      Split out the lookup code to namei.c. bulk of directory
- *               code now in directory.c:udf_fileident_read.
+ *  10/05/98 dgb  Split directory operations into it's own file
+ *                Implemented directory reads via do_udf_readdir
+ *  10/06/98      Made directory operations work!
+ *  11/17/98      Rewrote directory to support ICB_FLAG_AD_LONG
+ *  11/25/98 blf  Rewrote directory handling (readdir+lookup) to support reading
+ *                across blocks.
+ *  12/12/98      Split out the lookup code to namei.c. bulk of directory
+ *                code now in directory.c:udf_fileident_read.
  */
 
 #include "udfdecl.h"
@@ -36,7 +41,6 @@
 #include <linux/malloc.h>
 #include <linux/udf_fs.h>
 #endif
-
 
 /* Prototypes for file operations */
 static int udf_readdir(struct file *, void *, filldir_t);
@@ -70,21 +74,21 @@ struct inode_operations udf_dir_inode_operations = {
 	NULL,			/* create */
 #endif
 	udf_lookup,		/* lookup */
-	NULL,			/* link */
 #ifdef CONFIG_UDF_RW
+	udf_link,		/* link */
 	udf_unlink,		/* unlink */
-#else
-	NULL,			/* unlink */
-#endif
-	NULL,			/* symlink */
-#ifdef CONFIG_UDF_RW
+	udf_symlink,	/* symlink */
 	udf_mkdir,		/* mkdir */
 	udf_rmdir,		/* rmdir */
+	udf_mknod,		/* mknod */
 #else
+	NULL,			/* link */
+	NULL,			/* unlink */
+	NULL,			/* symlink */
 	NULL,			/* mkdir */
 	NULL,			/* rmdir */
-#endif
 	NULL,			/* mknod */
+#endif
 	NULL,			/* rename */
 	NULL,			/* readlink */
 	NULL,			/* follow_link */
@@ -123,6 +127,7 @@ struct inode_operations udf_dir_inode_operations = {
  *	July 1, 1997 - Andrew E. Mileski
  *	Written, tested, and released.
  */
+
 int udf_readdir(struct file *filp, void *dirent, filldir_t filldir)
 {
 	struct inode *dir = filp->f_dentry->d_inode;

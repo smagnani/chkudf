@@ -1,76 +1,46 @@
 /* ------------------------------------------------------------------
  * Linux(r) UDF Filesystem Driver
- * Version: 0.8.1
- *
- * This is Andrew's second "patch" vs kernel 2.1.62, 
- * converted to a standalone package. Then many changes made. :-)
+ * Version: 0.8.3
  * --------------------------------------------------------------- */
 
 REQUIRED:
 	Linux version 2.1.70 or higher
 	
 COMPILING:
-	type: "make"
+	type: "make udf.o"
 
 INSTALLING:
-	edit Make.conf to fix directories for modules & tools.
 	type: "make install"
 
 TESTING:
 	type "modprobe udf", 
 	then "mount -t udf /dev/scd0 /mnt"
 		(assuming /dev/scd0 is your scsi cdrom)
-		(Substitute "scd0" and "/mnt" as appropriate for your system)
+    or
+         "mount -t udf -o loop image /mnt"
+		(Substitute "scd0", "image",  and "/mnt" as appropriate for your system)
 
-I've tested this on my system with kernel 2.2.1, a Ricoh MP-6200S,
-a UDF 1.5 disc created by Adaptec DirectCD, and the cheap-o
-SCSI card (aha152x compatible) that came with the Ricoh.
+    For sample images, send email to Thomas Tempelmann <tempel@corp.adaptec.com>
+    with a subject of "Get UDF Sample Discs Access". You should get the URL
+    sent back within 5 minutes.
 
-I can mount/umount a udf filesystem without crashing my system.
-I can view the directory structure of the file system, including file
-dates and sizes. 
-
-Files can be read and used! (As of version 0.5). 
-A writable filesystem is planned, but no work has been done. Sorry.
-
-That's pretty much all that's currently implemented. If you want
-to help out, subscribe to the linux_udf mailing list below.
-
-Dave Boynton
-dave@trylinux.com
-
-/* --------------------------------------------------------------- 
- * Original Author: 
- *	Andrew E. Mileski	(email temporarily unavailable)
- * Recent updates: 
- *	Dave Boynton 		dave@trylinux.com
- */
-
-
-/* ------------------------------------------------------------------ */
-Original README: (minus Andrew's old email address)
+If you want to help out, subscribe to the linux_udf mailing list below.
 
 OSTA-UDF
-  Optical Storage Technology Association Universal Disk Format
+    Optical Storage Technology Association Universal Disk Format
 
 The Linux UDF development team mail list is:
-           linux_udf@hootie.lvld.hp.com
+    linux_udf@hootie.lvld.hp.com
+
 Subscribe to the mailing list by sending a message to:
-           majordomo@hootie.lvld.hp.com
+    majordomo@hootie.lvld.hp.com
 with a body of:
-           subscribe linux_udf
+    subscribe linux_udf
 
 UDF developers should subscribe to additional lists:
-           subscribe osta_tc
-           subscribe osta_cd_dvd
+    subscribe osta_tc
+    subscribe osta_cd_dvd
 
 Documentation on UDF and ECMA 167 is available FREE from:
-           http://www.osta.org/
-           http://www.ecma.ch/
-
-Happy hacking!
-
---
-Andrew E. Mileski    
-
-
+    http://www.osta.org/
+    http://www.ecma.ch/

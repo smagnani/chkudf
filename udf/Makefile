@@ -1,35 +1,48 @@
+#
+# Makefile 1.00 Peter Braam <braam@cs.cmu.edu>
+#
 
+help all:
+	@echo "Pick one of the following targets:"
+	@echo -e "\tmake config\t\t- configure and check system setup"
+	@echo -e "\tmake udf.o\t\t- build Udf module"
+	@echo -e "\tmake install\t\t- install Udf module"
+	@echo -e "\tmake clean\t\t- clean up the directory"
+	@echo -e "\tmake udftools\t\t- build udf tools"
 
-all: make-subdirs
-	@echo "* ---------- *"
-	@echo "* Done! ...  *"
-	@echo "* ---------- *"
+config .prereq.ok:
+	@./Configure
 
-install: make-subdirs
-	$(MAKE) -C module install
-	$(MAKE) -C tools install
+kcheck:
+	@. config.out ; \
+	if [ "$$CHECK" != "" ] ; then \
+	    if [ "`cksum < $$CHECK`" != "$$CKSUM" ] ; then \
+		/bin/echo -n "Kernel configuration has changed." ; \
+		/bin/echo "  Please re-run 'make config'." ; \
+		exit 1 ; \
+	    fi ; \
+	fi
 
-applypatch:
-	make -C patch apply
+udf.o: .prereq.ok
+	@make -C module
 
-modules: 
-	make -C module
+libudf: .prereq.ok
+	@make -C lib
 
-modules_install: 
-	make -C module install
+udftools: libudf .prereq.ok
+	@make -C tools
 
-make-subdirs: 
-	make -C lib
-	make -C module
-	make -C tools
+install: .prereq.ok
+	@make -C module install
+	@make -C tools install
 
 clean: clean-subdirs
-	@-/bin/rm -f *~ src/*~ src/*.bak src/*.o
 
 clean-subdirs:
 	@make -C lib clean
 	@make -C module clean
 	@make -C tools clean
-	@make -C patch clean
 
-
+distclean: clean
+	@make -C patch distclean
+	rm -rf .prereq.ok config.out config.mk
