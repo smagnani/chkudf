@@ -265,8 +265,12 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 			break;
 		}
 		mark_buffer_dirty(bh, 0);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
+		update_vm_cache(inode, pos, bh->b_data + offset, c);
+#else
 		update_vm_cache_conditional(inode, pos, bh->b_data + offset, c,
 			(unsigned long) buf);
+#endif
 		pos += c;
 		written += c;
 		buf += c;
