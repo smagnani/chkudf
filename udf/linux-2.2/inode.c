@@ -72,8 +72,11 @@ static void udf_update_extents(struct inode *,
  */
 void udf_put_inode(struct inode * inode)
 {
-	udf_discard_prealloc(inode);
-	write_inode_now(inode);
+	if (!(inode->i_sb->s_flags & MS_RDONLY))
+	{
+		udf_discard_prealloc(inode);
+		write_inode_now(inode);
+	}
 }
 
 /*
@@ -1474,16 +1477,18 @@ int udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 			case ICB_FLAG_AD_SHORT:
 			{
 				sad = (short_ad *)sptr;
-				sad->extLength = EXTENT_NEXT_EXTENT_ALLOCDECS << 30 |
-					inode->i_sb->s_blocksize;
+				sad->extLength = cpu_to_le32(
+					EXTENT_NEXT_EXTENT_ALLOCDECS << 30 |
+					inode->i_sb->s_blocksize);
 				sad->extPosition = cpu_to_le32(bloc->logicalBlockNum);
 				break;
 			}
 			case ICB_FLAG_AD_LONG:
 			{
 				lad = (long_ad *)sptr;
-				lad->extLength = EXTENT_NEXT_EXTENT_ALLOCDECS << 30 |
-					inode->i_sb->s_blocksize;
+				lad->extLength = cpu_to_le32(
+					EXTENT_NEXT_EXTENT_ALLOCDECS << 30 |
+					inode->i_sb->s_blocksize);
 				lad->extLocation = cpu_to_lelb(*bloc);
 				break;
 			}
