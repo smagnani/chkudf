@@ -121,7 +121,7 @@ static ssize_t udf_file_write_adinicb(struct file * file, const char * buf,
 	if (inode->i_sb->s_blocksize < (udf_file_entry_alloc_offset(inode) +
 		pos + count))
 	{
-		udf_expand_file_adinicb(inode, pos + count, &err);
+		udf_expand_file_adinicb(file, pos + count, &err);
 		if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
 		{
 			udf_debug("udf_expand_adinicb: err=%d\n", err);
