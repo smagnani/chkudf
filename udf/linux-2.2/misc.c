@@ -327,7 +327,7 @@ udf_read_tagged(struct super_block *sb, Uint32 block, Uint32 location, Uint16 *i
 
 	if ( location != le32_to_cpu(tag_p->tagLocation) )
 	{
-		udf_debug("location mismatch block %d, tag %d != %d\n",
+		udf_debug("location mismatch block %u, tag %u != %u\n",
 			block, le32_to_cpu(tag_p->tagLocation), location);
 		goto error_out;
 	}
