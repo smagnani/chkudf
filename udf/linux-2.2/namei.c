@@ -1066,7 +1066,7 @@ int udf_symlink(struct inode * dir, struct dentry * dentry, const char * symname
 		lb_addr bloc, eloc;
 		Uint32 elen, extoffset;
 
-		block = udf_new_block(inode,
+		block = udf_new_block(inode->i_sb, inode,
 			UDF_I_LOCATION(inode).partitionReferenceNum,
 			UDF_I_LOCATION(inode).logicalBlockNum, &err);
 		if (!block)

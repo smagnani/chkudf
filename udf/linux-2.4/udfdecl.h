@@ -184,13 +184,13 @@ extern void udf_truncate_extents(struct inode *);
 
 /* balloc.c */
 #ifdef QUOTA_CHANGE
-extern void udf_free_blocks(struct inode *, lb_addr, Uint32, Uint32);
-extern int udf_prealloc_blocks(struct inode *, Uint16, Uint32, Uint32);
-extern int udf_new_block(struct inode *, Uint16, Uint32, int *);
+extern void udf_free_blocks(struct super_block *, struct inode *, lb_addr, Uint32, Uint32);
+extern int udf_prealloc_blocks(struct super_block *, struct inode *, Uint16, Uint32, Uint32);
+extern int udf_new_block(struct super_block *, struct inode *, Uint16, Uint32, int *);
 #else
-extern void udf_free_blocks(const struct inode *, lb_addr, Uint32, Uint32);
-extern int udf_prealloc_blocks(const struct inode *, Uint16, Uint32, Uint32);
-extern int udf_new_block(const struct inode *, Uint16, Uint32, int *);
+extern void udf_free_blocks(struct super_block *, const struct inode *, lb_addr, Uint32, Uint32);
+extern int udf_prealloc_blocks(struct super_block *, const struct inode *, Uint16, Uint32, Uint32);
+extern int udf_new_block(struct super_block *, const struct inode *, Uint16, Uint32, int *);
 #endif
 
 /* fsync.c */

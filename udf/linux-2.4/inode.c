@@ -236,7 +236,7 @@ struct buffer_head * udf_expand_dir_adinicb(struct inode *inode, int *block, int
 	}
 
 	/* alloc block, and copy data to it */
-	*block = udf_new_block(inode,
+	*block = udf_new_block(inode->i_sb, inode,
 		UDF_I_LOCATION(inode).partitionReferenceNum,
 		UDF_I_LOCATION(inode).logicalBlockNum, err);
 
@@ -302,7 +302,9 @@ struct buffer_head * udf_expand_dir_adinicb(struct inode *inode, int *block, int
 	udf_add_aext(inode, &bloc, &extoffset, eloc, elen, &sbh, 0);
 	/* UniqueID stuff */
 
+#ifndef QUOTA_CHANGE
 	inode->i_blocks = inode->i_sb->s_blocksize / 512;
+#endif
 	mark_buffer_dirty(sbh);
 	udf_release_data(sbh);
 	mark_inode_dirty(inode);
@@ -546,7 +548,7 @@ static struct buffer_head * inode_getblk(struct inode * inode, long block,
 				goal = UDF_I_LOCATION(inode).logicalBlockNum + 1;
 		}
 
-		if (!(newblocknum = udf_new_block(inode,
+		if (!(newblocknum = udf_new_block(inode->i_sb, inode,
 			UDF_I_LOCATION(inode).partitionReferenceNum, goal, err)))
 		{
 			udf_release_data(pbh);
@@ -588,7 +590,9 @@ static struct buffer_head * inode_getblk(struct inode * inode, long block,
 	UDF_I_NEXT_ALLOC_GOAL(inode) = newblocknum;
 	inode->i_ctime = CURRENT_TIME;
 	UDF_I_UCTIME(inode) = CURRENT_UTIME;
+#ifndef QUOTA_CHANGE
 	inode->i_blocks += inode->i_sb->s_blocksize / 512;
+#endif
 	if (IS_SYNC(inode))
 		udf_sync_inode(inode);
 	else
@@ -692,7 +696,7 @@ static void udf_prealloc_extents(struct inode *inode, int c, int lastblock,
 		int next = laarr[start].extLocation.logicalBlockNum +
 			(((laarr[start].extLength & UDF_EXTENT_LENGTH_MASK) +
 			inode->i_sb->s_blocksize - 1) >> inode->i_sb->s_blocksize_bits);
-		int numalloc = udf_prealloc_blocks(inode,
+		int numalloc = udf_prealloc_blocks(inode->i_sb, inode,
 			laarr[start].extLocation.partitionReferenceNum,
 			next, (UDF_DEFAULT_PREALLOC_BLOCKS > length ? length :
 				UDF_DEFAULT_PREALLOC_BLOCKS) - currlength);
@@ -825,9 +829,6 @@ struct buffer_head * udf_bread(struct inode * inode, int block,
 	int create, int * err)
 {
 	struct buffer_head * bh = NULL;
-	int prev_blocks;
-
-	prev_blocks = inode->i_blocks;
 
 	bh = udf_getblk(inode, block, create, err);
 	if (!bh)
@@ -1637,7 +1638,7 @@ Sint8 udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 		int err, loffset;
 		lb_addr obloc = *bloc;
 
-		if (!(bloc->logicalBlockNum = udf_new_block(inode,
+		if (!(bloc->logicalBlockNum = udf_new_block(inode->i_sb, inode,
 			obloc.partitionReferenceNum, obloc.logicalBlockNum, &err)))
 		{
 			return -1;
@@ -2101,7 +2102,7 @@ Sint8 udf_delete_aext(struct inode *inode, lb_addr nbloc, int nextoffset,
 
 	if (memcmp(&nbloc, &obloc, sizeof(lb_addr)))
 	{
-		udf_free_blocks(inode, nbloc, 0, 1);
+		udf_free_blocks(inode->i_sb, inode, nbloc, 0, 1);
 		udf_write_aext(inode, obloc, &oextoffset, eloc, elen, obh, 1);
 		udf_write_aext(inode, obloc, &oextoffset, eloc, elen, obh, 1);
 		if (!memcmp(&UDF_I_LOCATION(inode), &obloc, sizeof(lb_addr)))
