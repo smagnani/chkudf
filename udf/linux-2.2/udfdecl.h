@@ -10,7 +10,6 @@
 #ifdef __KERNEL__
 
 #include <linux/config.h>
-#include <linux/fs.h>
 #include <linux/types.h>
 
 #ifndef LINUX_VERSION_CODE
@@ -20,6 +19,8 @@
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,1,70)
 #error "The UDF Module Current Requires Kernel Version 2.1.70 or greater"
 #endif
+
+#include <linux/fs.h>
 
 #if !defined(CONFIG_UDF_FS) && !defined(CONFIG_UDF_FS_MODULE)
 #define CONFIG_UDF_FS_MODULE
@@ -175,10 +176,10 @@ extern Uint32 udf_get_pblock(struct super_block *, Uint32, Uint16, Uint32);
 extern Uint32 udf_get_pblock_virt15(struct super_block *, Uint32, Uint16, Uint32);
 extern Uint32 udf_get_pblock_virt20(struct super_block *, Uint32, Uint16, Uint32);
 extern Uint32 udf_get_pblock_spar15(struct super_block *, Uint32, Uint16, Uint32);
-extern void udf_fill_spartable(struct super_block *, struct udf_sparing_data *, int);
+extern int udf_relocate_blocks(struct super_block *, long, long *);
 
 /* unicode.c */
-extern int udf_get_filename(Uint8 *, Uint8 *, int);
+extern int udf_get_filename(struct super_block *, Uint8 *, Uint8 *, int);
 
 /* ialloc.c */
 extern void udf_free_inode(struct inode *);
@@ -188,9 +189,9 @@ extern struct inode * udf_new_inode (const struct inode *, int, int *);
 extern void udf_truncate_extents(struct inode *);
 
 /* balloc.c */
-extern inline void udf_free_blocks(const struct inode *, lb_addr, Uint32, Uint32);
-extern inline int udf_prealloc_blocks(const struct inode *, Uint16, Uint32, Uint32);
-extern inline int udf_new_block(const struct inode *, Uint16, Uint32, int *);
+extern void udf_free_blocks(const struct inode *, lb_addr, Uint32, Uint32);
+extern int udf_prealloc_blocks(const struct inode *, Uint16, Uint32, Uint32);
+extern int udf_new_block(const struct inode *, Uint16, Uint32, int *);
 
 /* fsync.c */
 extern int udf_sync_file(struct file *, struct dentry *);
@@ -216,6 +217,10 @@ extern int udf_build_ustr(struct ustr *, dstring *, int);
 extern int udf_build_ustr_exact(struct ustr *, dstring *, int);
 extern int udf_CS0toUTF8(struct ustr *, struct ustr *);
 extern int udf_UTF8toCS0(dstring *, struct ustr *, int);
+#ifdef __KERNEL__
+extern int udf_CS0toNLS(struct nls_table *, struct ustr *, struct ustr *);
+extern int udf_NLStoCS0(struct nls_table *, dstring *, struct ustr *, int);
+#endif
 
 /* crc.c */
 extern Uint16 udf_crc(Uint8 *, Uint32, Uint16);
