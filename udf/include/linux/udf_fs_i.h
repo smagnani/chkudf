@@ -60,21 +60,14 @@ struct udf_inode_info
 	unsigned		i_use : 1;
 	unsigned		i_strat4096 : 1;
 	unsigned		reserved : 26;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
-	struct inode vfs_inode;
-	union
-	{
-		short_ad	i_sad[0];
-		long_ad		i_lad[0];
-		__u8		i_data[0];
-	} i_ext;
-#else
 	union
 	{
 		short_ad	*i_sad;
 		long_ad		*i_lad;
 		__u8		*i_data;
 	} i_ext;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
+	struct inode vfs_inode;
 #endif
 };
 
