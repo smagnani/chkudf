@@ -188,6 +188,7 @@ void udf_expand_file_adinicb(struct inode * inode, int newsize, int * err)
 			PAGE_CACHE_SIZE - UDF_I_LENALLOC(inode));
 		memcpy((char *)kaddr, bh->b_data + udf_file_entry_alloc_offset(inode),
 			UDF_I_LENALLOC(inode));
+		flush_dcache_page(page);
 		SetPageUptodate(page);
 		kunmap(page);
 	}
@@ -1448,12 +1449,19 @@ udf_iget(struct super_block *sb, lb_addr ino)
 	{
 		memcpy(&UDF_I_LOCATION(inode), &ino, sizeof(lb_addr));
 		__udf_read_inode(inode);
+		if (is_bad_inode(inode))
+		{
+			iput(inode);
+			return NULL;
+		}
 	}
 
 	if ( ino.logicalBlockNum >= UDF_SB_PARTLEN(sb, ino.partitionReferenceNum) )
 	{
 		udf_debug("block=%d, partition=%d out of range\n",
 			ino.logicalBlockNum, ino.partitionReferenceNum);
+		make_bad_inode(inode);
+		iput(inode);
 		return NULL;
  	}
 

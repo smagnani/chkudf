@@ -736,29 +736,6 @@ struct buffer_head * udf_bread(struct inode * inode, int block,
 	if (!bh)
 		return NULL;
 
-#if 0
-	if (create &&
-		S_ISDIR(inode->i_mode) &&
-		inode->i_blocks > prev_blocks)
-	{
-		int i;
-		struct buffer_head *tmp_bh = NULL;
-
-		for (i=1;
-			i < UDF_DEFAULT_PREALLOC_DIR_BLOCKS;
-			i++)
-		{
-			tmp_bh = udf_getblk(inode, block+i, create, err);
-			if (!tmp_bh)
-			{
-				udf_release_data(bh);
-				return 0;
-			}
-			udf_release_data(tmp_bh);
-		}
-	}
-#endif
-
 	if (buffer_uptodate(bh))
 		return bh;
 	ll_rw_block(READ, 1, &bh);
@@ -1413,12 +1390,19 @@ udf_iget(struct super_block *sb, lb_addr ino)
 	{
 		memcpy(&UDF_I_LOCATION(inode), &ino, sizeof(lb_addr));
 		__udf_read_inode(inode);
+		if (is_bad_inode(inode))
+		{
+			iput(inode);
+			return NULL;
+		}
 	}
 
 	if ( ino.logicalBlockNum >= UDF_SB_PARTLEN(sb, ino.partitionReferenceNum) )
 	{
 		udf_debug("block=%d, partition=%d out of range\n",
 			ino.logicalBlockNum, ino.partitionReferenceNum);
+		make_bad_inode(inode);
+		iput(inode);
 		return NULL;
  	}
 
