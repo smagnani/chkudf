@@ -38,9 +38,11 @@
 #define CURRENT_UTIME	(xtime.tv_usec)
 
 #define udf_file_entry_alloc_offset(inode)\
-	((UDF_I_EXTENDED_FE(inode) ?\
-		sizeof(struct extendedFileEntry) :\
-		sizeof(struct fileEntry)) + UDF_I_LENEATTR(inode))
+	(UDF_I_USE(inode) ?\
+		sizeof(struct unallocSpaceEntry) :\
+		((UDF_I_EFE(inode) ?\
+			sizeof(struct extendedFileEntry) :\
+			sizeof(struct fileEntry)) + UDF_I_LENEATTR(inode)))
 
 #define udf_ext0_offset(inode)\
 	(UDF_I_ALLOCTYPE(inode) == ICBTAG_FLAG_AD_IN_ICB ?\
@@ -216,8 +218,8 @@ extern timestamp *udf_time_to_stamp(timestamp *, time_t, long);
 /* directory.c */
 extern struct fileIdentDesc * udf_get_fileident(void * buffer, int bufsize, int * offset);
 extern extent_ad * udf_get_fileextent(void * buffer, int bufsize, int * offset);
-extern long_ad * udf_get_filelongad(void * buffer, int bufsize, int * offset, int);
-extern short_ad * udf_get_fileshortad(void * buffer, int bufsize, int * offset, int);
+extern long_ad * udf_get_filelongad(uint8_t *, int, int *, int);
+extern short_ad * udf_get_fileshortad(uint8_t *, int, int *, int);
 extern uint8_t * udf_get_filead(struct fileEntry *, uint8_t *, int, int, int, int *);
 
 #endif /* __UDF_DECL_H */
