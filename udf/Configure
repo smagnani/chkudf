@@ -392,6 +392,9 @@ echo ""
 if [ -L src ]; then
 	rm src
 fi
+if [ -d src ]; then
+	rm -rf src
+fi
 if [ -d linux-$UTS_SHORT ]; then
 	ln -s linux-$UTS_SHORT src
 else
@@ -400,6 +403,9 @@ fi
 
 if [ -L patch ]; then
 	rm patch
+fi
+if [ -d patch ]; then
+	rm -rf patch
 fi
 if [ -d patch-$UTS_SHORT ]; then
 	ln -s patch-$UTS_SHORT patch
