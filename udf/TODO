@@ -7,6 +7,7 @@ FS:
     handling bad block remapping (superblock data/metadata/data)
     handling writing VAT/sequential write media (CDR)
     add journaling support (?)
+    WORM support
 
 SUPPORT:
     rewrite mkudf (or at least, rework it)
