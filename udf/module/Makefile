@@ -41,11 +41,13 @@ showvars:
 	@echo SRCS $(SRCS)
 	@echo OBJS $(OBJS)
 
+modules: udf.o
+
 clean:
 	rm -f core core.* *.o .*.o *.s *.a *~ .depfiles/*.d
 	-rmdir .depfiles
 
-install: $(MODULES) ../.prereq.ok kcheck
+modules_install: $(MODULES) ../.prereq.ok kcheck
 	-mkdir -p $(MODDIR)
 	install -o root -g root -m 644 $(MODULES) $(MODDIR)
 
