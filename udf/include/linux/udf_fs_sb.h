@@ -18,6 +18,8 @@
 #if !defined(_LINUX_UDF_FS_SB_H)
 #define _LINUX_UDF_FS_SB_H
 
+#include <linux/version.h>
+
 #pragma pack(1)
 
 #define UDF_MAX_BLOCK_LOADED	8
