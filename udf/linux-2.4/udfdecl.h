@@ -2,8 +2,8 @@
 #define __UDF_DECL_H
 
 #include <linux/udf_fs.h>
-#include <linux/ecma_167r3.h>
-#include <linux/osta_udf201.h>
+#include "ecma_167.h"
+#include "osta_udf.h"
 
 #include <linux/fs.h>
 #include <linux/config.h>
