@@ -23,6 +23,7 @@ help all:
 tools: udftools
 module: udf.o
 
+.PHONY : config
 config .prereq.ok:
 	@./Configure
 
