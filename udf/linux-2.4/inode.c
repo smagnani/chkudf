@@ -168,8 +168,9 @@ static int udf_alloc_block(struct inode *inode, Uint16 partition,
 	return result;
 }
 
-void udf_expand_file_adinicb(struct inode *inode, int newsize, int *err)
+void udf_expand_file_adinicb(struct file * filp, int newsize, int * err)
 {
+	struct inode * inode = filp->f_dentry->d_inode;
 	long_ad newad;
 	int block, newblock;
 	struct buffer_head *sbh = NULL, *dbh = NULL;
@@ -179,6 +180,7 @@ void udf_expand_file_adinicb(struct inode *inode, int newsize, int *err)
 		UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_LONG;
 		mark_inode_dirty(inode);
 		inode->i_op = &udf_file_inode_operations;
+		filp->f_op = inode->i_op->default_file_ops;
 		return;
 	}
 
@@ -220,12 +222,13 @@ void udf_expand_file_adinicb(struct inode *inode, int newsize, int *err)
 
 	UDF_I_LENALLOC(inode) = sizeof(newad);
 	UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_LONG;
-	inode->i_blocks += inode->i_sb->s_blocksize / 512;
+	inode->i_blocks = newad.extLength / 512;
 	mark_buffer_dirty(sbh, 1);
 	udf_release_data(sbh);
 	mark_inode_dirty(inode);
 	inode->i_version ++;
 	inode->i_op = &udf_file_inode_operations;
+	filp->f_op = inode->i_op->default_file_ops;
 }
 
 struct buffer_head * udf_expand_dir_adinicb(struct inode *inode, int *block, int *err)
@@ -310,7 +313,6 @@ struct buffer_head * udf_expand_dir_adinicb(struct inode *inode, int *block, int
 	udf_release_data(sbh);
 	mark_inode_dirty(inode);
 	inode->i_version ++;
-	inode->i_op = &udf_file_inode_operations;
 	return dbh;
 }
 
