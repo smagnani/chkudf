@@ -345,7 +345,21 @@ udf_convert_permissions(struct FileEntry *fe)
 void
 udf_write_inode(struct inode *inode)
 {
-	COOKIE(("udf_write_inode: inode=0x%lx\n", (unsigned long)inode));
+	bh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode), 0, TID_FILE_ENTRY);
+	if (!bh)
+	{
+		printk(KERN_DEBUG "udf: udf_write_inode: !bh\n");
+		return -EIO;
+	}
+	fe = (struct FileEntry *)bh->b_data;
+
+	/* Set fe info from inode */
+
+	/* write the data blocks */
+
+	mark_buffer_dirty(bh, 1);
+	udf_release_data(bh);
+	return 0;
 }
 
 /*

@@ -65,6 +65,7 @@
 #define UDF_SB_VOLDESC(X)		( UDF_SB(X)->s_voldesc )
 #define UDF_SB_FILESET(X)		( UDF_SB(X)->s_fileset )
 #define UDF_SB_ROOTDIR(X)		( UDF_SB(X)->s_rootdir )
+#define UDF_SB_LOGVOLINT(X)		( UDF_SB(X)->s_logvolint )
 #define UDF_SB_PARTITION(X)		( UDF_SB_FILESET(sb).partitionReferenceNum )
 #define UDF_SB_RECORDTIME(X)	( UDF_SB(X)->s_recordtime )
 #define UDF_SB_TIMESTAMP(X)		( UDF_SB(X)->s_timestamp )

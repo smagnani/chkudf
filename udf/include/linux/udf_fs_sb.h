@@ -91,6 +91,7 @@ struct udf_sb_info
 	__u32 s_voldesc;
 	lb_addr s_fileset;
 	lb_addr s_rootdir;
+	__u32 s_logvolint;
 
 	__u32 s_filecount;
 

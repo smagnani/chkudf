@@ -93,23 +93,6 @@ extern int udf_get_filename(struct FileIdentDesc *, char *, struct inode *);
 #include "udfend.h"
 #endif
 
-static inline lb_addr lelb_to_cpu(lb_addr in)
-{
-	lb_addr out;
-	out.logicalBlockNum = le32_to_cpu(in.logicalBlockNum);
-	out.partitionReferenceNum = le16_to_cpu(in.partitionReferenceNum);
-	return out;
-}
-
-static inline timestamp lets_to_cpu(timestamp in)
-{
-	timestamp out;
-	memcpy(&out, &in, sizeof(timestamp));
-	out.typeAndTimezone = le16_to_cpu(in.typeAndTimezone);
-	out.year = le16_to_cpu(in.year);
-	return out;
-}
-
 /* structures */
 struct udf_directory_record
 {

@@ -42,4 +42,29 @@
 
 #endif
 
+static inline lb_addr lelb_to_cpu(lb_addr in)
+{
+	lb_addr out;
+	out.logicalBlockNum = le32_to_cpu(in.logicalBlockNum);
+	out.partitionReferenceNum = le16_to_cpu(in.partitionReferenceNum);
+	return out;
+}
+
+static inline timestamp lets_to_cpu(timestamp in)
+{
+	timestamp out;
+	memcpy(&out, &in, sizeof(timestamp));
+	out.typeAndTimezone = le16_to_cpu(in.typeAndTimezone);
+	out.year = le16_to_cpu(in.year);
+	return out;
+}
+
+static inline long_ad lela_to_cpu(long_ad in)
+{
+	long_ad out;
+	out.extLength = le32_to_cpu(in.extLength);
+	out.extLocation = lelb_to_cpu(in.extLocation);
+	return out;
+}
+
 #endif /* __UDF_ENDIAN_H */
