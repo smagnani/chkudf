@@ -18,7 +18,7 @@ KFLAGS	= -O2 -Wall -Wstrict-prototypes -pipe
 endif
 
 CPPFLAGS= $(PCDEBUG) -D__KERNEL__ -DMODULE -I../include\
-		-I. -I$(LINUX)/include -I$(LINUX)/arch/$(ARCH)/mach-generic $(SMPFLAG) -DCONFIG_UDF_FS_EXT -DKBUILD_MODNAME=udf
+		-I. -I$(LINUX)/include -I$(LINUX)/include/asm-$(ARCH)/mach-default $(SMPFLAG) -DCONFIG_UDF_FS_EXT -DKBUILD_MODNAME=udf
 COFLAGS	= -kv
 
 CFLAGS	= $(KFLAGS) $(MFLAG) $(ACFLAG)

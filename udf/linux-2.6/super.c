@@ -49,6 +49,7 @@
 #include <linux/version.h>
 #include <linux/blkdev.h>
 #include <linux/slab.h>
+#include <linux/vmalloc.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/stat.h>
@@ -56,6 +57,7 @@
 #include <linux/nls.h>
 #include <linux/smp_lock.h>
 #include <linux/buffer_head.h>
+#include <linux/vfs.h>
 #include <asm/byteorder.h>
 
 #include <linux/udf_fs.h>

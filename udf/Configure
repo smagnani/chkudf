@@ -424,7 +424,7 @@ if [ ! -x /sbin/insmod -o ! -x /sbin/rmmod ] ; then
     exit 1
 fi
 
-MOD_RELEASE=`/sbin/insmod -V 2>&1 | \
+MOD_RELEASE=`/sbin/modprobe -V 2>&1 | \
     sed -n -e 's/.*[Vv]ersion \([0-9][0-9.]*\)/\1/p'`
 echo "Your module utilities are version $MOD_RELEASE."
 case "$VERSION.$PATCHLEVEL" in
