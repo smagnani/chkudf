@@ -20,19 +20,20 @@
  *
  * HISTORY
  *
- * 10/2/98 dgb	Attempt to integrate into udf.o
- * 10/7/98	Switched to using generic_readpage, etc., like isofs
- *		And it works!
+ * 10/2/98 dgb   Attempt to integrate into udf.o
+ * 10/7/98       Switched to using generic_readpage, etc., like isofs
+ *               And it works!
+ * 12/06/98 blf  Added udf_file_read. uses generic_file_read for all cases but
+ *               ICB_FLAG_AD_IN_ICB.
  */
 
-#ifdef __linux__
-#include <linux/version.h>
-#include <linux/mm.h>
-
-#include <linux/udf_fs.h>
-#endif
 
 #include "udfdecl.h"
+#include <linux/fs.h>
+#include <asm/uaccess.h>
+
+#include "udf_i.h"
+#include "udf_sb.h"
 
 typedef void * poll_table; 
 
@@ -48,9 +49,9 @@ static int udf_revalidate(kdev_t dev);
 static int udf_flush(struct file *);
 #endif
 
+static ssize_t udf_file_read(struct file *, char *, size_t, loff_t *);
 #ifdef CONFIG_UDF_FULL_FS
 static loff_t udf_llseek(struct file *filp, loff_t offset, int origin);
-static ssize_t udf_read(struct file *, char *, size_t, loff_t *);
 static int udf_ioctl(struct inode *, struct file *, unsigned int,
 	unsigned long);
 static int udf_release(struct inode *, struct file *);
@@ -64,7 +65,7 @@ static int udf_check_media_change(kdev_t dev);
 
 struct file_operations udf_file_fops = {
 	NULL,			/* llseek */
-	generic_file_read,	/* read */
+	udf_file_read,	/* read */
 #ifdef CONFIG_UDF_WRITE
 	udf_write,		/* write */
 #else
@@ -137,9 +138,8 @@ loff_t udf_llseek(struct file *filp, loff_t offset, int origin)
 }
 #endif
 
-#ifdef USE_UDF_READ
 /*
- * udf_read
+ * udf_file_read
  *
  * PURPOSE
  *	Read from an open file.
@@ -177,14 +177,41 @@ loff_t udf_llseek(struct file *filp, loff_t offset, int origin)
  *	July 1, 1997 - Andrew E. Mileski
  *	Written, tested, and released.
  */
-static ssize_t udf_read(struct file * filp, char * buf, size_t bufsize, 
+static ssize_t udf_file_read(struct file * filp, char * buf, size_t bufsize, 
 	loff_t * loff)
 {
-	printk(KERN_ERR "udf: udf_read(,,%ld, %ld)\n",
-		(long)bufsize, (long)loff);
-	return -1;
+        struct inode *inode = filp->f_dentry->d_inode;
+
+	if (!UDF_I_EXT0OFFS(inode))
+		return generic_file_read(filp, buf, bufsize, loff);
+	else
+	{
+		Uint32 size, left, pos, block;
+		struct buffer_head *bh;
+
+		size = inode->i_size;
+		if (*loff > size)
+			left = 0;
+		else
+			left = size - *loff;
+		if (left > bufsize)
+			left = bufsize;
+
+		if (left <= 0)
+			return 0;
+
+		pos = *loff + UDF_I_EXT0OFFS(inode);
+		block = udf_bmap(inode, 0);
+		if (!(bh = bread(inode->i_dev, block, inode->i_sb->s_blocksize)))
+			return 0;
+		if (!copy_to_user(buf, bh->b_data + pos, left))
+			*loff += left;
+		else
+			return -EFAULT;
+
+		return left;
+	}
 }
-#endif
 
 #ifdef CONFIG_UDF_WRITE
 /*

@@ -44,7 +44,6 @@ struct udf_sparing_data
 
 struct udf_virtual_data
 {
-	struct inode    *s_vat;
 	__u16	  s_start_offset;
 	__u32	  s_num_entries;
 };
@@ -111,6 +110,9 @@ struct udf_sb_info
 	/* Character Mapping Info */
 	struct nls_table *s_nls_iocharset;
 	unsigned char s_utf8;
+
+	/* VAT inode */
+	struct inode    *s_vat;
 
 	/* Debugging level */
 	int s_debug;

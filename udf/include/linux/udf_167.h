@@ -442,7 +442,8 @@ struct PartitionHeaderDesc {
 };
 
 /* File Identifier Descriptor (ECMA 167 4/14.4) */
-struct FileIdentDesc {
+struct FileIdentDesc
+{
 	tag descTag;
 	Uint16 fileVersionNum; /* 1 */
 	Uint8 fileCharacteristics;
@@ -462,10 +463,11 @@ struct FileIdentDesc {
 #define FILE_METADATA	0x10 /* UDF 2.0 */
 
 /* Allocation Ext Descriptor (ECMA 167 4/14.5) */
-struct AllocExtDesc {
+struct AllocExtDesc
+{
 	tag descTag;
 	Uint32 previousAllocExtLocation;
-	Uint32 lengthAllocDescription;
+	Uint32 lengthAllocDescs;
 };
 
 /* ICB Tag (ECMA 167 4/14.6) */

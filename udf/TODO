@@ -12,6 +12,7 @@ chk img descr
   wrong link cnt
     -- Only in Root dir. Probably root-dir-entries incorrectly inherit
        the link count from the actual root directory. 
+        -- Seems to be a bug in the image -- BLF (Sequential.img has correct link counts)
 
   extended attr.
 	-> Reinoud: what do you mean by this? -- REW
@@ -20,11 +21,15 @@ chk img descr
     -- Fixed. (Name comparisons were done erroneously)
 
 kmsg, busy inodes
-  -- Fixed? (Bens work?)
+  -- Fixed? (Bens work?) -- fixed BLF
 
 gcc warns  (will fix these on tuesday (dec 15 1998). -- REW)
   -- integer constant out of range: Has to do with "long long" type. 
 	Something is wrong. I don't expect mkudf to work in this state.... 
+           -- I run egcs, which doesn't seem to warn.. gcc seems to work ok
+              (it complains about 64 bit constants... all I know is, on the sparc
+               it generates the same code as on the PC, so the 64 bit endian swap seems
+               to work ok) -- BLF
   -- Wrong arguments to a callback function. (or something like that)
 	-> Fix declarations.
   -- chkudf is compiled with -ggdb which implies -lg which doesn't
@@ -33,6 +38,9 @@ gcc warns  (will fix these on tuesday (dec 15 1998). -- REW)
 
 - Reduce debugging output a bit.... Hmm. Ok Seems it is not on by default.
   -> Ask reinoud how he turns on debugging. :-)
+        -- if you want to really spam yourself, turn on -DVDEBUG
+           I tend to change the #defines from DEBUG to VDEBUG when I don't need
+           them thrashing my log. -- BLF
 
 
 
@@ -41,8 +49,10 @@ Check if other images work.
 - Sequential.img:
 
 	- File contents in most files are not correct.
+            -- fixed! -- BLF
 	- "2 identical files in here" -> Not identical, references past 
 		end-of-disk.
+            -- also fixed :) -- BLF
 
 - SparedBlks.img: 
 	- Seems OK.

@@ -1,13 +1,32 @@
+/*
+ * partition.c
+ *
+ * PURPOSE
+ *      Partition handling routines for the OSTA-UDF(tm) filesystem.
+ *
+ * CONTACTS
+ *      E-mail regarding any portion of the Linux UDF file system should be
+ *      directed to the development team mailing list (run by majordomo):
+ *              linux_udf@hootie.lvld.hp.com
+ *
+ * COPYRIGHT
+ *      This file is distributed under the terms of the GNU General Public
+ *      License (GPL). Copies of the GPL can be obtained from:
+ *              ftp://prep.ai.mit.edu/pub/gnu/GPL
+ *      Each contributing author retains all rights to their own work.
+ *
+ * HISTORY
+ *
+ * 12/06/98 blf  Created file. 
+ *
+ */
+
 #include "udfdecl.h"
 #include "udf_sb.h"
 #include "udf_i.h"
 
-#ifdef __linux__
 #include <linux/fs.h>
 #include <linux/string.h>
-#else
-#include <string.h>
-#endif
 
 extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partition, Uint32 offset)
 {
@@ -38,10 +57,20 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 
 			index = (sb->s_blocksize - UDF_SB_TYPEVIRT(sb,partition).s_start_offset) / sizeof(Uint32);
 
+
+			if (block > UDF_SB_TYPEVIRT(sb,partition).s_num_entries)
+			{
+				printk(KERN_DEBUG "udf: trying to access block beyond end of VAT (%d max %d)\n",
+					block, UDF_SB_TYPEVIRT(sb,partition).s_num_entries);
+				return 0xFFFFFFFF;
+			}
+#ifdef VDEBUG
+			printk(KERN_DEBUG "udf: block == %d, index == %d\n", block, index);
+#endif
+
 			if (block >= index)
 			{
 				block -= index;
-				/* newblock = (block / (sb->s_blocksize / sizeof(Uint32))); */
 				newblock = 1 + (block / (sb->s_blocksize / sizeof(Uint32)));
 				index = block % (sb->s_blocksize / sizeof(Uint32));
 			}
@@ -51,7 +80,12 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 				index = UDF_SB_TYPEVIRT(sb,partition).s_start_offset / sizeof(Uint32) + block;
 			}
 
-			loc = udf_bmap(UDF_SB_TYPEVIRT(sb,partition).s_vat, newblock);
+			loc = udf_bmap(UDF_SB_VAT(sb), newblock);
+
+#ifdef VDEBUG
+			printk(KERN_DEBUG "udf: udf_get_pblock(VAT: (%d,%d)+%d start = %d, newblock = %d, loc = %d, index = %d\n",
+				block, partition, offset, UDF_SB_TYPEVIRT(sb,partition).s_start_offset, newblock, loc, index);
+#endif
 
 			if (!(bh = bread(sb->s_dev, loc, sb->s_blocksize)))
 			{
@@ -61,15 +95,16 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 			}
 
 			loc = ((Uint32 *)bh->b_data)[index];
+
 			udf_release_data(bh);
 
-			if (UDF_I_LOCATION(UDF_SB_TYPEVIRT(sb,partition).s_vat).partitionReferenceNum == partition)
+			if (UDF_I_LOCATION(UDF_SB_VAT(sb)).partitionReferenceNum == partition)
 			{
 				printk(KERN_DEBUG "udf: recursive call to udf_get_pblock!\n");
 				return 0xFFFFFFFF;
 			}
 
-			return udf_get_pblock(sb, loc, UDF_I_LOCATION(UDF_SB_TYPEVIRT(sb,partition).s_vat).partitionReferenceNum, offset);
+			return udf_get_pblock(sb, loc, UDF_I_LOCATION(UDF_SB_VAT(sb)).partitionReferenceNum, offset);
 		}
 		case UDF_SPARABLE_MAP15:
 		{
@@ -81,7 +116,7 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 			struct SparingTable *st;
 			SparingEntry *se;
 
-			bh = udf_read_tagged(sb, spartable, spartable);
+			bh = udf_read_tagged(sb, spartable, spartable, TID_UNUSED_DESC);
 
 			if (!bh)
 			{

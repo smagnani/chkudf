@@ -3,6 +3,7 @@
  *
  * PURPOSE
  *	Routines for converting between UTF-8 and OSTA Compressed Unicode.
+ *      Also handles filename mangling
  *
  * DESCRIPTION
  *	OSTA Compressed Unicode is explained in the OSTA UDF specification.
@@ -22,14 +23,15 @@
  *	Each contributing author retains all rights to their own work.
  */
 
-#include "udfdecl.h"
 
 #ifdef __KERNEL__
 #include <linux/kernel.h>
-#include <linux/string.h>	/* for memset */
+#include <linux/string.h>       /* for memset */
 #else
 #include <string.h>
 #endif
+
+#include "udfdecl.h"
 
 /*
  * udf_build_ustr
@@ -100,7 +102,7 @@ int udf_CS0toUTF8(struct ustr *utf_o, struct ustr *ocu_i)
 
 	if ((cmp_id != 8) && (cmp_id != 16)) {
 #ifdef __KERNEL__
-		printk(KERN_ERR "udf: unknown compression code (%d)\n", cmp_id);
+		printk(KERN_ERR "udf: unknown compression code (%d) stri=%s\n", cmp_id, ocu_i->u_name);
 #endif
 		return -1;
 	}
@@ -249,6 +251,33 @@ error_out:
 	return 0;
 }
 
+#ifdef __KERNEL__
+int udf_get_filename(struct FileIdentDesc *fi, char *name, struct inode *inode)
+{
+	struct ustr filename;
+	struct ustr unifilename;
+	int len;
+
+	if (udf_build_ustr_exact(&unifilename, fi->fileIdent + fi->lengthOfImpUse,
+		fi->lengthFileIdent) )
+	{
+		return 0;
+	}
+
+	if (udf_CS0toUTF8(&filename, &unifilename) )
+	{
+		return 0;
+	}
+
+	if ((len = udf_translate_to_linux(name, filename.u_name, filename.u_len-1,
+		unifilename.u_name, unifilename.u_len)))
+	{
+		return len;
+	}
+	return 0;
+}
+#endif
+
 #define ILLEGAL_CHAR_MARK	'_'
 #define EXT_MARK			'.'
 #define CRC_MARK			'#'
@@ -262,16 +291,12 @@ int udf_translate_to_linux(char *newName, char *udfName, int udfLen, char *fidNa
 	char current;
 	const char hexChar[] = "0123456789ABCDEF";
 
-	if (udfLen == 1 && udfName[0] == '.')
+	if (udfName[0] == '.' && (udfLen == 1 ||
+		(udfLen == 2 && udfName[1] == '.')))
 	{
 		needsCRC = 1;
-		newName[newIndex++] = '.';
-	}
-	else if (udfLen == 2 && udfName[0] == '.' && udfName[1] == '.')
-	{
-		needsCRC = 1;
-		newName[newIndex++] = '.';
-		newName[newIndex++] = '.';
+		newIndex = udfLen;
+		memcpy(newName, udfName, udfLen);
 	}
 	else
 	{	

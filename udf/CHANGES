@@ -1,48 +1,44 @@
-
 dgb: David Boyd       (dave@trylinux.com)
-bf:  Ben Fennema      (bfennema@falcon.csc.calpoly.edu)
+blf: Ben Fennema      (bfennema@falcon.csc.calpoly.edu)
 rl:  Reinoud Lamberts (Reinoud@BitWizard.nl)
 rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
 
 
+10/02/98 dgb    Implemented some changes suggested by HJA Sandkuyl.
+                Moved files around to support user-land access to 
+                filesystem via library
+10/04/98        Implemented table-based lookup for timestamp conversions
+                Fixed unicode convertions, added volident field to superblock
+10/06/98        Implemented directory operations, most of which work!
 
-10/2/98 dgb	Implemented some changes suggested by HJA Sandkuyl.
-		Moved files around to support user-land access to 
-		filesystem via library
-10/4/98 	Implemented table-based lookup for timestamp conversions
-		Fixed unicode convertions, added volident field to superblock
-10/6/98		Implemented directory operations, most of which work!
+10/07/98 dgb    Milestone reached. Rudimentary directory and file reading.
+                Limited in number of directory entries, though, about 30-40.
 
-10/7/98	dgb	Milestone reached. Rudimentary directory and file reading.
-		Limited in number of directory entries, though, about 30-40.
+10/16/98        Attempting some multi-session support.
 
-10/16/98	Attempting some multi-session support.
+10/18/98        Fixed some directory problems; still limited but
+                doesn't seem to crash or oops now.
+                Enhanced "df" output a little.  Generally much more stable.
 
-10/18/98	Fixed some directory problems; still limited but
-		doesn't seem to crash or oops now.
-		Enhanced "df" output a little.  Generally much more stable.
+11/29/98        Added better support for 'extents', long directories are ok now.
+                Incorporated some changes from Ben Fennema, including mkudf.
+                Still can't handle the "Sequential.img" test case from Adaptec.
+                Improved taglist and added a new dumpfe tool.
 
-11/29/98	Added better support for 'extents', long directories are 
-		ok now. Incorporated some changes from Ben Fennema, 
-		including mkudf. Still can't handle the "Sequential.img" 
-		test case from Adaptec. Improved taglist and added a new 
-		dumpfe tool.
+12/6/98         Good results with Thomas Tempelmann's UDF1.02.img, although
+                still needs some 'short_ad' updates, and filename translation.
+                Superficial support for virtual & sparable partitions.
 
-12/6/98		Good results with Thomas Tempelmann's UDF1.02.img, although
-		still needs some 'short_ad' updates, and filename translation.
-		Superficial support for virtual & sparable partitions.
+12/8/98 blf     Partition support for Spared Blocks and Virtual Partitions.
+                Definite bugs in Virtual Partitions (lastblock only set correctly
+                on files).
 
-12/10/98 rl	Changed "." and ".." file name translation into human
+12/10/98 rl     Changed "." and ".." file name translation into human
                 readable form.
 
-12/11/98 rl	Included (&fixed :) Ben's VAT fix.  
-12/11/98 rl/rew	Fixed incorrect name compare (udf_lookup).
+12/11/98 rl/rew Fixed incorrect name compare (udf_lookup).
 
-12/13/98 rew	Fixed two warnings that gcc gave me about assignements
-		inside a comparison. 
+12/13/98 rew    Cleanup of CHANGES/TODO
 
-12/13/98 rew	Cleanup of CHANGES/TODO.
-
-12/13/98 rew	Tested Thomas' other images. 1 OK 2 bad. See TODO.
-
-
+12/14/98 blf    Full partition support. Code cleanups. No warnings! :)
+                UDF1.02.img, SparedBlks.img, and Sequential.img all work.

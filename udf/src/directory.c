@@ -22,6 +22,7 @@
 #if defined(__linux__) && defined(__KERNEL__)
 
 #include <linux/fs.h>
+#include <linux/string.h>
 
 #else
 
@@ -31,8 +32,147 @@
 
 #endif
 
+#ifdef __KERNEL__
+
+Uint8 * udf_filead_read(struct inode *dir, Uint8 *tmpad, Uint8 ad_size,
+	lb_addr fe_loc, int *pos, int *offset, struct buffer_head **bh, int *error)
+{
+	int loffset = *offset;
+	int block;
+	Uint8 *ad;
+	int remainder;
+
+	*error = 0;
+
+#ifdef VDEBUG
+	printk(KERN_DEBUG "udf: udf_filead_read(%p,%p,%d,%d,%p)\n",
+		dir, tmpad, ad_size, *offset, *bh);
+#endif
+
+	ad = (Uint8 *)(*bh)->b_data + *offset;
+	*offset += ad_size;
+
+	if (!ad)
+	{
+		udf_release_data(*bh);
+		*error = 1;
+		return NULL;
+	}
+
+	if (*offset == dir->i_sb->s_blocksize)
+	{
+		udf_release_data(*bh);
+		block = udf_get_lb_pblock(dir->i_sb, fe_loc, ++*pos);
+		if (!block)
+			return NULL;
+		if (!(*bh = bread(dir->i_dev, block, dir->i_sb->s_blocksize)))
+			return NULL;
+	}
+	else if (*offset > dir->i_sb->s_blocksize)
+	{
+		ad = tmpad;
+
+		remainder = dir->i_sb->s_blocksize - loffset;
+		memcpy((char *)ad, (*bh)->b_data + loffset, remainder);
+
+		udf_release_data(*bh);
+		block = udf_get_lb_pblock(dir->i_sb, fe_loc, ++*pos);
+		if (!block)
+			return NULL;
+		if (!((*bh) = bread(dir->i_dev, block, dir->i_sb->s_blocksize)))
+			return NULL;
+
+		memcpy((char *)ad + remainder, (*bh)->b_data, ad_size - remainder);
+		*offset = ad_size - remainder;
+	}
+	return ad;
+}
+
+struct FileIdentDesc *
+udf_fileident_read(struct inode *dir, struct FileIdentDesc *tmpfi,
+	int *nf_pos, int *offset, struct buffer_head **bh, int *error)
+{
+	int loffset = *offset;
+	int block;
+	struct FileIdentDesc *fi;
+	int remainder;
+
+	*error = 0;
+
+#ifdef VDEBUG
+	printk(KERN_DEBUG "udf: udf_fileident_read(%p,%p,%d,%d,%p)\n",
+		dir, tmpfi, *nf_pos, *offset, *bh);
+#endif
+
+	fi = udf_get_fileident((*bh)->b_data, dir->i_sb->s_blocksize,
+		offset);
+
+	if (!fi)
+	{
+		udf_release_data(*bh);
+		*error = 1;
+		return NULL;
+	}
+
+	*nf_pos += ((*offset - loffset) >> 2);
+
+	if (*offset == dir->i_sb->s_blocksize)
+	{
+			
+		udf_release_data(*bh);
+		block = udf_bmap(dir, *nf_pos >> (dir->i_sb->s_blocksize_bits - 2));
+		if (!block)
+			return NULL;
+		if (!(*bh = bread(dir->i_dev, block, dir->i_sb->s_blocksize)))
+			return NULL;
+	}
+	else if (*offset > dir->i_sb->s_blocksize)
+	{
+		int fi_len;
+
+		fi = tmpfi;
+
+		remainder = dir->i_sb->s_blocksize - loffset;
+		memcpy((char *)fi, (*bh)->b_data + loffset, remainder);
+
+		udf_release_data(*bh);
+		block = udf_bmap(dir, *nf_pos >> (dir->i_sb->s_blocksize_bits - 2));
+		if (!block)
+			return NULL;
+		if (!((*bh) = bread(dir->i_dev, block, dir->i_sb->s_blocksize)))
+			return NULL;
+
+		if (sizeof(struct FileIdentDesc) > remainder)
+		{
+			memcpy((char *)fi + remainder, (*bh)->b_data, sizeof(struct FileIdentDesc) - remainder);
+
+			if (fi->descTag.tagIdent != TID_FILE_IDENT_DESC)
+			{
+				printk(KERN_DEBUG "udf: (udf_enum_directory) - 0x%x != TID_FILE_IDENT_DESC\n",
+					fi->descTag.tagIdent);
+				udf_release_data(*bh);
+				*error = 1;
+				return NULL;
+			}
+			fi_len = sizeof(struct FileIdentDesc) + fi->lengthFileIdent + fi->lengthOfImpUse;
+			fi_len += (4 - (fi_len % 4)) % 4;
+			*nf_pos += ((fi_len - (*offset - loffset)) >> 2);
+		}
+		else
+		{
+			fi_len = sizeof(struct FileIdentDesc) + fi->lengthFileIdent + fi->lengthOfImpUse;
+			fi_len += (4 - (fi_len % 4)) % 4;
+		}
+
+		memcpy((char *)fi + remainder, (*bh)->b_data, fi_len - remainder);
+		*offset = fi_len - remainder;
+	}
+	return fi;
+}
+#endif
+
 struct FileIdentDesc * 
-udf_get_fileident(void * buffer, int bufsize, int * offset, int * remainder)
+udf_get_fileident(void * buffer, int bufsize, int * offset)
 {
 	struct FileIdentDesc *fi;
 	int lengthThisIdent;
@@ -87,9 +227,6 @@ udf_get_fileident(void * buffer, int bufsize, int * offset, int * remainder)
 	if (padlen)
 		lengthThisIdent+= (UDF_NAME_PAD - padlen);
 	*offset = *offset + lengthThisIdent;
-	if ( remainder ) {
-		*remainder=bufsize - *offset;
-	}
 
 	return fi;
 }
@@ -202,4 +339,3 @@ udf_get_filelongad(void * buffer, int bufsize, int * offset)
 	*offset = *offset + sizeof(long_ad);
 	return la;
 }
-

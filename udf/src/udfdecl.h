@@ -40,6 +40,7 @@ extern void udf_put_inode(struct inode *);
 extern void udf_delete_inode(struct inode *);
 extern void udf_write_inode(struct inode *);
 extern int udf_bmap(struct inode *, int block);
+extern void udf_umount_begin(struct super_block *);
 
 /* module parms */
 extern int udf_debuglvl;
@@ -52,8 +53,8 @@ extern int udf_read_tagged_data(char *, int size, int fd, int block, int partref
 extern struct inode_operations udf_inode_operations;
 extern void udf_debug_dump(struct buffer_head *);
 extern struct buffer_head *udf_read_sector(struct super_block *, unsigned long sec);
-extern struct buffer_head *udf_read_tagged(struct super_block *, Uint32, Uint32);
-extern struct buffer_head *udf_read_ptagged(struct super_block *, lb_addr);
+extern struct buffer_head *udf_read_tagged(struct super_block *, Uint32, Uint32, Uint32);
+extern struct buffer_head *udf_read_ptagged(struct super_block *, lb_addr, Uint32);
 extern struct buffer_head *udf_read_untagged(struct super_block *, Uint32, Uint32);
 extern void udf_release_data(struct buffer_head *);
 
@@ -66,8 +67,8 @@ extern long udf_block_from_inode(struct inode *);
 extern long udf_block_from_bmap(struct inode *, int block, int part);
 extern long udf_inode_from_block(struct super_block *, long block, int part);
 extern int  udf_part_from_inode(struct inode *);
-extern struct FileIdentDesc * udf_get_fileident(void * buffer, int bufsize, 
-						int * offset, int * remainder);
+
+extern int udf_get_filename(struct FileIdentDesc *, char *, struct inode *);
 
 #define DPRINTK(X,Y)	do { if (udf_debuglvl >= X) printk Y ; } while(0)
 #define PRINTK(X)	do { if (udf_debuglvl >= UDF_DEBUG_LVL1) printk X ; } while(0)
@@ -203,9 +204,21 @@ extern time_t udf_converttime (struct ktm *);
 extern void udf_dump(char * buffer, int size);
 
 
+#ifdef __KERNEL__
+extern Uint8 *
+udf_filead_read(struct inode *, Uint8 *, Uint8, lb_addr, int *, int *,
+	struct buffer_head **, int *);
+
+extern struct FileIdentDesc *
+udf_fileident_read(struct inode *, struct FileIdentDesc *,
+        int *, int *, struct buffer_head **, int *);
+#endif
+extern struct FileIdentDesc * 
+udf_get_fileident(void * buffer, int bufsize, int * offset);
 extern extent_ad * udf_get_fileextent(void * buffer, int bufsize, int * offset);
 extern long_ad * udf_get_filelongad(void * buffer, int bufsize, int * offset);
 extern short_ad * udf_get_fileshortad(void * buffer, int bufsize, int * offset);
+extern Uint8 * udf_get_filead(struct FileEntry *, Uint8 *, int, int, int, int *);
 
 
 #endif

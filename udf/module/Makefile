@@ -44,7 +44,7 @@ UDFH    = $(INCDIR)/udf_fs.h  $(INCDIR)/udf_udf.h $(INCDIR)/udf_167.h
 UDFH   += $(INCDIR)/udf_fs_sb.h $(INCDIR)/udf_fs_i.h udfdecl.h udf_i.h udf_sb.h
 
 O_OBJS   := inode.o super.o dir.o crc.o debug.o directory.o file.o
-O_OBJS   += udftime.o unicode.o misc.o partition.o
+O_OBJS   += udftime.o unicode.o misc.o partition.o namei.o
 
 %.o:  	../src/%.c 
 	$(CC) -c $(CFLAGS) -o $@ $<

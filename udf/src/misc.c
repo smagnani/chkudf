@@ -131,7 +131,7 @@ udf_read_untagged(struct super_block *sb, Uint32 block, Uint32 offset)
  *	Written, tested, and released.
  */
 extern struct buffer_head *
-udf_read_tagged(struct super_block *sb, Uint32 block, Uint32 offset)
+udf_read_tagged(struct super_block *sb, Uint32 block, Uint32 location, Uint32 ident)
 {
 	tag *tag_p;
 	struct buffer_head *bh;
@@ -150,28 +150,24 @@ udf_read_tagged(struct super_block *sb, Uint32 block, Uint32 offset)
 	if (!bh)
 	{
 		printk(KERN_ERR "udf: udf_read_tagged(%p,%d,%d) failed\n",
-			sb, block, offset);
+			sb, block, ident);
 		return NULL;
 	}
 
 	tag_p = (tag *)(bh->b_data);
-#if 0
-	/* Verify the tag location */
-	if ( ((block-offset) != tag_p->tagLocation) &&
-	     (block != tag_p->tagLocation) ) {
-#endif
-	if ( offset != tag_p->tagLocation )
-	{
-		static int seen_msg=0;
 
-		if (!seen_msg) {	
-			printk(KERN_DEBUG "udf: location mismatch block %d, offset %d, tag %d\n",
-				block, offset, tag_p->tagLocation);
-			seen_msg=1;
-		}
-		/*
+	if ( ident != TID_UNUSED_DESC && ident != tag_p->tagIdent )
+	{
+		printk(KERN_DEBUG "udf: ident mismatch block %d, ident %d != %d\n",
+			block, tag_p->tagIdent, ident);
 		goto error_out;
-		*/
+	}
+
+	if ( location != tag_p->tagLocation )
+	{
+		printk(KERN_DEBUG "udf: location mismatch block %d, tag %d != %d\n",
+			block, tag_p->tagLocation, location);
+		goto error_out;
 	}
 	
 	/* Verify the tag checksum */
@@ -181,24 +177,23 @@ udf_read_tagged(struct super_block *sb, Uint32 block, Uint32 offset)
 	for (i = 5; i < 16; i++)
 		checksum += (Uint8)(bh->b_data[i]);
 	if (checksum != tag_p->tagChecksum) {
-		printk(KERN_ERR "udf: tag checksum failed\n");
+		printk(KERN_ERR "udf: tag checksum failed block %d\n", block);
 		goto error_out;
 	}
 
-#ifdef USE_STRICT_VERSION
 	/* Verify the tag version */
-	if (tag_p->descVersion != 0x0002U) {
-		printk(KERN_ERR "udf: tag version 0x%04x != 0x0002U\n",
-			tag_p->descVersion);
+	if (tag_p->descVersion != 0x0002U && tag_p->descVersion != 0x0003U)
+	{
+		printk(KERN_ERR "udf: tag version 0x%04x != 0x0002 || 0x0003 block %d\n",
+			tag_p->descVersion, block);
 		goto error_out;
 	}
-#endif
 
 	/* Verify the descriptor CRC */
 	if (tag_p->descCRC == udf_crc(bh->b_data + 16, tag_p->descCRCLength)) {
 		return bh;
 	}
-	printk(KERN_ERR "udf: crc failure in udf_read_tagged\n");
+	printk(KERN_ERR "udf: crc failure in udf_read_tagged block %d\n", block);
 
 error_out:
 	brelse(bh);
@@ -206,14 +201,15 @@ error_out:
 }
 
 extern struct buffer_head *
-udf_read_ptagged(struct super_block *sb, lb_addr loc)
+udf_read_ptagged(struct super_block *sb, lb_addr loc, Uint32 ident)
 {
 #ifdef VDEBUG
-	printk(KERN_DEBUG "udf: udf_read_ptagged(%p,%d,%d)\n",
-		sb, loc.logicalBlockNum, loc.partitionReferenceNum);
+	printk(KERN_DEBUG "udf: udf_read_ptagged(%p,%d,%d,%d) block=%d\n",
+		sb, loc.logicalBlockNum, loc.partitionReferenceNum, ident,
+		udf_get_lb_pblock(sb, loc, 0));
 #endif
 	return udf_read_tagged(sb, udf_get_lb_pblock(sb, loc, 0),
-		loc.logicalBlockNum);
+		loc.logicalBlockNum, ident);
 }
 
 void udf_release_data(struct buffer_head *bh)

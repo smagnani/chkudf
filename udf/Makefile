@@ -14,5 +14,5 @@ clean-subdirs:
 	make -C lib clean
 	make -C module clean
 	make -C tools clean
-	rm -f *.o *~
+
 

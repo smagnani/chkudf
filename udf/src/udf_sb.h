@@ -75,6 +75,7 @@
 #define UDF_SB_PARTMAPS(X)		( UDF_SB(X)->s_partmaps )
 #define UDF_SB_LOCATION(X)		( UDF_SB(X)->s_location )
 #define UDF_SB_CHARSET(X)		( UDF_SB(X)->s_nls_iocharset )
+#define UDF_SB_VAT(X)			( UDF_SB(X)->s_vat )
 
 #define UDF_SB_PARTTYPE(X,Y)	( UDF_SB_PARTMAPS(X)[Y].s_partition_type )
 #define UDF_SB_PARTROOT(X,Y)	( UDF_SB_PARTMAPS(X)[Y].s_partition_root )
