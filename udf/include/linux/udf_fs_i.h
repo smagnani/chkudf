@@ -17,6 +17,15 @@
  *	Each contributing author retains all rights to their own work.
  */
 
+#ifdef __KERNEL__
+
+#if !defined(UDF_COMPILING)
+struct udf_inode_info {
+	__u32 reserved[16];
+};
+
+#else
+
 struct udf_inode_info {
 	/* Physical address of inode */
 	__u32 i_alloc_type;
@@ -29,5 +38,14 @@ struct udf_inode_info {
 	__u64 i_fileLength;
 	__u64 i_unique;
 };
+#endif
+
+#endif
+
+/* exported IOCTLs, we have 'l', 0x40-0x7f */
+
+#define UDF_GETEASIZE	_IOR('l', 0x40, int)
+#define UDF_GETEABLOCK	_IOR('l', 0x41, void *)
+#define UDF_GETVOLIDENT _IOR('l', 0x42, void *)
 
 #endif /* !defined(_LINUX_UDF_FS_I_H) */

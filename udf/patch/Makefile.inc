@@ -1,6 +1,6 @@
-diff -u --recursive --new-file v2.1.129/linux/fs/Makefile linux/fs/Makefile
---- v2.1.129/linux/fs/Makefile	Mon Aug 31 16:01:35 1998
-+++ linux/fs/Makefile	Sun Nov 29 16:35:15 1998
+diff -u --recursive --new-file v2.2.1/linux/fs/Makefile linux/fs/Makefile
+--- v2.2.1/linux/fs/Makefile	Tue Jan 19 14:07:53 1999
++++ linux/fs/Makefile	Wed Feb 10 14:45:28 1999
 @@ -18,7 +18,7 @@
  MOD_LIST_NAME := FS_MODULES
  ALL_SUB_DIRS = coda minix ext2 fat msdos vfat proc isofs nfs umsdos ntfs \

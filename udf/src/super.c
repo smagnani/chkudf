@@ -53,6 +53,7 @@
 #include <linux/cdrom.h>
 #include <linux/nls.h>
 #include <asm/byteorder.h>
+#include <linux/string.h> /* memset */
 
 #include <linux/udf_fs.h>
 #include <linux/udf_fs_sb.h>
@@ -506,10 +507,15 @@ udf_get_last_session(kdev_t dev)
       set_fs(old_fs);
 #ifdef DEBUG
       if (i==0) {
-	  printk(KERN_INFO "udf: XA disk: %s\n", ms_info.xa_flag ? "yes":"no");
-	  printk(KERN_INFO "udf: vol_desc_start = %d\n", ms_info.addr.lba);
-      } else
-      	  printk(KERN_DEBUG "udf: CDROMMULTISESSION not supported: rc=%d\n",i);
+	  	printk(KERN_INFO "udf: XA disk: %s\n", ms_info.xa_flag ? "yes":"no");
+	  	printk(KERN_INFO "udf: vol_desc_start = %d\n", ms_info.addr.lba);
+      } else {
+      	printk(KERN_DEBUG "udf: CDROMMULTISESSION not supported: rc=%d\n",i);
+	  }
+#else
+	  if (i!=0) {
+		return 0;
+	  }
 #endif
 
 #define WE_OBEY_THE_WRITTEN_STANDARDS 1
@@ -557,11 +563,13 @@ udf_get_last_block(kdev_t dev)
 		inode_fake.i_rdev=dev;
 		set_fs(KERNEL_DS);
 
+		lblock=0;
 		i = get_blkfops(MAJOR(dev))->ioctl(&inode_fake,
 			NULL,
 			BLKGETSIZE,
 			(unsigned long) &lblock);
 
+		printk(KERN_DEBUG "udf: BLKGETSIZE i=%d, lblock=%ld\n", i, lblock);
 		if (mult)
 			lblock *= mult;
 		else if (div)
@@ -928,7 +936,7 @@ udf_load_partdesc(struct super_block *sb, struct buffer_head *bh)
 }
 
 static int 
-udf_load_logicalvol(struct super_block *sb, struct buffer_head * bh)
+udf_load_logicalvol(struct super_block *sb,struct buffer_head * bh)
 {
 	struct LogicalVolDesc *lvd;
 	int i, offset;
@@ -989,35 +997,7 @@ udf_load_logicalvol(struct super_block *sb, struct buffer_head * bh)
 			UDF_SB_FILESET(sb).partitionReferenceNum,
 			UDF_SB_FILESET(sb).logicalBlockNum);
 	}
-	if (lvd->integritySeqExt.extLength)
-		udf_load_logicalvolint(sb, leea_to_cpu(lvd->integritySeqExt));
 	return 0;
-}
-
-/*
- * udf_load_logicalvolint
- *
- */
-void udf_load_logicalvolint(struct super_block *sb, extent_ad loc)
-{
-	struct LogicalVolIntegrityDesc *lvid;
-	struct LogicalVolIntegrityDescImpUse *lvidiu;
-
-	while ((bh = udf_read_tagged(sb, loc.extLocation, loc.extLocation,
-		TID_LOGICAL_VOL_INTEGRITY_DESC)) && loc.extLength > 0)
-	{
-		lvid = (struct LogicalVolIntegrityDesc *)bh->b_data;
-		lvidiu = (struct LogicalVolIntegrityDescImpUse *)&(lvid->logicalVolContentsUse[0])
-		UDF_SB_LOGVOLINT(sb) = loc.extLocation;
-		UDF_SB_FILECOUNT(sb) = lvidiu->numFiles;
-
-		if (lvid->nextIntegrityExt.extLength)
-			udf_load_logicalvolint(sb, lvid->nextIntegrityExt);
-		
-		udf_release_data(bh);
-		loc.extLength -= sb->s_blocksize;
-		loc.extLocation ++;
-	}
 }
 
 /*
@@ -1275,8 +1255,8 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	UDF_SB_VOLDESC(sb)=0;
 	UDF_SB_FILESET(sb).logicalBlockNum = 0xFFFFFFFF;
 	UDF_SB_FILESET(sb).partitionReferenceNum = 0xFFFF;
-	UDF_SB_LOGVOLINT(sb) = 0xFFFFFFFF;
 	UDF_SB_RECORDTIME(sb)=0;
+	UDF_SB_FILECOUNT(sb)=0;
 	UDF_SB_VOLIDENT(sb)[0]=0;
 
 	UDF_SB(sb)->s_flags = uopt.flags;
@@ -1484,6 +1464,7 @@ static unsigned int
 udf_count_free(struct super_block *sb)
 {
 	struct buffer_head *bh;
+	struct SpaceBitmapDesc *bm;
 	unsigned int accum=0;
 	int index;
 	int block=0;
@@ -1493,75 +1474,43 @@ udf_count_free(struct super_block *sb)
 	Uint8 * ptr;
 
 	if (UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_uspace_bitmap == 0xFFFFFFFF)
-	{
-		if (UDF_SB_LOGVOLINT(sb))
-		{
-			struct LogicalVolIntegrityDesc *lvid;
-			bh = udf_read_tagged(sb, UDF_SB_LOGVOLINT(sb), UDF_SB_LOGVOLINT(sb), TID_LOGICAL_VOL_INTEGRITY_DESC);
+		return 0;
 
-			if (!bh)
-			{
-				printk(KERN_ERR "udf: udf_count_free failed!\n");
-				return 0;
-			}
+	loc.logicalBlockNum = UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_uspace_bitmap;
+	loc.partitionReferenceNum = UDF_SB_PARTITION(sb);
 
-			lvid = (struct LogicalVolIntegrityDesc *)bh->b_data;
+	bh = udf_read_ptagged(sb, loc, 0, TID_SPACE_BITMAP_DESC);
 
-			if (lvid->numOfPartitions > UDF_SB_PARTITION(sb))
-				accum = lvid->freeSpaceTable[UDF_SB_PARTITION(sb)];
+	if (!bh) {
+		printk(KERN_ERR "udf: udf_count_free failed\n");
+		return 0;
+	}
 
-			if (accum == 0xFFFFFFFF)
-				accum = 0;
+	bm=(struct SpaceBitmapDesc *)bh->b_data;
+	bytes=bm->numOfBytes;
+	bytes += 24;
+	index=24; /* offset in first block only */
+	ptr=(Uint8 *)bh->b_data;
 
+	while ( bytes > 0 ) {
+		while ((bytes > 0) && (index < sb->s_blocksize)) {
+			value=ptr[index];
+			accum += udf_bitmap_lookup[ value & 0x0f ];
+			accum += udf_bitmap_lookup[ value >> 4 ];
+			index++;
+			bytes--;
+		}
+		if ( bytes ) {
 			udf_release_data(bh);
-			return accum;
-		}
-		else
-			return 0;
-	}
-	else
-	{
-		struct SpaceBitmapDesc *bm;
-		loc.logicalBlockNum = UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_uspace_bitmap;
-		loc.partitionReferenceNum = UDF_SB_PARTITION(sb);
-		bh = udf_read_ptagged(sb, loc, 0, TID_SPACE_BITMAP_DESC);
-
-		if (!bh)
-		{
-			printk(KERN_ERR "udf: udf_count_free failed\n");
-			return 0;
-		}
-
-		bm = (struct SpaceBitmapDesc *)bh->b_data;
-		bytes = bm->numOfBytes;
-		bytes += 24;
-		index = 24; /* offset in first block only */
-		ptr = (Uint8 *)bh->b_data;
-
-		while ( bytes > 0 )
-		{
-			while ((bytes > 0) && (index < sb->s_blocksize))
-			{
-				value = ptr[index];
-				accum += udf_bitmap_lookup[ value & 0x0f ];
-				accum += udf_bitmap_lookup[ value >> 4 ];
-				index++;
-				bytes--;
+			bh = bread(sb->s_dev, block++, sb->s_blocksize);
+			if (!bh) {
+			  printk(KERN_DEBUG "udf: udf_count_free failed\n");
+			  return accum;
 			}
-			if ( bytes )
-			{
-				udf_release_data(bh);
-				bh = bread(sb->s_dev, block++, sb->s_blocksize);
-				if (!bh)
-				{
-					printk(KERN_DEBUG "udf: udf_count_free failed\n");
-					return accum;
-				}
-				index = 0;
-				ptr = (Uint8 *)bh->b_data;
-			}
+			index=0;
+			ptr=(Uint8 *)bh->b_data;
 		}
-		udf_release_data(bh);
-		return accum;
 	}
+	udf_release_data(bh);
+	return accum;
 }

@@ -21,17 +21,18 @@
  *
  */
 
+#include "udfdecl.h"
+
 #if defined(__linux__) && defined(__KERNEL__)
 #include <linux/version.h>
 #include "udf_i.h"
 #include "udf_sb.h"
-#include <linux/string.h>
+#include <linux/string.h> /* memset */
 #include <linux/errno.h>
 #include <linux/mm.h>
 #include <linux/malloc.h>
 #endif
 
-#include "udfdecl.h"
 
 static inline int udf_match(int len, const char * const name, struct qstr *qs)
 {

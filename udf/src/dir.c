@@ -24,6 +24,7 @@
  *               code now in directory.c:udf_fileident_read.
  */
 
+#include "udfdecl.h"
 
 #if defined(__linux__) && defined(__KERNEL__)
 #include <linux/version.h>
@@ -35,7 +36,6 @@
 #include <linux/malloc.h>
 #endif
 
-#include "udfdecl.h"
 
 /* Prototypes for file operations */
 static int udf_readdir(struct file *, void *, filldir_t);
@@ -49,7 +49,7 @@ struct file_operations udf_dir_fops = {
 	NULL,
 	udf_readdir,	/* readdir */
 	NULL,			/* poll */
-	NULL,			/* ioctl */
+	udf_ioctl,			/* ioctl */
 	NULL,			/* mmap */
 	NULL,			/* open */
 	NULL,			/* flush */

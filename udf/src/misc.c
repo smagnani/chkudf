@@ -161,9 +161,11 @@ udf_read_tagged(struct super_block *sb, Uint32 block, Uint32 location, Uint32 id
 
 	if ( location != le32_to_cpu(tag_p->tagLocation) )
 	{
+#ifdef DEBUG
 		printk(KERN_DEBUG "udf: location mismatch block %d, tag %d != %d\n",
 			block, le32_to_cpu(tag_p->tagLocation), location);
-		goto error_out;
+#endif
+		goto error_out; 
 	}
 	
 	/* Verify the tag checksum */

@@ -27,29 +27,9 @@ LIBUDFO=crc.o unicode.o udftime.o debug.o misc.o directory.o
 all: $(LIBUDF) 
 
 clean:
-	/bin/rm -f *.o $(LIBUDF) 
+	@-/bin/rm -f *.o $(LIBUDF)  *~ *.bak
+	@echo "lib cleaned."
 
 $(LIBUDF): $(LIBUDFO)
 	ar rcv $@ $(LIBUDFO)
 
-#crc.o:  crc.c $(UDF_CONFIG) $(UDF_INC)
-#	$(CC) $(CFLAGS) -c crc.c -o $@
-#
-#misc.o:  misc.c $(UDF_CONFIG) $(UDF_INC)
-#	$(CC) $(CFLAGS) -c misc.c -o $@
-#
-#directory.o:  directory.c $(UDF_CONFIG) $(UDF_INC)
-#	$(CC) $(CFLAGS) -c directory.c -o $@
-#
-#getopt.o:	getopt.c $(UDF_CONFIG) $(UDF_INC)
-#	$(CC) $(CFLAGS) -c getopt.c -o $@
-#
-#unicode.o:  unicode.c  $(UDF_INC)
-#	$(CC) $(CFLAGS) -c unicode.c -o $@
-#
-#udftime.o:  udftime.c  $(UDF_INC)
-#	$(CC) $(CFLAGS) -c udftime.c -o $@
-#
-#debug.o:  debug.c  $(UDF_INC)
-#	$(CC) $(CFLAGS) -c debug.c -o $@
-#

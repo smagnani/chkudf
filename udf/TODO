@@ -15,7 +15,7 @@ mount ro -> -w- perms?
   -- umask implemented -- DGB
 
 remount support
-  -- stuff function, needs more work -- DGB
+  -- some things function, needs more work -- DGB
 
 Check if other images work:
 
@@ -54,3 +54,5 @@ link count:
 
 Strategy4096 aint no good.  It picks te first entry, should be the last.
 
+mkudf:
+	We should start working on making 'mkudf' a working utility.

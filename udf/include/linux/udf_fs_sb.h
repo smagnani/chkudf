@@ -19,7 +19,7 @@
 
 #define UDF_SB_APPROX_SIZE	40
 
-#if !defined(CONFIG_UDF_FS)
+#if !defined(UDF_COMPILING)
 
 /* make things easier for the kernel when we're not compiled in ... */
 struct udf_sb_info {
@@ -91,7 +91,6 @@ struct udf_sb_info
 	__u32 s_voldesc;
 	lb_addr s_fileset;
 	lb_addr s_rootdir;
-	__u32 s_logvolint;
 
 	__u32 s_filecount;
 

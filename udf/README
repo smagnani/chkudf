@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------
  * Linux(r) UDF Filesystem Driver
- * Version: 0.7
+ * Version: 0.7.7
  *
  * This is Andrew's second "patch" vs kernel 2.1.62, 
  * converted to a standalone package. Then many changes made. :-)
@@ -12,25 +12,26 @@ REQUIRED:
 COMPILING:
 	type: "make"
 
+INSTALLING:
+	edit Make.conf to fix directories for modules & tools.
+	type: "make install"
+
 TESTING:
-	type "insmod module/udf.o", 
+	type "modprobe udf", 
 	then "mount -t udf /dev/scd0 /mnt"
 		(assuming /dev/scd0 is your scsi cdrom)
 		(Substitute "scd0" and "/mnt" as appropriate for your system)
 
-I've tested this on my system with kernel 2.1.125, a Ricoh MP-6200S,
+I've tested this on my system with kernel 2.2.1, a Ricoh MP-6200S,
 a UDF 1.5 disc created by Adaptec DirectCD, and the cheap-o
 SCSI card (aha152x compatible) that came with the Ricoh.
 
 I can mount/umount a udf filesystem without crashing my system.
 I can view the directory structure of the file system, including file
-dates and sizes. However, directories are limited in size, to maybe
-30-40 entries, depending on name lengths (1 2k block.)
+dates and sizes. 
 
-Files can be read and used! (As of version 0.5). However, files are limited
-to DVD compatible use, that is, only one 'extent' per file. That means
-the file space must be contiguous on the disc.
-
+Files can be read and used! (As of version 0.5). 
+A writable filesystem is planned, but no work has been done. Sorry.
 
 That's pretty much all that's currently implemented. If you want
 to help out, subscribe to the linux_udf mailing list below.

@@ -21,22 +21,21 @@
  */
 
 
-
-#ifdef __KERNEL__
-
 #ifdef DEBUG
 
-#ifdef __linux__
+#if defined(__linux__) && defined(__KERNEL__)
+
 #include <linux/types.h>
 #include <linux/kernel.h>
 #define PRINT1(X)	printk(KERN_DEBUG X )
 #define PRINT2(X,Y)	printk(KERN_DEBUG X,Y )
-#endif
 
 #else
+
 #include <stdio.h>
 #define PRINT1(X)	fprintf(stderr, X )
 #define PRINT2(X,Y)	fprintf(stderr, X,Y )
+
 #endif
 
 
@@ -67,9 +66,12 @@ udf_dump(char * buffer, int size)
 		PRINT1("\n");
 	}
 }
-#else
+
+#else /* DEBUG */
+
 void
 udf_dump(char * buffer, int size)
 {
 }
+
 #endif

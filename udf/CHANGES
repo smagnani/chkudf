@@ -55,3 +55,11 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
                 Really basic support for finding the unallocated space bitmap
                 (we really need support for unallocated space tables +
                 freed space tables/bitmaps...)
+
+2/9/99 dgb		Tested with Kernel 2.2.1. 
+				Added some ioctl's for extended attributes and volume ident.
+				Added UDF_COMPILING define to udf_fs_i.h to allow kernel to
+				compile without gagging on lb_addr.
+				Minor change to mkudf so it gives help w/'mkudf' and nothing
+				else. Changed 'dump' to 'dumpsect' to avoid conflict.
+

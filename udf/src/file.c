@@ -30,7 +30,12 @@
 
 #include "udfdecl.h"
 #include <linux/fs.h>
+#ifdef __KERNEL__
 #include <asm/uaccess.h>
+#include <linux/kernel.h>
+#include <linux/string.h> /* memset */
+#include <linux/errno.h>
+#endif
 
 #include "udf_i.h"
 #include "udf_sb.h"
@@ -52,8 +57,6 @@ static int udf_flush(struct file *);
 static ssize_t udf_file_read(struct file *, char *, size_t, loff_t *);
 #ifdef CONFIG_UDF_FULL_FS
 static loff_t udf_llseek(struct file *filp, loff_t offset, int origin);
-static int udf_ioctl(struct inode *, struct file *, unsigned int,
-	unsigned long);
 static int udf_release(struct inode *, struct file *);
 static int udf_open(struct inode *, struct file *);
 
@@ -81,7 +84,7 @@ struct file_operations udf_file_fops = {
 	udf_release,		/* release */
 #else
 	NULL,			/* poll */
-	NULL,			/* ioctl */
+	udf_ioctl,			/* ioctl */
 	generic_file_mmap,	/* mmap */
 	NULL,			/* open */
 	NULL,			/* flush */
@@ -319,9 +322,65 @@ unsigned int udf_poll(struct file *filp, poll_table *table)
 int udf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 	unsigned long arg)
 {
-	printk(KERN_ERR "udf: udf_ioctl(ino %lu,, %d,)\n",
-		inode->i_ino, cmd);
-	return -1;
+	int result=-1;
+	int size;
+	struct buffer_head *bh;
+	struct FileEntry *fe;
+
+	if ( permission(inode, MAY_READ) != 0 )
+	{
+			printk(KERN_DEBUG "udf: no permission to access inode %lu\n",
+							inode->i_ino);
+			return -EPERM;
+	}
+
+	if ( !arg ) {
+			printk(KERN_DEBUG "udf: invalid argument to udf_ioctl\n");
+			return -EINVAL;
+	}
+
+	/* first, do ioctls that don't need to udf_read */
+	switch (cmd)
+	{
+		case UDF_GETVOLIDENT:
+			if ( (result == verify_area(VERIFY_WRITE, (char *)arg, 32)) == 0)
+				result = copy_to_user((char *)arg, UDF_SB_VOLIDENT(inode->i_sb), 32);
+			return result;
+
+	}
+
+	/* ok, we need to read the inode */
+	bh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode), 0, TID_FILE_ENTRY);
+	if (!bh)
+	{
+		printk(KERN_ERR "udf: udf_ioctl(ino %ld) failed !bh\n",
+			inode->i_ino);
+		return -EFAULT;
+	}
+
+	fe = (struct FileEntry *)bh->b_data;
+	size = le32_to_cpu(fe->lengthExtendedAttr);
+
+	switch (cmd) 
+	{
+		case UDF_GETEASIZE:
+			if ( (result = verify_area(VERIFY_WRITE, (char *)arg, 4)) == 0) 
+				result= put_user(size, (int *)arg);
+			break;
+
+		case UDF_GETEABLOCK:
+			if ( (result = verify_area(VERIFY_WRITE, (char *)arg, size)) == 0) 
+				result= copy_to_user((char *)arg, fe->extendedAttr, size);
+			break;
+
+		default:
+			printk(KERN_DEBUG "udf: udf_ioctl(ino %lu,, %d,)\n",
+					inode->i_ino, cmd);
+			break;
+	}
+
+	udf_release_data(bh);
+	return result;
 }
 
 #ifdef CONFIG_UDF_FULL_FS
