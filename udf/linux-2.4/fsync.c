@@ -45,6 +45,9 @@ int udf_fsync_inode(struct inode *inode, int datasync)
 	int err;
 
 	err = fsync_inode_buffers(inode);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,15)
+	err |= fsync_inode_data_buffers(inode);
+#endif
 	if (!(inode->i_state & I_DIRTY))
 		return err;
 	if (datasync && !(inode->i_state & I_DIRTY_DATASYNC))
