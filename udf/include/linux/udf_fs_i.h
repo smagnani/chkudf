@@ -38,6 +38,7 @@ struct udf_inode_info
 	__u64 i_unique;
 	__u32 i_lenEAttr;
 	__u32 i_lenAlloc;
+	__u64 i_lenExtents;
 	__u32 i_next_alloc_block;
 	__u32 i_next_alloc_goal;
 	unsigned i_alloc_type : 3;
