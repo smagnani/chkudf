@@ -203,7 +203,7 @@ udf_parse_options(char *options, struct udf_options *uopt)
 	char *opt, *val;
 
 	uopt->novrs = 0;
-	uopt->blocksize = 512;
+	uopt->blocksize = 0;
 	uopt->partition = 0xFFFF;
 	uopt->session = 0xFFFFFFFF;
 	uopt->lastblock = 0xFFFFFFFF;
@@ -346,13 +346,14 @@ static  int
 udf_set_blocksize(struct super_block *sb, int bsize)
 {
 	/* Use specified block size if specified */
-	if (!(sb->s_blocksize = get_hardblocksize(sb->s_dev)))
-		sb->s_blocksize = 2048;
-	if (bsize > sb->s_blocksize)
+	if (bsize)
 		sb->s_blocksize = bsize;
+	else if (!(sb->s_blocksize = get_hardblocksize(sb->s_dev)))
+		sb->s_blocksize = 2048;
 
 	/* Block size must be an even multiple of 512 */
-	switch (sb->s_blocksize) {
+	switch (sb->s_blocksize)
+	{
 		case 512: sb->s_blocksize_bits = 9;	break;
 		case 1024: sb->s_blocksize_bits = 10; break;
 		case 2048: sb->s_blocksize_bits = 11; break;
@@ -989,10 +990,12 @@ udf_process_sequence(struct super_block *sb, long block, long lastblock, lb_addr
 	struct buffer_head *bh = NULL;
 	struct udf_vds_record vds[VDS_POS_LENGTH];
 	struct GenericDesc *gd;
+	struct VolDescPtr *vdp;
 	int done=0;
 	int i,j;
 	Uint32 vdsn;
 	Uint16 ident;
+	long next_s = 0, next_e = 0;
 
 	memset(vds, 0, sizeof(struct udf_vds_record) * VDS_POS_LENGTH);
 
@@ -1021,6 +1024,12 @@ udf_process_sequence(struct super_block *sb, long block, long lastblock, lb_addr
 				{
 					vds[VDS_POS_VOL_DESC_PTR].volDescSeqNum = vdsn;
 					vds[VDS_POS_VOL_DESC_PTR].block = block;
+
+					vdp = (struct VolDescPtr *)bh->b_data;
+					next_s = le32_to_cpu(vdp->nextVolDescSeqExt.extLocation);
+					next_e = le32_to_cpu(vdp->nextVolDescSeqExt.extLength);
+					next_e = next_e >> sb->s_blocksize_bits;
+					next_e += next_s;
 				}
 				break;
 			case TID_IMP_USE_VOL_DESC: /* ISO 13346 3/10.4 */
@@ -1050,7 +1059,14 @@ udf_process_sequence(struct super_block *sb, long block, long lastblock, lb_addr
 				break;
 			case TID_TERMINATING_DESC: /* ISO 13346 3/10.9 */
 				vds[VDS_POS_TERMINATING_DESC].block = block;
-				done = 1;
+				if (next_e)
+				{
+					block = next_s;
+					lastblock = next_e;
+					next_s = next_e = 0;
+				}
+				else
+					done = 1;
 				break;
 		}
 		udf_release_data(bh);
@@ -1124,7 +1140,7 @@ udf_load_partition(struct super_block *sb, lb_addr *fileset)
 	for (i=0; i<sizeof(UDF_SB_ANCHOR(sb))/sizeof(int); i++)
 	{
 		if (UDF_SB_ANCHOR(sb)[i] && (bh = udf_read_tagged(sb,
-			UDF_SB_ANCHOR(sb)[i], UDF_SB_ANCHOR(sb)[i] - UDF_SB_SESSION(sb), &ident)))
+			UDF_SB_ANCHOR(sb)[i], UDF_SB_ANCHOR(sb)[i], &ident)))
 		{
 			anchor = (struct AnchorVolDescPtr *)bh->b_data;
 
