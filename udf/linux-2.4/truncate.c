@@ -41,7 +41,13 @@ static void extent_trunc(struct inode * inode, lb_addr bloc, int extoffset,
 
 	if (nelen)
 	{
-		neloc = eloc;
+		if (etype == (EXT_NOT_RECORDED_ALLOCATED >> 30))
+		{
+			udf_free_blocks(inode->i_sb, inode, eloc, 0, last_block);
+			etype = (EXT_NOT_RECORDED_NOT_ALLOCATED >> 30);
+		}
+		else
+			neloc = eloc;
 		nelen = (etype << 30) | nelen;
 	}
 
