@@ -1769,6 +1769,20 @@ udf_count_free(struct super_block *sb)
 {
 	unsigned int accum = 0;
 
+	if (UDF_SB_LVIDBH(sb))
+	{
+		if (le32_to_cpu(UDF_SB_LVID(sb)->numOfPartitions) > UDF_SB_PARTITION(sb))
+		{
+			accum = le32_to_cpu(UDF_SB_LVID(sb)->freeSpaceTable[UDF_SB_PARTITION(sb)]);
+
+			if (accum == 0xFFFFFFFF)
+				accum = 0;
+		}
+	}
+
+	if (accum)
+		return accum;
+
 	if (UDF_SB_PARTFLAGS(sb,UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_UNALLOC_BITMAP)
 	{
 		accum += udf_count_free_bitmap(sb,
@@ -1792,18 +1806,6 @@ udf_count_free(struct super_block *sb)
 		accum += udf_count_free_table(sb,
 			UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_fspace.s_table);
 	}
-	if (accum)
-		return accum;
 
-	if (UDF_SB_LVIDBH(sb))
-	{
-		if (le32_to_cpu(UDF_SB_LVID(sb)->numOfPartitions) > UDF_SB_PARTITION(sb))
-		{
-			accum = le32_to_cpu(UDF_SB_LVID(sb)->freeSpaceTable[UDF_SB_PARTITION(sb)]);
-
-			if (accum == 0xFFFFFFFF)
-				accum = 0;
-		}
-	}
 	return accum;
 }
