@@ -1304,7 +1304,7 @@ udf_update_inode(struct inode *inode, int do_sync)
 	if (UDF_I_NEW_INODE(inode) == 1)
 	{
 		if (UDF_I_EXTENDED_FE(inode) == 0)
-			memset(bh->b_data, 0x0, sizeof(struct FileEntry));
+			memset(bh->b_data, 0x00, sizeof(struct FileEntry));
 		else
 			memset(bh->b_data, 0x00, sizeof(struct ExtendedFileEntry));
 		memset(bh->b_data + udf_file_entry_alloc_offset(inode) +
@@ -1607,7 +1607,8 @@ int udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 			return -1;
 		}
 		aed = (struct AllocExtDesc *)(nbh->b_data);
-		aed->previousAllocExtLocation = cpu_to_le32(obloc.logicalBlockNum);
+		if (!UDF_QUERY_FLAG(inode->i_sb, UDF_FLAG_STRICT))
+			aed->previousAllocExtLocation = cpu_to_le32(obloc.logicalBlockNum);
 		if (*extoffset + adsize > inode->i_sb->s_blocksize)
 		{
 			loffset = *extoffset;
@@ -1660,7 +1661,10 @@ int udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 				break;
 			}
 		}
-		udf_update_tag((*bh)->b_data, loffset);
+		if (!UDF_QUERY_FLAG(inode->i_sb, UDF_FLAG_STRICT) || UDF_SB_UDFREV(inode->i_sb) >= 0x0201)
+			udf_update_tag((*bh)->b_data, loffset);
+		else
+			udf_update_tag((*bh)->b_data, sizeof(struct AllocExtDesc));
 		mark_buffer_dirty(*bh);
 		udf_release_data(*bh);
 		*bh = nbh;
@@ -1678,7 +1682,10 @@ int udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 		aed = (struct AllocExtDesc *)(*bh)->b_data;
 		aed->lengthAllocDescs =
 			cpu_to_le32(le32_to_cpu(aed->lengthAllocDescs) + adsize);
-		udf_update_tag((*bh)->b_data, *extoffset + (inc ? 0 : adsize));
+		if (!UDF_QUERY_FLAG(inode->i_sb, UDF_FLAG_STRICT) || UDF_SB_UDFREV(inode->i_sb) >= 0x0201)
+			udf_update_tag((*bh)->b_data, *extoffset + (inc ? 0 : adsize));
+		else
+			udf_update_tag((*bh)->b_data, sizeof(struct AllocExtDesc));
 		mark_buffer_dirty(*bh);
 	}
 
@@ -1734,9 +1741,12 @@ int udf_write_aext(struct inode *inode, lb_addr bloc, int *extoffset,
 
 	if (memcmp(&UDF_I_LOCATION(inode), &bloc, sizeof(lb_addr)))
 	{
-		struct AllocExtDesc *aed = (struct AllocExtDesc *)(bh)->b_data;
-		udf_update_tag((bh)->b_data,
-			le32_to_cpu(aed->lengthAllocDescs) + sizeof(struct AllocExtDesc));
+		if (!UDF_QUERY_FLAG(inode->i_sb, UDF_FLAG_STRICT) || UDF_SB_UDFREV(inode->i_sb) >= 0x0201)
+		{
+			struct AllocExtDesc *aed = (struct AllocExtDesc *)(bh)->b_data;
+			udf_update_tag((bh)->b_data,
+				le32_to_cpu(aed->lengthAllocDescs) + sizeof(struct AllocExtDesc));
+		}
 	}
 	else
 		mark_inode_dirty(inode);
@@ -2055,7 +2065,10 @@ int udf_delete_aext(struct inode *inode, lb_addr nbloc, int nextoffset,
 			aed = (struct AllocExtDesc *)(obh)->b_data;
 			aed->lengthAllocDescs =
 				cpu_to_le32(le32_to_cpu(aed->lengthAllocDescs) - (2*adsize));
-			udf_update_tag((obh)->b_data, oextoffset - (2*adsize));
+			if (!UDF_QUERY_FLAG(inode->i_sb, UDF_FLAG_STRICT) || UDF_SB_UDFREV(inode->i_sb) >= 0x0201)
+				udf_update_tag((obh)->b_data, oextoffset - (2*adsize));
+			else
+				udf_update_tag((obh)->b_data, sizeof(struct AllocExtDesc));
 			mark_buffer_dirty(obh);
 		}
 	}
@@ -2072,7 +2085,10 @@ int udf_delete_aext(struct inode *inode, lb_addr nbloc, int nextoffset,
 			aed = (struct AllocExtDesc *)(obh)->b_data;
 			aed->lengthAllocDescs =
 				cpu_to_le32(le32_to_cpu(aed->lengthAllocDescs) - adsize);
-			udf_update_tag((obh)->b_data, oextoffset - adsize);
+			if (!UDF_QUERY_FLAG(inode->i_sb, UDF_FLAG_STRICT) || UDF_SB_UDFREV(inode->i_sb) >= 0x0201)
+				udf_update_tag((obh)->b_data, oextoffset - adsize);
+			else
+				udf_update_tag((obh)->b_data, sizeof(struct AllocExtDesc));
 			mark_buffer_dirty(obh);
 		}
 	}

@@ -164,7 +164,7 @@ module_exit(exit_udf_fs)
  *	noadinicb	Don't embed data in the inode
  *	shortad		Use short ad's
  *	longad		Use long ad's (default)
- *	strict		Set strict conformance (unused)
+ *	strict		Set strict conformance
  *
  *	The remaining are for debugging and disaster recovery:
  *
@@ -1540,7 +1540,7 @@ error_out:
 		}
 	}
 #ifdef CONFIG_NLS
-	if (UDF_SB(sb)->s_flags & (1 << UDF_FLAG_NLS_MAP))
+	if (UDF_QUERY_FLAG(sb, UDF_FLAG_NLS_MAP))
 		unload_nls(UDF_SB(sb)->s_nls_map);
 #endif
 	if (!(sb->s_flags & MS_RDONLY))
@@ -1630,7 +1630,7 @@ udf_put_super(struct super_block *sb)
 		}
 	}
 #ifdef CONFIG_NLS
-	if (UDF_SB(sb)->s_flags & (1 << UDF_FLAG_NLS_MAP))
+	if (UDF_QUERY_FLAG(sb, UDF_FLAG_NLS_MAP))
 		unload_nls(UDF_SB(sb)->s_nls_map);
 #endif
 	if (!(sb->s_flags & MS_RDONLY))

@@ -360,7 +360,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 			return NULL;
 		}
 
-		if (UDF_SB(sb)->s_flags & (1 << UDF_FLAG_UTF8))
+		if (UDF_QUERY_FLAG(sb, UDF_FLAG_UTF8))
 		{
 			if ( !(namelen = udf_UTF8toCS0(name, &unifilename, UDF_NAME_LEN)) )
 			{
@@ -368,7 +368,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 				return NULL;
 			}
 		}
-		else if (UDF_SB(sb)->s_flags & (1 << UDF_FLAG_NLS_MAP))
+		else if (UDF_QUERY_FLAG(sb, UDF_FLAG_NLS_MAP))
 		{
 			if ( !(namelen = udf_NLStoCS0(UDF_SB(sb)->s_nls_map, name, &unifilename, UDF_NAME_LEN)) )
 			{
@@ -611,11 +611,12 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 	}
 }
 
-static int udf_delete_entry(struct FileIdentDesc *fi,
+static int udf_delete_entry(struct super_block *sb, struct FileIdentDesc *fi,
 	struct udf_fileident_bh *fibh, struct FileIdentDesc *cfi)
 {
 	cfi->fileCharacteristics |= FILE_DELETED;
-	memset(&(cfi->icb), 0x00, sizeof(long_ad));
+	if (UDF_QUERY_FLAG(sb, UDF_FLAG_STRICT))
+		memset(&(cfi->icb), 0x00, sizeof(long_ad));
 	return udf_write_fi(cfi, fi, fibh, NULL, NULL);
 }
 
@@ -853,7 +854,7 @@ static int udf_rmdir(struct inode * dir, struct dentry * dentry)
 	retval = -ENOTEMPTY;
 	if (!empty_dir(inode))
 		goto end_rmdir;
-	retval = udf_delete_entry(fi, &fibh, &cfi);
+	retval = udf_delete_entry(dir->i_sb, fi, &fibh, &cfi);
 	dir->i_version = ++event;
 	if (retval)
 		goto end_rmdir;
@@ -908,7 +909,7 @@ static int udf_unlink(struct inode * dir, struct dentry * dentry)
 			inode->i_ino, inode->i_nlink);
 		inode->i_nlink = 1;
 	}
-	retval = udf_delete_entry(fi, &fibh, &cfi);
+	retval = udf_delete_entry(dir->i_sb, fi, &fibh, &cfi);
 	if (retval)
 		goto end_unlink;
 	dir->i_ctime = dir->i_mtime = CURRENT_TIME;
@@ -1230,7 +1231,7 @@ static int udf_rename (struct inode * old_dir, struct dentry * old_dentry,
 
 	/* The old fid may have moved - find it again */
 	ofi = udf_find_entry(old_dir, old_dentry, &ofibh, &ocfi);
-	udf_delete_entry(ofi, &ofibh, &ocfi);
+	udf_delete_entry(old_inode->i_sb, ofi, &ofibh, &ocfi);
 
 	old_dir->i_version = ++event;
 	if (new_inode)
