@@ -24,20 +24,27 @@
  *
  * 10/2/98 dgb	changed UDF_ID_DEVELOPER
  * 11/26/98 bf  changed UDF_ID_DEVELOPER, 
+ * 12/5/98 dgb  updated include file hierarchy, more UDF definitions
  */
 
-/* -------- Basic types and constants ----------- */
+/* based on ECMA 167 structure definitions */
+#include <linux/udf_167.h>
 
+#ifdef __linux__
+#pragma pack(1)
+#endif
+
+/* -------- Basic types and constants ----------- */
 /* UDF character set (UDF 1.50 2.1.2) */
 #define UDF_CHAR_SET_TYPE	0
 #define UDF_CHAR_SET_INFO	"OSTA Compressed Unicode"
 
 #define UDF_ID_DEVELOPER	"*Linux UDFFS"
  
-#if 0
+/* UDF 1.02 2.2.6.4 */
 struct LogicalVolIntegrityDescImpUse
 {
-	regid		impIdent;
+	EntityID	impIdent;
 	Uint32		numFiles;
 	Uint32		numDirs;
 	Uint16		minUDFReadRev;
@@ -45,6 +52,8 @@ struct LogicalVolIntegrityDescImpUse
 	Uint16		maxUDFWriteRev;
 };
 
+/* UDF 1.02 2.2.7.2 */
+/* LVInformation may be present in ImpUseVolDesc.impUse */
 struct ImpUseVolDescImpUse
 {
 	charspec	LVICharset;
@@ -52,31 +61,44 @@ struct ImpUseVolDescImpUse
 	dstring		LVInfo1[36];
 	dstring		LVInfo2[36];
 	dstring		LVInfo3[36];
-	regid		impIdent;
+	EntityID	impIdent;
 	Uint8		impUse[128];
 };
 
+struct UdfPartitionMap2
+{
+        Uint8           partitionMapType;
+        Uint8           partitionMapLength;
+        Uint8           reserved1[2];
+        EntityID        partIdent;
+        Uint16          volSeqNum;
+        Uint16          partitionNum;
+        Uint8           reserved2[24];
+};
+
+/* UDF 1.5 2.2.8 */
 struct VirtualPartitionMap
 {
 	Uint8		partitionMapType;	/* 2 */
 	Uint8		partitionMapLength;	/* 64 */
 	Uint8		reserved1[2];		/* #00 */
-	regid		partIdent;
+	EntityID	partIdent;
 	Uint16		volSeqNum;
 	Uint16		partitionNum;
 	Uint8		reserved2[24];		/* #00 */
 };
 
+/* UDF 1.5 2.2.9 */
 struct SparablePartitionMap
 {
 	Uint8		partitionMapType;	/* 2 */
 	Uint8		partitionMapLength;	/* 64 */
 	Uint8		reserved1[2];		/* #00 */
-	regid		partIdent;		/* Flags = 0 */
+	EntityID	partIdent;		/* Flags = 0 */
 						/* Id = UDF_ID_SPARABLE */
 						/* IdSuf = 2.1.5.3 */
 	Uint16		volSeqNum;
-	Uint16		partitioNum;
+	Uint16		partitionNum;
 	Uint16		packetLength;		/* 32 */
 	Uint8		numSparingTables;
 	Uint8		reserved2[1];		/* #00 */
@@ -84,8 +106,86 @@ struct SparablePartitionMap
 	Uint32		locSparingTable[0];
 	Uint8		pad[0];
 };
-#endif
  
+/* DVD Copyright Management Info, see UDF 1.02 3.3.4.5.1.2 */
+/* when ImpUseExtendedAttr.impIdent= "*UDF DVD CGMS Info" */
+struct DVDCopyrightImpUse {
+	Uint16 headerChecksum;
+	Uint8  CGMSInfo;
+	Uint8  dataType;
+	Uint8  protectionSystemInfo[4];
+};
+
+/* the impUse of long_ad used with FileIdent - UDF 2.0 2.3.4.3 */
+struct UniqueID {
+	Uint16 reserved;	/* #00 */
+	Uint32 uniqueIdent;
+};
+
+/* the impUse of long_ad used in AllocDescs  - UDF 1.02 2.3.10.1 */
+struct ADImpUse {
+	Uint16 flags;
+	Uint8  impUse[4];
+};
+
+/* UDF 1.02 2.3.10.1 */
+#define UDF_EXTENT_LENGTH_MASK		0x3FFFFFFF
+#define UDF_EXTENT_FLAG_MASK		0xc0000000
+#define UDF_EXTENT_FLAG_ERASED		0x40000000
+
+/* 
+ * Important!  VirtualAllocationTables are 
+ * very different between 1.5 and 2.0!
+ */
+
+/* ----------- 1.5 ------------- */
+/* UDF 1.5 2.2.10 */
+#define FILE_TYPE_VAT15		0x0U
+
+/* UDF 1.5 2.2.10 - VAT layout: */
+struct VirutalAllocationTable15 {
+	Uint32 VirtualSector[0];
+	EntityID	ident;
+	Uint32	previousVATICB;
+   };  
+/* where number of VirtualSector's is (VATSize-36)/4 */
+
+/* ----------- 2.0 ------------- */
+/* UDF 2.0 2.2.10 */
+#define FILE_TYPE_VAT20		0xf8U
+
+/* UDF 2.0 2.2.10 (different from 1.5!) */
+struct VirtualAllocationTable20 {
+	Uint16 lengthHeader;
+	Uint16 lengthImpUse;
+	dstring logicalVolIdent[128];
+	Uint32	previousVatICBLoc;
+	Uint32  numFIDSFiles;
+	Uint32  numFIDSDirectories; /* non-parent */
+	Uint16  minReadRevision;
+	Uint16	minWriteRevision;
+	Uint16  maxWriteRevision;
+	Uint16  reserved;
+	Uint8	impUse[0];
+	Uint32  vatEntry[0];
+};
+
+/* Sparing maps, see UDF 1.5 2.2.11 */
+typedef struct {
+	Uint32  origLocation;
+	Uint32  mappedLocation;
+} SparingEntry;
+
+/* sparing maps, see UDF 2.0 2.2.11 */
+struct SparingTable {
+	tag 	descTag;
+	EntityID sparingIdent; /* *UDF Sparing Table */
+	Uint16   reallocationTableLen;
+	Uint16   reserved;	/* #00 */
+	Uint32   sequenceNum;
+	SparingEntry mapEntry[0];
+};
+
 /* Entity Identifiers (UDF 1.50 6.1) */
 #define	UDF_ID_COMPLIANT	"*OSTA UDF Compliant"
 #define UDF_ID_LV_INFO		"*UDF LV Info"
@@ -98,7 +198,7 @@ struct SparablePartitionMap
 #define UDF_ID_MAC_FINDER	"*UDF Mac FinderInfo"
 #define UDF_ID_MAC_UNIQUE	"*UDF Mac UniqueIDTable"
 #define UDF_ID_MAC_RESOURCE	"*UDF Mac ResourceFork"
-#define UDF_ID_PARTITION	"*UDF Virtual Partition"
+#define UDF_ID_VIRTUAL		"*UDF Virtual Partition"
 #define UDF_ID_SPARABLE		"*UDF Sparable Partition"
 #define UDF_ID_ALLOC		"*UDF Virtual Alloc Tbl"
 #define UDF_ID_SPARING		"*UDF Sparing Table"
@@ -128,5 +228,9 @@ struct SparablePartitionMap
 
 #define UDF_NAME_LEN	253
 #define UDF_PATH_LEN	1023
+
+#ifdef __linux__
+#pragma pack()
+#endif
 
 #endif /* !defined(_LINUX_UDF_FMT_H) */

@@ -17,23 +17,24 @@
  *
  * HISTORY
  *	10/4/98 dgb: moved into library
+ *	12/5/98      adjusted for inclusion in kernel
  */
 
 
 
 #ifdef __KERNEL__
-#include <linux/types.h>
-#include <linux/udf_fs.h>
+
+#ifdef DEBUG
 
 #ifdef __linux__
+#include <linux/types.h>
+#include <linux/kernel.h>
 #define PRINT1(X)	printk(KERN_DEBUG X )
 #define PRINT2(X,Y)	printk(KERN_DEBUG X,Y )
 #endif
 
 #else
-#include <sys/types.h>
 #include <stdio.h>
-#include <linux/udf_fs.h>
 #define PRINT1(X)	fprintf(stderr, X )
 #define PRINT2(X,Y)	fprintf(stderr, X,Y )
 #endif
@@ -66,3 +67,9 @@ udf_dump(char * buffer, int size)
 		PRINT1("\n");
 	}
 }
+#else
+void
+udf_dump(char * buffer, int size)
+{
+}
+#endif

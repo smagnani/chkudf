@@ -23,7 +23,8 @@
 
 #if defined(__linux__) && defined(__KERNEL__)
 #include <linux/version.h>
-#include <linux/udf_fs.h>
+#include "udf_i.h"
+#include "udf_sb.h"
 #include <linux/string.h>
 #include <linux/errno.h>
 #include <linux/mm.h>
@@ -45,36 +46,22 @@ struct DirectoryCursor
 	Uint8   workBuffer[0];
 };
 
-/* directory enumeration and lookups use this */
-static struct DirectoryCursor * udf_fileident_opendir(struct inode *);
-static struct FileIdentDesc * udf_fileident_readdir(struct DirectoryCursor *);
-static void udf_fileident_closedir(struct DirectoryCursor *);
-static int udf_fileident_nextlength(struct DirectoryCursor * );
-
 /* Prototypes for file operations */
 static int udf_readdir(struct file *, void *, filldir_t);
 
 /* generic directory enumeration */
 typedef int (*udf_enum_callback)(struct inode *, struct FileIdentDesc *, 
-	   			void *, void *, void *);
+	   			struct file *, filldir_t, void *);
 static int udf_enum_directory(struct inode *, udf_enum_callback, 
-#ifdef BF_CHANGES
 				struct file *, filldir_t, void *,
 				struct FileIdentDesc *);
-#else
-	   			void *, void *, void *);
-#endif
 
 /* readdir and lookup functions */
 static int udf_lookup_callback(struct inode *, struct FileIdentDesc*, 
 	   			void *, void *, void *);
 
 static int udf_readdir_callback(struct inode *, struct FileIdentDesc*, 
-#ifdef BF_CHANGES
 				struct file *, filldir_t, void *);
-#else
-	   			void *, void *, void *);
-#endif
 
 struct file_operations udf_dir_fops = {
 	NULL,			/* llseek */
@@ -119,7 +106,6 @@ struct file_operations udf_dir_fops = {
  *	July 1, 1997 - Andrew E. Mileski
  *	Written, tested, and released.
  */
-#ifdef BF_CHANGES
 int udf_readdir(struct file *filp, void *dirent, filldir_t filldir)
 {
 	struct FileIdentDesc *tmpfi;
@@ -151,7 +137,7 @@ int udf_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		(((int)filp->f_pos & ((dir->i_sb->s_blocksize - 1) >> 2)) << 2),
 		(int)filp->f_pos, dir->i_ino);
 #endif
-  
+
 	result = udf_enum_directory(dir, udf_readdir_callback, 
 					filp, filldir, dirent, tmpfi);
   
@@ -161,25 +147,27 @@ int udf_readdir(struct file *filp, void *dirent, filldir_t filldir)
 
 static int 
 udf_readdir_callback(struct inode *dir, struct FileIdentDesc*fi, 
- 			struct file  *filp, filldir_t filldir, void *dirent)
+ 			struct file *filp, filldir_t filldir, void *dirent)
 {
  	struct ustr filename;
  	struct ustr unifilename;
  	long ino;
+	char name[255];
+	int len;
  	
  	if ( (!fi) || (!filp) || (!filldir) || (!dir) )
  	{
  		return 0;
  	}
  
- 	ino = fi->icb.extLocation.logicalBlockNum;
+	ino = udf_get_lb_pblock(dir->i_sb, fi->icb.extLocation, 0);
  
  	if (fi->lengthFileIdent == 0) /* parent directory */
  	{
- #ifdef VDEBUG
+#ifdef VDEBUG
  		printk(KERN_DEBUG "udf: readdir callback '%s' (%d) ino %ld == f_pos %d\n",
  			"..", 2, filp->f_dentry->d_parent->d_inode->i_ino, (int)filp->f_pos);
- #endif
+#endif
  		if (filldir(dirent, "..", 2, filp->f_pos, filp->f_dentry->d_parent->d_inode->i_ino) < 0)
  			return -1;
  		return 0;
@@ -201,9 +189,11 @@ udf_readdir_callback(struct inode *dir, struct FileIdentDesc*fi,
  		filename.u_name, filename.u_len, ino, (int)filp->f_pos);
  #endif
  
- 	if (filldir(dirent, filename.u_name, filename.u_len, filp->f_pos, ino) < 0)
- 	{
- 		return 1; /* halt enum */
+        if (len = udf_translate_to_linux(name, filename.u_name, filename.u_len-1,
+                unifilename.u_name, unifilename.u_len))
+        {
+	 	if (filldir(dirent, name, len, filp->f_pos, ino) < 0)
+	 		return 1; /* halt enum */
  	}
  	return 0;
 }
@@ -322,13 +312,13 @@ udf_enum_directory(struct inode * dir, udf_enum_callback callback,
 
 		if ( (fi->fileCharacteristics & FILE_DELETED) != 0 )
 		{
-			if ( !udf_undelete ) 
+			if ( !IS_UNDELETE(dir->i_sb) )
 				continue;
 		}
 		
 		if ( (fi->fileCharacteristics & FILE_HIDDEN) != 0 )
 		{
-			if ( !udf_unhide) 
+			if ( !IS_UNHIDE(dir->i_sb) )
 				continue;
 		}
 
@@ -348,621 +338,6 @@ udf_enum_directory(struct inode * dir, udf_enum_callback callback,
 	else
 		return 0;
 }
-
-#else
-
-int udf_readdir(struct file *filp, void *dirent, filldir_t filldir)
-{
-#if 	LINUX_VERSION_CODE > 0x020140
-	struct inode *dir = filp->f_dentry->d_inode;
-	long ino, parent_ino;
-	int result;
-
-	if (!dir)
-	   return -EBADF;
-
- 	if (!S_ISDIR(dir->i_mode))
-	   return -ENOTDIR;
-
-	if ( (UDF_I_DIRPOS(dir) == 0) &&
-	   (filp->f_pos > 0) ) {
-	   return 0;
-	}
-	parent_ino=filp->f_dentry->d_parent->d_inode->i_ino;
-#ifdef VDEBUG
-	printk(KERN_DEBUG "udf: udf_readdir(%p, %p,) DIRPOS %d f_pos %d, i_ino=%ld, parent=%lu\n",
-	   filp, dirent, UDF_I_DIRPOS(dir), (int)filp->f_pos, dir->i_ino, parent_ino);
-#endif
-
-	/* procfs used as an example here */
-	ino = dir->i_ino;
-
-	if ( filp->f_pos == 0 ) {
-	   if (filldir(dirent, ".", 1, filp->f_pos, ino) <0) 
-	   	return 0;
-	   filp->f_pos++;
-	}
-	if ( filp->f_pos == 1 ) {
-	   if (filldir(dirent, "..", 2, filp->f_pos, parent_ino) <0) 
-	   	return 0;
-	   filp->f_pos++;
-	   UDF_I_DIRPOS(dir)=1;
-	}
-
-	result= udf_enum_directory(dir, udf_readdir_callback, 
-	   			filp, filldir, dirent);
-	if ( result )
-	   UDF_I_DIRPOS(dir)=0;
-	return result;
-#else
-	return -1;
-#endif
-}
-
-static int 
-udf_readdir_callback(struct inode *dir, struct FileIdentDesc*fi, 
-	   	void *p1, void *p2, void *p3)
-{
-	struct ustr filename;
-	struct ustr unifilename;
-	long ino;
-	struct file *filp;
-	filldir_t filldir;
-	
-	filp=(struct file*)p1;
-	filldir=(filldir_t)p2;
-
-	if ( (!fi) || (!filp) || (!dir) ) {
-	   printk(KERN_DEBUG "udf: callback failed, line %u\n", __LINE__);
-	   return 0;
-	}
-
-	if ( !filldir ) {
-	   printk(KERN_DEBUG "udf: callback failed, line %u\n", __LINE__);
-	   return 0;
-	}
-	ino=fi->icb.extLocation.logicalBlockNum;
-
-	if ( udf_build_ustr_exact(&unifilename, fi->fileIdent,
-	   fi->lengthFileIdent) ) {
-	   	return 0;
-	}
-
-	if ( udf_CS0toUTF8(&filename, &unifilename) ) {
-	   	return 0;
-	}
-
-	UDF_I_DIRPOS(dir)++;
-	if ( UDF_I_DIRPOS(dir) == (filp->f_pos) ) {
-#ifdef VDEBUG
-	   printk(KERN_DEBUG "udf: readdir %lu callback '%s' dir %d == f_pos\n",
-	   	ino, filename.u_name, UDF_I_DIRPOS(dir));
-#endif
-	   if (filldir(p3, filename.u_name, 	
-	   		filename.u_len, 
-	   		filp->f_pos, ino) <0)
-	   	return 0; /* halt enum */
-	   filp->f_pos++;
-#ifdef VDEBUG
-	} else {
-	   printk(KERN_DEBUG "udf: readdir callback '%s' dir %d != f_pos %d\n",
-	   	filename.u_name, UDF_I_DIRPOS(dir), (int)filp->f_pos);
-#endif
-	}
-	return 0;
-}
-
-static int 
-udf_enum_directory(struct inode * dir, udf_enum_callback callback, 
-	   	void *p1, void *p2, void *p3)
-{
-	struct FileIdentDesc *fi=NULL;
-	struct DirectoryCursor *cursor=NULL;
-	int curtail=0;
-
-	cursor=udf_fileident_opendir(dir);
-	if (!cursor) {
-	   printk(KERN_ERR "udf: enum_directory() failed open, block %lu\n", dir->i_ino);
-	   return 1;
-	}
-
-	while ( (fi=udf_fileident_readdir(cursor)) != NULL ) {
-	   
-	   /* pre-process ident */
-#ifdef VDEBUG
-	   printk(KERN_DEBUG "udf: enum_dir %lu ino %lu fi %p char %x lenident %d\n",
-		(long)cursor->inode->i_ino,
-		(long)fi->icb.extLocation.logicalBlockNum,
-		(void *)fi, fi->fileCharacteristics, fi->lengthFileIdent);
-#endif
-
-	   if ( !fi->lengthFileIdent )
-	   	continue;
-
-	   if ( (fi->fileCharacteristics & FILE_DELETED) != 0 ) {
-	   	if ( !udf_undelete ) 
-	   		continue;
-	   }
-	   
-	   if ( (fi->fileCharacteristics & FILE_HIDDEN) != 0 ) {
-	   	if ( !udf_unhide) 
-	   		continue;
-	   }
-
-	   /* callback */
-	   curtail=callback(dir, fi, p1, p2, p3);
-	} /* end while */
-
-	udf_fileident_closedir(cursor);
-	return curtail ? 0 : 1;
-}
-
-#if 0
-int udf_readdir(struct file *filp, void *dirent, filldir_t filldir)
-{
-	struct FileIdentDesc *tmpfi;
-	struct inode *dir = filp->f_dentry->d_inode;
-	long ino, parent_ino;
-	int result;
-
-	if (!dir)
-	   return -EBADF;
-
- 	if (!S_ISDIR(dir->i_mode))
-	   return -ENOTDIR;
-
-	if ( (UDF_I_DIRPOS(dir) == 0) &&
-	   (filp->f_pos > 0) ) {
-	   return 0;
-	}
-	parent_ino=filp->f_dentry->d_parent->d_inode->i_ino;
-#ifdef VDEBUG
-	printk(KERN_DEBUG "udf: udf_readdir(%p, %p,) DIRPOS %d f_pos %d, i_ino=%ld, parent=%lu\n",
-	   filp, dirent, UDF_I_DIRPOS(dir), (int)filp->f_pos, dir->i_ino, parent_ino);
-#endif
-
-	/* procfs used as an example here */
-	ino = dir->i_ino;
-
-	if ( filp->f_pos == 0 ) {
-	   if (filldir(dirent, ".", 1, filp->f_pos, ino) <0) 
-	   	return 0;
-	   filp->f_pos++;
-	}
-	if ( filp->f_pos == 1 ) {
-	   if (filldir(dirent, "..", 2, filp->f_pos, parent_ino) <0) 
-	   	return 0;
-	   filp->f_pos++;
-	   UDF_I_DIRPOS(dir)=1;
-	}
-
-	result= udf_enum_directory(dir, udf_readdir_callback, 
-	   			filp, filldir, dirent);
-	if ( result )
-	   UDF_I_DIRPOS(dir)=0;
-	return result;
-}
-
-static int 
-udf_readdir_callback(struct inode *dir, struct FileIdentDesc*fi, 
-	   	void *p1, void *p2, void *p3)
-{
-	struct ustr filename;
-	struct ustr unifilename;
-	long ino;
-	struct file *filp;
-	filldir_t filldir;
-	
-	filp=(struct file*)p1;
-	filldir=(filldir_t)p2;
-
-	if ( (!fi) || (!filp) || (!dir) ) {
-	   printk(KERN_DEBUG "udf: callback failed, line %u\n", __LINE__);
-	   return 0;
-	}
-
-	if ( !filldir ) {
-	   printk(KERN_DEBUG "udf: callback failed, line %u\n", __LINE__);
-	   return 0;
-	}
-	ino=fi->icb.extLocation.logicalBlockNum;
-
-	if ( udf_build_ustr_exact(&unifilename, fi->fileIdent,
-	   fi->lengthFileIdent) ) {
-	   	return 0;
-	}
-
-	if ( udf_CS0toUTF8(&filename, &unifilename) ) {
-	   	return 0;
-	}
-
-	UDF_I_DIRPOS(dir)++;
-	if ( UDF_I_DIRPOS(dir) == (filp->f_pos) ) {
-#ifdef VDEBUG
-	   printk(KERN_DEBUG "udf: readdir %lu callback '%s' dir %d == f_pos\n",
-	   	ino, filename.u_name, UDF_I_DIRPOS(dir));
-#endif
-	   if (filldir(p3, filename.u_name, 	
-	   		filename.u_len, 
-	   		filp->f_pos, ino) <0)
-	   	return 0; /* halt enum */
-	   filp->f_pos++;
-#ifdef VDEBUG
-	} else {
-	   printk(KERN_DEBUG "udf: readdir callback '%s' dir %d != f_pos %d\n",
-	   	filename.u_name, UDF_I_DIRPOS(dir), (int)filp->f_pos);
-#endif
-	}
-	return 0;
-}
-
-static int 
-udf_enum_directory(struct inode * dir, udf_enum_callback callback, 
-	   	void *p1, void *p2, void *p3)
-{
-	struct FileIdentDesc *fi=NULL;
-	struct DirectoryCursor *cursor=NULL;
-	int curtail=0;
-
-	cursor=udf_fileident_opendir(dir);
-	if (!cursor) {
-	   printk(KERN_ERR "udf: enum_directory() failed open, block %lu\n", dir->i_ino);
-	   return 1;
-	}
-
-	while ( (fi=udf_fileident_readdir(cursor)) != NULL ) {
-	   
-	   /* pre-process ident */
-#ifdef VDEBUG
-	   printk(KERN_DEBUG "udf: enum_dir %lu ino %lu fi %p char %x lenident %d\n",
-		(long)cursor->inode->i_ino,
-		(long)fi->icb.extLocation.logicalBlockNum,
-		(void *)fi, fi->fileCharacteristics, fi->lengthFileIdent);
-#endif
-
-	   if ( !fi->lengthFileIdent )
-	   	continue;
-
-	   if ( (fi->fileCharacteristics & FILE_DELETED) != 0 ) {
-	   	if ( !udf_undelete ) 
-	   		continue;
-	   }
-	   
-	   if ( (fi->fileCharacteristics & FILE_HIDDEN) != 0 ) {
-	   	if ( !udf_unhide) 
-	   		continue;
-	   }
-
-	   /* callback */
-	   curtail=callback(dir, fi, p1, p2, p3);
-	} /* end while */
-
-	udf_fileident_closedir(cursor);
-	return curtail ? 0 : 1;
-}
-#endif
-#endif /* def BF_CHANGES */
-
-static struct DirectoryCursor * 
-udf_fileident_opendir(struct inode *dir)
-{
-	struct DirectoryCursor * cursor;
-	struct FileEntry *fe;
-	int buildsize;
-	int block;
-
-#ifdef VDEBUG
-	printk(KERN_DEBUG "udf: opendir %lu\n", dir->i_ino);
-#endif
-
-	if ( (!dir) || (!dir->i_sb) || (!S_ISDIR(dir->i_mode)) ) {
-	   printk(KERN_ERR "udf: invalid inode sent to opendir\n");
-	   return NULL;
-	}
-
-	buildsize=sizeof(struct DirectoryCursor) + (dir->i_sb->s_blocksize);
-	cursor=(struct DirectoryCursor *) kmalloc( buildsize, GFP_KERNEL);
-	if (!cursor) {
-	   printk(KERN_ERR "udf: can't kmalloc work buffer\n");
-	   return NULL;
-	}
-
-	cursor->inode=dir;
-
-#if 0 /* FIX */
-	block=udf_block_from_inode(cursor->inode->i_sb, cursor->inode->i_ino);
-	cursor->bh=udf_read_tagged(cursor->inode->i_sb, block, 
-	   			UDF_BLOCK_OFFSET(cursor->inode->i_sb));
-#endif
-	if (!cursor->bh) {
-	   printk(KERN_ERR "udf: can't read directory block %u\n", block);
-	   kfree(cursor);
-	   return NULL;
-	}
-	cursor->currentBlockNum= block;
-
-	/* used by AD_LONG */
-	cursor->bh_alloc=NULL; 
-
-	/* workBuffer is for fileentry's that span blocks */
-	/* all other entries will be read directly from bh->b_data */
-	cursor->workBufferLength= dir->i_sb->s_blocksize;	
-	cursor->dirOffset=0;
-	cursor->allocOffset=0;
-
-	fe=(struct FileEntry *)cursor->bh->b_data;
-
-	switch (UDF_I_ALLOCTYPE(cursor->inode)) {
-
-	  case ICB_FLAG_AD_SHORT:
-	   printk(KERN_DEBUG "udf: unexpected ICB_FLAG_AD_SHORT dir %u\n", 
-			block);
-	   udf_fileident_closedir(cursor);
-	   return NULL;
-
-	  case ICB_FLAG_AD_EXTENDED:
-	   printk(KERN_DEBUG "udf: unexpected ICB_FLAG_AD_EXTENTED dir %u\n", 
-			block);
-	   udf_fileident_closedir(cursor);
-	   return NULL;
-
-	  case ICB_FLAG_AD_LONG:
-	   { /* setup initial info */
-	   	long_ad * la;
-	   	la=udf_get_filelongad(fe, 
-			cursor->inode->i_sb->s_blocksize, 
-			&cursor->allocOffset);
-	   	if ( (la) && (la->extLength) ) {
-	   		cursor->extentLength=la->extLength;
-	   		cursor->currentBlockNum=la->extLocation.logicalBlockNum;
-	   		cursor->bh_alloc=cursor->bh;
-#if 0 /* FIX */
-	   		cursor->bh=udf_read_untagged(cursor->inode->i_sb, 
-	   				cursor->currentBlockNum,
-	   				UDF_BLOCK_OFFSET(cursor->inode->i_sb));
-#endif
-	   	} else {
-#ifdef DEBUG
-		   printk(KERN_DEBUG "udf: readdir %lu AD_LONG no extents\n",
-			cursor->inode->i_ino);
-	   	   udf_fileident_closedir(cursor);
-#endif
-		   return NULL;
-		}
-	   }
-#ifdef DEBUG
-	   printk(KERN_DEBUG "udf: dir %lu AD_LONG ext[0] -> %d size %u\n", 
-	   	cursor->inode->i_ino, cursor->currentBlockNum,
-		cursor->extentLength);
-#endif
-	   break;
-
-	  case ICB_FLAG_AD_IN_ICB:
-	   cursor->extentLength=fe->lengthAllocDescs;
-	   cursor->dirOffset=(int)fe->extendedAttr - (int)fe +
-	   			fe->lengthExtendedAttr;
-#ifdef DEBUG
-	   printk(KERN_DEBUG "udf: dir %lu AD_IN_ICB size %u\n", 
-	   	cursor->inode->i_ino, cursor->extentLength);
-#endif
-	   break;
-
-	}
-	return cursor;
-}
-
-static struct FileIdentDesc * 
-udf_fileident_readdir(struct DirectoryCursor * cursor)
-{
-	struct FileEntry * fe;
-	struct FileIdentDesc * fi;
-	long_ad * la;
-	Uint8 * ptr;
-	int lengthThisIdent;
-	int remainder=0;
-
-	if ( (!cursor) || (!cursor->bh) )
-	   return NULL;
-
-#ifdef VDEBUG
-	printk(KERN_DEBUG "udf: readdir %lu, extlen %d\n", 
-		cursor->inode->i_ino, cursor->extentLength);
-#endif
-	if ( (int)cursor->extentLength < 0 ) {
-	   printk(KERN_ERR "udf: programmer malfunction - lengthIdents negative! line %u\n",
-	   	__LINE__);
-	   return NULL;
-	}
-
-	switch ( UDF_I_ALLOCTYPE(cursor->inode) ) {
-	   case ICB_FLAG_AD_LONG:
-	   	fe=(struct FileEntry *)cursor->bh_alloc->b_data;
-	   	break;
-	   case ICB_FLAG_AD_IN_ICB:
-		if ( !cursor->extentLength ) 
-			return NULL;
-	   	fe=(struct FileEntry *)cursor->bh->b_data;
-	   	break;
-	   default:
-	   	printk(KERN_DEBUG "udf: huh? line %u\n", __LINE__);
-	   	return NULL;
-	}
-
-	cursor->workBufferLength=0;
-	remainder=cursor->inode->i_sb->s_blocksize - cursor->dirOffset;
-	ptr=(Uint8 *)cursor->bh->b_data + cursor->dirOffset;
-
-	lengthThisIdent=udf_fileident_nextlength(cursor);
-#ifdef VDEBUG
-	printk(KERN_DEBUG 
-	   "udf: dirOffset %d lengthThisIdent %d remainder %d extLen %d\n",
-	   cursor->dirOffset, lengthThisIdent, remainder, cursor->extentLength);
-#endif
-
-	if ( lengthThisIdent < 1 ) {
-	   /* refill our buffers */
-	   remainder=cursor->inode->i_sb->s_blocksize - cursor->dirOffset;
-#ifdef VDEBUG
-	   printk(KERN_DEBUG "udf: refill needed %lu len %d type %u\n",
-		cursor->inode->i_ino, remainder,
-		UDF_I_ALLOCTYPE(cursor->inode));
-#endif
-
-	   if ( UDF_I_ALLOCTYPE(cursor->inode) == ICB_FLAG_AD_LONG ) {
-	   	/* copy fragment into workBuffer */
-	   	memcpy(cursor->workBuffer, ptr, remainder);
-	   	cursor->workBufferLength=remainder;
-
-	   	/* release old buffer */
-	   	udf_release_data(cursor->bh);
-	   	cursor->bh=NULL;
-
-	   	/* calculate new block number */
-	   	if ( cursor->extentLength > cursor->inode->i_sb->s_blocksize) {
-	   		cursor->extentLength -= cursor->inode->i_sb->s_blocksize;
-	   		cursor->currentBlockNum++;
-#ifdef VDEBUG
-			printk(KERN_DEBUG "udf: refill %lu ext %u len %d\n",
-				cursor->inode->i_ino, 
-				cursor->currentBlockNum,
-				cursor->extentLength);
-#endif
-	   	} else { /* need next extent */
-	   		la=udf_get_filelongad(fe, 
-	   			cursor->inode->i_sb->s_blocksize, 
-	   			&cursor->allocOffset);
-	   		if ( (la) && (la->extLength) ) {
-	   			cursor->currentBlockNum=la->extLocation.logicalBlockNum;
-	   			cursor->extentLength=la->extLength;
-#ifdef DEBUG
-				printk(KERN_DEBUG 
-				  "udf: dir %lu AD_LONG ext[] -> %u len %d\n",
-				cursor->inode->i_ino, 
-				cursor->currentBlockNum,
-				cursor->extentLength);
-#endif
-	   		} else {
-#ifdef DEBUG
-		   	   printk(KERN_DEBUG 
-				"udf: dir %lu AD_LONG ext[] end\n",
-				cursor->inode->i_ino);
-#endif
-				return NULL;
-			}
-	   	}
-
-	   	/* get new buffer */
-#if 0 /* FIX */
-	   	cursor->bh=udf_read_untagged(cursor->inode->i_sb,
-	   			cursor->currentBlockNum,
-	   			UDF_BLOCK_OFFSET(cursor->inode->i_sb));
-#endif
-	   	if (!cursor->bh) {
-	   	   printk(KERN_ERR "udf: can't read directory block %lu\n",
-			(long)cursor->currentBlockNum);
-	   	   return NULL;
-	   	}
-
-	   	/* merge other fragment into workBuffer */
-	   	memcpy(cursor->workBuffer+cursor->workBufferLength,
-	   		cursor->bh->b_data, 
-	   		(cursor->inode->i_sb->s_blocksize - remainder));
-
-	   	/* use workBuffer instead of b_data for this one */
-	   	ptr=cursor->workBuffer;
-	   	cursor->dirOffset=0;
-	   	lengthThisIdent=udf_fileident_nextlength(cursor);
-
-	   	/* adjust dirOffset for fragment */
-	   	cursor->dirOffset = lengthThisIdent - cursor->workBufferLength;
-		cursor->extentLength -= cursor->dirOffset;
-	   	cursor->workBufferLength= 0;
-
-#ifdef VDEBUG
-	   	printk(KERN_DEBUG "udf: merged fi size %d, dirOffset %d\n", 
-			lengthThisIdent, cursor->dirOffset);
-#endif
-	   } else {
-	   	printk(KERN_DEBUG "udf: alloc type? line %u rem %d type %d\n", 
-	   		__LINE__, remainder, UDF_I_ALLOCTYPE(cursor->inode));
-	   	return NULL;
-	   }
-	} else {
-	   /* not a fragment */
-	   cursor->dirOffset += lengthThisIdent;	
-	   cursor->extentLength -= lengthThisIdent;
-	}
-
-	if ( lengthThisIdent < 0 ) {
-		printk(KERN_DEBUG "udf: readdir len %d??\n", lengthThisIdent);
-		return NULL;
-	}
-
-	fi=(struct FileIdentDesc *)ptr;
-	if ( fi->descTag.tagIdent != TID_FILE_IDENT_DESC )
-		return NULL;
-
-	return fi;
-}
-
-static void 
-udf_fileident_closedir(struct DirectoryCursor * cursor)
-{
-#ifdef VDEBUG
-	printk(KERN_DEBUG "udf: closedir %lu\n",
-		cursor->inode->i_ino);
-#endif
-	if ( cursor->bh )
-	   udf_release_data(cursor->bh);
-	if ( cursor->bh_alloc )
-	   udf_release_data(cursor->bh_alloc);
-	kfree(cursor);
-}
-
-/*
- * returns: -1 if refill needed, otherwise size of ident
- */
-static int
-udf_fileident_nextlength(struct DirectoryCursor * cursor)
-{
-	struct FileIdentDesc * fi;
-	Uint8 * ptr;
-	int lengthThisIdent;
-	int padlen;
-	int remainder;
-
-	if ( !cursor->bh )
-	   return -1;
-
-	if ( cursor->extentLength < 1 ) 
-	   return -1;
-
-	if ( !cursor->workBufferLength ) {
-	   /* check for refill */
-	   remainder=cursor->inode->i_sb->s_blocksize - cursor->dirOffset;
-	   if ( remainder < sizeof(struct FileIdentDesc) )
-	   	return -1;
-
-	   ptr=(Uint8 *)cursor->bh->b_data + cursor->dirOffset;
-	} else {
-	   ptr=cursor->workBuffer;
-	}
-	fi=(struct FileIdentDesc *)ptr;
-
-	lengthThisIdent=sizeof(struct FileIdentDesc) +
-	   	fi->lengthFileIdent + fi->lengthOfImpUse;
-
-	padlen=lengthThisIdent % UDF_NAME_PAD;  /* should be 4 ? */
-	if ( padlen )
-	   lengthThisIdent += (UDF_NAME_PAD - padlen);
-
-	if ( (cursor->workBufferLength) ||
-	     ( (cursor->dirOffset+lengthThisIdent) < cursor->inode->i_sb->s_blocksize) )
-	   return lengthThisIdent;
-	else
-	   return -1;
-}
-
 /* Inode Operations */
 
 #ifdef CONFIG_UDF_WRITE
@@ -1014,7 +389,6 @@ static int udf_smap(struct inode *, int);
  *	July 1, 1997 - Andrew E. Mileski
  *	Written, tested, and released.
  */
-#ifdef BF_CHANGES
 
 int
 udf_lookup(struct inode *dir, struct dentry *dentry)
@@ -1025,6 +399,7 @@ udf_lookup(struct inode *dir, struct dentry *dentry)
 	struct FileIdentDesc *tmpfi;
 
 	filp.f_pos = 0;
+	memset(&ino, 0, sizeof(lb_addr));
 	tmpfi = (struct FileIdentDesc *) __get_free_page(GFP_KERNEL);
 	if (!tmpfi)
 		return -ENOMEM;
@@ -1048,48 +423,16 @@ udf_lookup(struct inode *dir, struct dentry *dentry)
 	return 0;
 }
 
-#else
-
-int
-udf_lookup(struct inode *dir, struct dentry *dentry)
-{
-	struct inode *inode=NULL;
-	long ino=0;
-
-	/* Temporary - name doesn't exist, but it is okay to create it */
-#ifdef VDEBUG
-	printk(KERN_DEBUG "udf: udf_lookup(%lu, '%s')\n",
-	   dir->i_ino, dentry->d_name.name);
-#endif
-#ifdef DEBUG
-	/* temporary shorthand for specifying files by inode number */
-	if ( !strncmp(dentry->d_name.name, ".I=", 3) ) {
-	   ino=simple_strtoul(dentry->d_name.name+3, NULL, 0);
-	}
-#endif
-	udf_enum_directory(dir, udf_lookup_callback, (void *)dentry, &ino, NULL);
-	if ( ino ) {
-	   inode = udf_iget(dir->i_sb, ino);
-	   if ( !inode )
-	   	return -EACCES;
-	}
-	d_add(dentry, inode);
-	return 0;
-}
-#endif
-
 static int
 udf_lookup_callback(struct inode *dir, struct FileIdentDesc *fi, 
-#ifdef BF_CHANGES
 		void *unused3, void *parm2, void *parm1)
-#else
-	   	void *parm1, void *parm2, void *unused3)
-#endif
 {
 	struct dentry * dentry;
 	lb_addr *ino;
 	struct ustr filename;
 	struct ustr unifilename;
+	char name[255];
+	int len;
 
 	dentry=(struct dentry *)parm1;
 	ino=(lb_addr *)parm2;
@@ -1109,9 +452,14 @@ udf_lookup_callback(struct inode *dir, struct FileIdentDesc *fi,
 	   	return 0;
 	}
 
-	if ( strcmp(dentry->d_name.name, filename.u_name) == 0) {
-	   *ino = fi->icb.extLocation;
-	   return 1; /* stop enum */
+	if (len = udf_translate_to_linux(name, filename.u_name, filename.u_len-1,
+		unifilename.u_name, unifilename.u_len))
+	{
+		if ( strncmp(dentry->d_name.name, name, len) == 0)
+		{
+			*ino = fi->icb.extLocation;
+			return 1; /* stop enum */
+		}
 	}
 	return 0; /* continue enum */
 }

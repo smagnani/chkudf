@@ -17,7 +17,12 @@ UDF_CONFIG	= $(UDF_INC)/config/udf.h
 
 
 CFLAGS		= -DDEBUG -D__KERNEL__=1 $(KERNH)\
-	-DMODULE -DBF_CHANGES -O2 -Wall -Wstrict-prototypes -I$(UDF_INC) -g
+	-DMODULE -O2 -Wall -Wstrict-prototypes -I$(UDF_INC) -g
+
+#
+# comment out following if you add our include files to linux/fs.h!
+#
+CFLAGS += -DCONFIG_UDF_FS_EXT
 #
 # ---------------------------------------------------------
 # you shouldn't need to change (much) below this
@@ -31,11 +36,15 @@ O_TARGET := udf.o
 
 all: $(O_TARGET) 
 
+make.log: $(O_TARGET)
+	make clean
+	make all >make.log 2>&1
+
 UDFH    = $(INCDIR)/udf_fs.h  $(INCDIR)/udf_udf.h $(INCDIR)/udf_167.h
-UDFH   += $(INCDIR)/udf_fs_sb.h $(INCDIR)/udf_fs_i.h udfdecl.h
+UDFH   += $(INCDIR)/udf_fs_sb.h $(INCDIR)/udf_fs_i.h udfdecl.h udf_i.h udf_sb.h
 
 O_OBJS   := inode.o super.o dir.o crc.o debug.o directory.o file.o
-O_OBJS   += udftime.o unicode.o misc.o
+O_OBJS   += udftime.o unicode.o misc.o partition.o
 
 %.o:  	../src/%.c 
 	$(CC) -c $(CFLAGS) -o $@ $<
@@ -46,49 +55,3 @@ udf.o:  $(O_OBJS)
 clean:
 	/bin/rm -f *.o $(O_TARGET) $(L_TARGET)
 
-# lookup.c and vat.c aren't intergrated in yet, as of 0.2
-newobj: vat.o lookup.o
-
-#super.o:  super.c $(UDFINC)
-#	$(CC) $(CFLAGS) $(MODFLAGS) -c super.c -o $@
-#
-#file.o:  file.c  $(UDFINC)
-#	$(CC) $(CFLAGS) $(MODFLAGS) -c file.c -o $@
-#
-#dir.o:  dir.c  $(UDFINC)
-#	$(CC) $(CFLAGS) $(MODFLAGS) -c dir.c -o $@
-#
-#name.o:	name.c $(UDFINC)
-#	$(CC) $(CFLAGS) $(MODFLAGS) -c namei.c -o $@
-#
-#dir.S:  dir.c  $(UDFINC)
-#	$(CC) $(CFLAGS) $(MODFLAGS) -c dir.c -S -o $@
-#
-#lookup.o:  lookup.c $(UDFINC)
-#	$(CC) $(CFLAGS) $(MODFLAGS) -c lookup.c -o $@
-#
-#vat.o:  vat.c 
-#	$(CC) $(CFLAGS) $(MODFLAGS) -c vat.c -o $@
-#
-#
-#$(KLIBUDF): $(KLIBUDFO)
-#	ar rcv $@ $(KLIBUDFO)
-#
-#kcrc.o:  crc.c $(CONFIG) $(UDFINC)
-#	$(CC) $(CFLAGS) $(MODFLAGS) -c crc.c -o $@
-#
-#kmisc.o:  misc.c $(CONFIG) $(UDFINC)
-#	$(CC) $(CFLAGS) $(MODFLAGS) -c misc.c -o $@
-#
-#kdirectory.o:  directory.c $(CONFIG) $(UDFINC)
-#	$(CC) $(CFLAGS) $(MODFLAGS) -c directory.c -o $@
-#
-#kunicode.o:  unicode.c  $(UDFINC)
-#	$(CC) $(CFLAGS) $(MODFLAGS) -c unicode.c -o $@
-#
-#kudftime.o:  udftime.c  $(UDFINC)
-#	$(CC) $(CFLAGS) $(MODFLAGS) -c udftime.c -o $@
-#
-#kdebug.o:  debug.c  $(UDFINC)
-#	$(CC) $(CFLAGS) $(MODFLAGS) -c debug.c -o $@
-#

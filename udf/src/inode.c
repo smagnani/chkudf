@@ -23,9 +23,11 @@
  *
  */
 
-#include <linux/udf_fs.h>
-
 #include "udfdecl.h"
+#include <linux/fs.h>
+
+#include "udf_i.h"
+#include "udf_sb.h"
 
 /*
  * udf_read_inode
@@ -59,10 +61,8 @@ udf_read_inode(struct inode *inode)
 	UDF_I_EXT0LOC(inode).logicalBlockNum = 0xFFFFFFFF;
 	UDF_I_EXT0LOC(inode).partitionReferenceNum = 0xFFFF;
 	UDF_I_EXT0OFFS(inode)=0;
-#ifndef BF_CHANGES
-	UDF_I_DIRPOS(inode)=0;
-#endif
 	UDF_I_ALLOCTYPE(inode)=0;
+	memcpy(&UDF_I_LOCATION(inode), &UDF_SB_LOCATION(inode->i_sb), sizeof(lb_addr));
 
 #ifdef VDEBUG
         printk(KERN_DEBUG "udf: udf_read_inode(%d,%d)\n",
@@ -70,6 +70,7 @@ udf_read_inode(struct inode *inode)
                 UDF_I_LOCATION(inode).partitionReferenceNum);
 #endif
 	bh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode));
+
 #ifdef VDEBUG
 	printk(KERN_DEBUG "udf: block: %ld partroot: %d part: %d\n",
 		inode->i_ino, UDF_SB_PARTROOT(inode->i_sb, UDF_I_PART(inode)), UDF_I_PART(inode));
@@ -90,7 +91,10 @@ udf_read_inode(struct inode *inode)
 
 #ifdef VDEBUG
 		printk(KERN_DEBUG
-	"udf: block: %u ino %ld FILE_ENTRY: len %u blocks %u perm 0x%x link %d type 0x%x flags 0x%x\n",
+	"udf: block: %u (%u,%u) ino %ld FILE_ENTRY: len %u/%u blocks %u perm 0x%x link %d type 0x%x flags 0x%x\n",
+			udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0),
+			UDF_I_LOCATION(inode).logicalBlockNum,
+			UDF_I_LOCATION(inode).partitionReferenceNum,
 			inode->i_ino, 
 			UDF_I_FILELENHIGH(inode),
 			UDF_I_FILELENLOW(inode),
@@ -305,11 +309,13 @@ udf_iget(struct super_block *sb, lb_addr ino)
 	struct inode *inode;
 
 #ifdef VDEBUG
-	printk(KERN_DEBUG "udf_iget: ino=0x%x (%x)\n", ino.logicalBlockNum, ino.partitionReferenceNum);
+	printk(KERN_DEBUG "udf_iget: ino=%d,%d==%d\n", ino.logicalBlockNum, ino.partitionReferenceNum,
+		udf_get_lb_pblock(sb, ino, 0));
 #endif
-
 	/* Get the inode */
-	inode = iget(sb, UDF_SB_PARTROOT(sb, ino.partitionReferenceNum) + ino.logicalBlockNum);
+	memcpy(&UDF_SB_LOCATION(sb), &ino, sizeof(lb_addr));
+
+	inode = iget(sb, udf_get_lb_pblock(sb, ino, 0));
 	if (!inode) {
 		printk(KERN_ERR "udf: iget() failed\n");
 		return NULL;
@@ -317,7 +323,7 @@ udf_iget(struct super_block *sb, lb_addr ino)
 
 	if ( ino.logicalBlockNum >= UDF_SB_PARTLEN(sb, ino.partitionReferenceNum) )
 	{
-		printk(KERN_ERR "udf: iget(%d,%d) out of range\n",
+		printk(KERN_DEBUG "udf: iget(%d,%d) out of range\n",
 			ino.partitionReferenceNum, ino.logicalBlockNum);
 		return NULL;
  	}
@@ -326,11 +332,13 @@ udf_iget(struct super_block *sb, lb_addr ino)
 	if (inode->i_op && inode->i_nlink)
 		return inode;
 
+#if 0
 	/* Sanity check */
 	if (inode->i_op) {
 		printk(KERN_WARNING "udf: i_op != NULL\n");
 		inode->i_op = NULL;
 	}
+#endif
 #ifdef VDEBUG	
 	if (inode->i_nlink)
 		printk(KERN_DEBUG "udf: i_nlink != 0, %d\n",
@@ -351,6 +359,8 @@ udf_iget(struct super_block *sb, lb_addr ino)
 	 *	i_nlink = 0
 	 */
 	inode->i_blksize = sb->s_blocksize;
+	inode->i_version = 1;
+#if 0
 	inode->i_mode = UDF_SB(sb)->s_mode;
 	inode->i_gid = UDF_SB(sb)->s_gid;
 	inode->i_uid = UDF_SB(sb)->s_uid;
@@ -359,15 +369,15 @@ udf_iget(struct super_block *sb, lb_addr ino)
 	inode->i_op = NULL; 
 	inode->i_nlink = 0; 
 
-	inode->i_version = 1;
-	memcpy(&UDF_I_LOCATION(inode), &ino, sizeof(lb_addr));
+	memcpy(&UDF_SB_LOCATION(inode), &ino, sizeof(lb_addr));
+#endif
 #ifdef VDEBUG
 	printk(KERN_DEBUG "udf: udf_iget(%d,%d)\n",
 		UDF_I_LOCATION(inode).logicalBlockNum,
 		UDF_I_LOCATION(inode).partitionReferenceNum);
 #endif
 
-#if 1
+#if 0
 	udf_read_inode(inode);
 #endif
 
@@ -381,7 +391,8 @@ int
 udf_bmap(struct inode *inode, int block)
 {
 	off_t b_off, size;
-	unsigned int firstext = 0;
+	unsigned int currblk = 0;
+	unsigned int currpart = 0;
 	int offset = 0;
 
 	if (block < 0)
@@ -461,9 +472,8 @@ udf_bmap(struct inode *inode, int block)
 				} while ( (sa) && (sa->extLength & 0x3FFFFFFF) &&
 					(offset < UDF_I_EXT0LEN(inode)) &&
 					(b_off >= size) );
-
-				firstext = get_pblock(inode->i_sb, (sa->extPosition & 0x3FFFFFFF),
-					UDF_I_LOCATION(inode).partitionReferenceNum);
+				currblk = sa->extPosition & 0x3FFFFFFF;
+				currpart = UDF_I_LOCATION(inode).partitionReferenceNum;
 				break;
 			}
 			case ICB_FLAG_AD_LONG:
@@ -480,14 +490,18 @@ udf_bmap(struct inode *inode, int block)
 					 (offset < UDF_I_EXT0LEN(inode)) &&
 					 (b_off >= size) );
 
-				firstext = get_lb_pblock(inode->i_sb, la->extLocation);
+				currblk = la->extLocation.logicalBlockNum;
+				currpart = la->extLocation.partitionReferenceNum;
 				break;
 			}
 		} /* end switch */
 		udf_release_data(bh);
 	}
 	else
-		firstext = get_lb_pblock(inode->i_sb, UDF_I_EXT0LOC(inode));
+	{
+		currblk = UDF_I_EXT0LOC(inode).logicalBlockNum;
+		currpart = UDF_I_EXT0LOC(inode).partitionReferenceNum;
+	}
 
-	return firstext + (b_off >> inode->i_sb->s_blocksize_bits);
+	return udf_get_pblock(inode->i_sb, currblk, currpart, b_off >> inode->i_sb->s_blocksize_bits);
 }
