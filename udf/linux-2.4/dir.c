@@ -62,8 +62,6 @@ static struct file_operations udf_dir_operations = {
 	NULL,			/* release */
 	udf_sync_file,	/* fsync */
 	NULL,			/* fasync */
-	NULL,			/* check_media_change */
-	NULL,			/* revalidate */
 	NULL			/* lock */
 };
 
@@ -97,14 +95,8 @@ struct inode_operations udf_dir_inode_operations = {
 	NULL,			/* get_block */
 	NULL,			/* readpage */
 	NULL,			/* writepage */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,3,30)
-	NULL,			/* flushpage */
-#endif
 	NULL,			/* truncate */
 	NULL,			/* permission */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,3,30)
-	NULL,			/* smap */
-#endif
 	NULL			/* revalidate */
 };
 
@@ -169,7 +161,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 	char *nameptr;
 	Uint16 liu;
 	Uint8 lfi;
-	loff_t size = (UDF_I_EXT0OFFS(dir) + dir->i_size) >> 2;
+	loff_t size = (udf_ext0_offset(dir) + dir->i_size) >> 2;
 	struct buffer_head * bh = NULL;
 	lb_addr bloc, eloc;
 	Uint32 extoffset, elen, offset;
@@ -178,7 +170,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 		return 1;
 
 	if (nf_pos == 0)
-		nf_pos = (UDF_I_EXT0OFFS(dir) >> 2);
+		nf_pos = (udf_ext0_offset(dir) >> 2);
 
 	fibh.soffset = fibh.eoffset = (nf_pos & ((dir->i_sb->s_blocksize - 1) >> 2)) << 2;
 	if (inode_bmap(dir, nf_pos >> (dir->i_sb->s_blocksize_bits - 2),
