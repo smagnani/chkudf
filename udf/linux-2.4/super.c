@@ -556,7 +556,7 @@ udf_find_anchor(struct super_block *sb)
 			else if (ident == TID_FILE_ENTRY || ident == TID_EXTENDED_FILE_ENTRY)
 			{
 				lastblock = last[i];
-				UDF_SB_ANCHOR(sb)[2] = 512 + UDF_SB_SESSION(sb);
+				UDF_SB_ANCHOR(sb)[3] = 512 + UDF_SB_SESSION(sb);
 			}
 			else
 			{
@@ -1416,8 +1416,7 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	UDF_SB_LASTBLOCK(sb) = uopt.lastblock;
 	UDF_SB_ANCHOR(sb)[0] = UDF_SB_ANCHOR(sb)[1] = 0;
 	UDF_SB_ANCHOR(sb)[2] = uopt.anchor;
-	UDF_SB_ANCHOR(sb)[3] = 256;
-	UDF_SB_ANCHOR(sb)[4] = 512;
+	UDF_SB_ANCHOR(sb)[3] = UDF_SB_SESSION(sb) + 256;
 
 	if (udf_check_valid(sb, uopt.novrs, silent)) /* read volume recognition sequences */
 	{
