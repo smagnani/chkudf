@@ -18,7 +18,7 @@ KFLAGS	= -O2 -Wall -Wstrict-prototypes -pipe
 endif
 
 CPPFLAGS= $(PCDEBUG) -D__KERNEL__ -DMODULE -I../include\
-		-I. -I$(LINUX)/include $(SMPFLAG) $(WRITEFLAG) -DCONFIG_UDF_FS_EXT
+		-I. -I$(LINUX)/include $(SMPFLAG) -DCONFIG_UDF_FS_EXT
 COFLAGS	= -kv
 
 CFLAGS	= $(KFLAGS) $(MFLAG) $(ACFLAG)
