@@ -209,6 +209,10 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 	offset = pos & (sb->s_blocksize - 1);
 	c = sb->s_blocksize - offset;
 	written = 0;
+
+	if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
+		pos -= udf_file_entry_alloc_offset(inode);
+
 	do
 	{
 		bh = udf_getblk(inode, block, 1, &err);
@@ -226,7 +230,6 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 
 		if (new_buffer)
 		{
-
 			set_bit(BH_Lock, &bh->b_state);
 			c -= copy_from_user(bh->b_data + offset, buf, c);
 			if (c != sb->s_blocksize)
@@ -310,8 +313,6 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 			brelse(bufferlist[i]);
 		}
 	}
-	if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
-		pos -= udf_file_entry_alloc_offset(inode);
 
 	if (pos > inode->i_size)
 		inode->i_size = pos;
