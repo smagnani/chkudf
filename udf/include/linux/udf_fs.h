@@ -31,14 +31,16 @@
  *
  */
 
-#if !defined(_LINUX_UDF_FS_H)
-#define _LINUX_UDF_FS_H
+#ifndef _UDF_FS_H
+#define _UDF_FS_H 1
+
+#include <linux/config.h>
 
 #define UDF_PREALLOCATE
 #define UDF_DEFAULT_PREALLOC_BLOCKS	8
 
-#define UDFFS_DATE			"2001/10/10"
-#define UDFFS_VERSION			"1.0.0-cvs"
+#define UDFFS_DATE			"2002/03/11"
+#define UDFFS_VERSION			"0.9.6"
 
 #if !defined(UDFFS_RW)
 
@@ -78,4 +80,4 @@ extern int init_udf_fs(void);
 
 #endif /* __KERNEL__ */
 
-#endif /* !defined(_LINUX_UDF_FS_H) */
+#endif /* _UDF_FS_H */
