@@ -1,3 +1,0 @@
-ifeq (,$(strip $(subst $(comma),:,$(CFLAGS) $(EXTRA_CFLAGS) $(CFLAGS_crc.o))))
-FILES_FLAGS_UP_TO_DATE += crc.o
-endif
