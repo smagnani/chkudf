@@ -47,7 +47,7 @@ struct udf_inode_info
 	unsigned i_strat_4096 : 1;
 	unsigned i_new_inode : 1;
 	unsigned reserved : 26;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,3)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
 	struct inode vfs_inode;
 #endif
 };
