@@ -305,14 +305,14 @@ static struct buffer_head * inode_getblk(struct inode * inode, long block,
 	Uint32 elen = 0;
 	lb_addr eloc, pbloc, cbloc, nbloc;
 	int c = 1;
-	int lbcount = 0, b_off = 0, offset = 0;
-	Uint32 newblocknum, newblock;
+	Uint64 lbcount = 0, b_off = 0;
+	Uint32 newblocknum, newblock, offset = 0;
 	Sint8 etype;
 	int goal = 0, pgoal = UDF_I_LOCATION(inode).logicalBlockNum;
 	char lastblock = 0;
 
 	pextoffset = cextoffset = nextoffset = udf_file_entry_alloc_offset(inode);
-	b_off = block << inode->i_sb->s_blocksize_bits;
+	b_off = (Uint64)block << inode->i_sb->s_blocksize_bits;
 	pbloc = cbloc = nbloc = UDF_I_LOCATION(inode);
 
 	/* find the extent which contains the block we are looking for.
@@ -2066,7 +2066,7 @@ Sint8 udf_delete_aext(struct inode *inode, lb_addr nbloc, int nextoffset,
 Sint8 inode_bmap(struct inode *inode, int block, lb_addr *bloc, Uint32 *extoffset,
 	lb_addr *eloc, Uint32 *elen, Uint32 *offset, struct buffer_head **bh)
 {
-	Uint64 lbcount = 0, bcount = block << inode->i_sb->s_blocksize_bits;
+	Uint64 lbcount = 0, bcount = (Uint64)block << inode->i_sb->s_blocksize_bits;
 	Sint8 etype;
 
 	if (block < 0)
