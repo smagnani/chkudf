@@ -1116,6 +1116,7 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 			inode->i_nlink ++;
 			break;
 		}
+		case FILE_TYPE_REALTIME:
 		case FILE_TYPE_REGULAR:
 		case FILE_TYPE_NONE:
 		{
