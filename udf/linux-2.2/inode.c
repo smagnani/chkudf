@@ -36,6 +36,7 @@
 #include "udfdecl.h"
 #include <linux/locks.h>
 #include <linux/mm.h>
+#include <linux/malloc.h>
 
 #include "udf_i.h"
 #include "udf_sb.h"
@@ -154,7 +155,7 @@ void udf_expand_file_adinicb(struct inode * inode, int newsize, int * err)
 	if (!dbh)
 		return;
 
-	memcpy(dbh->b_data, UDF_I_DATA(inode) + UDF_I_LENEATTR(inode)
+	memcpy(dbh->b_data, UDF_I_DATA(inode) + UDF_I_LENEATTR(inode),
 		UDF_I_LENALLOC(inode));
 		
 	mark_buffer_dirty(dbh, 1);
@@ -241,7 +242,7 @@ struct buffer_head * udf_expand_dir_adinicb(struct inode *inode, int *block, int
 		dfibh.soffset = dfibh.eoffset;
 		dfibh.eoffset += (sfibh.eoffset - sfibh.soffset);
 		dfi = (struct fileIdentDesc *)(dbh->b_data + dfibh.soffset);
-		if (udf_write_fi(sfi, dfi, &dfibh, sfi->impUse,
+		if (udf_write_fi(inode, sfi, dfi, &dfibh, sfi->impUse,
 			sfi->fileIdent + sfi->lengthOfImpUse))
 		{
 			UDF_I_ALLOCTYPE(inode) = ICBTAG_FLAG_AD_IN_ICB;
@@ -1727,8 +1728,6 @@ int8_t udf_write_aext(struct inode *inode, lb_addr bloc, int *extoffset,
 int8_t udf_next_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 	lb_addr *eloc, uint32_t *elen, struct buffer_head **bh, int inc)
 {
-	uint16_t tagIdent;
-	int pos, alen;
 	int8_t etype;
 
 	while ((etype = udf_current_aext(inode, bloc, extoffset, eloc, elen, bh, inc)) ==

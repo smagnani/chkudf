@@ -96,7 +96,7 @@ extern void udf_error(struct super_block *, const char *, const char *, ...);
 extern void udf_warning(struct super_block *, const char *, const char *, ...);
 
 /* namei.c */
-extern int udf_write_fi(struct fileIdentDesc *, struct fileIdentDesc *, struct udf_fileident_bh *, uint8_t *, uint8_t *);
+extern int udf_write_fi(struct inode *, struct fileIdentDesc *, struct fileIdentDesc *, struct udf_fileident_bh *, uint8_t *, uint8_t *);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,7)
 extern int udf_lookup(struct inode *, struct dentry *);
 #else

@@ -42,7 +42,7 @@ static inline int udf_match(int len, const char * const name, struct qstr *qs)
 	return !memcmp(name, qs->name, len);
 }
 
-int udf_write_fi(struct fileIdentDesc *cfi,
+int udf_write_fi(struct inode *inode, struct fileIdentDesc *cfi,
 	struct fileIdentDesc *sfi, struct udf_fileident_bh *fibh,
 	uint8_t *impuse, uint8_t *fileident)
 {
@@ -485,7 +485,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 				cfi->fileCharacteristics = 0;
 				cfi->lengthFileIdent = namelen;
 				cfi->lengthOfImpUse = cpu_to_le16(0);
-				if (!udf_write_fi(cfi, fi, fibh, NULL, name))
+				if (!udf_write_fi(dir, cfi, fi, fibh, NULL, name))
 					return fi;
 				else
 				{
@@ -609,7 +609,7 @@ add:
 	cfi->fileVersionNum = cpu_to_le16(1);
 	cfi->lengthFileIdent = namelen;
 	cfi->lengthOfImpUse = cpu_to_le16(0);
-	if (!udf_write_fi(cfi, fi, fibh, NULL, name))
+	if (!udf_write_fi(dir, cfi, fi, fibh, NULL, name))
 	{
 		udf_release_data(bh);
 		dir->i_size += nfidlen;
@@ -634,13 +634,13 @@ add:
 	}
 }
 
-static int udf_delete_entry(struct super_block *sb, struct fileIdentDesc *fi,
+static int udf_delete_entry(struct inode *inode, struct fileIdentDesc *fi,
 	struct udf_fileident_bh *fibh, struct fileIdentDesc *cfi)
 {
 	cfi->fileCharacteristics |= FID_FILE_CHAR_DELETED;
-	if (UDF_QUERY_FLAG(sb, UDF_FLAG_STRICT))
+	if (UDF_QUERY_FLAG(inode->i_sb, UDF_FLAG_STRICT))
 		memset(&(cfi->icb), 0x00, sizeof(long_ad));
-	return udf_write_fi(cfi, fi, fibh, NULL, NULL);
+	return udf_write_fi(inode, cfi, fi, fibh, NULL, NULL);
 }
 
 int udf_create(struct inode *dir, struct dentry *dentry, int mode)
@@ -672,7 +672,7 @@ int udf_create(struct inode *dir, struct dentry *dentry, int mode)
 	cfi.icb.extLocation = cpu_to_lelb(UDF_I_LOCATION(inode));
 	*(uint32_t *)((struct allocDescImpUse *)cfi.icb.impUse)->impUse =
 		cpu_to_le32(UDF_I_UNIQUE(inode) & 0x00000000FFFFFFFFUL);
-	udf_write_fi(&cfi, fi, &fibh, NULL, NULL);
+	udf_write_fi(dir, &cfi, fi, &fibh, NULL, NULL);
 	if (UDF_I_ALLOCTYPE(dir) == ICBTAG_FLAG_AD_IN_ICB)
 	{
 		mark_inode_dirty(dir);
@@ -721,7 +721,7 @@ int udf_mknod(struct inode * dir, struct dentry * dentry, int mode, int rdev)
 	cfi.icb.extLocation = cpu_to_lelb(UDF_I_LOCATION(inode));
 	*(uint32_t *)((struct allocDescImpUse *)cfi.icb.impUse)->impUse =
 		cpu_to_le32(UDF_I_UNIQUE(inode) & 0x00000000FFFFFFFFUL);
-	udf_write_fi(&cfi, fi, &fibh, NULL, NULL);
+	udf_write_fi(dir, &cfi, fi, &fibh, NULL, NULL);
 	if (UDF_I_ALLOCTYPE(dir) == ICBTAG_FLAG_AD_IN_ICB)
 	{
 		mark_inode_dirty(dir);
@@ -799,7 +799,7 @@ int udf_mkdir(struct inode * dir, struct dentry * dentry, int mode)
 	*(uint32_t *)((struct allocDescImpUse *)cfi.icb.impUse)->impUse =
 		cpu_to_le32(UDF_I_UNIQUE(dir) & 0x00000000FFFFFFFFUL);
 	cfi.fileCharacteristics = FID_FILE_CHAR_DIRECTORY | FID_FILE_CHAR_PARENT;
-	udf_write_fi(&cfi, fi, &fibh, NULL, NULL);
+	udf_write_fi(inode, &cfi, fi, &fibh, NULL, NULL);
 	udf_release_data(fibh.sbh);
 	inode->i_mode = S_IFDIR | (mode & (S_IRWXUGO|S_ISVTX) & ~current->fs->umask);
 	if (dir->i_mode & S_ISGID)
@@ -818,7 +818,7 @@ int udf_mkdir(struct inode * dir, struct dentry * dentry, int mode)
 	*(uint32_t *)((struct allocDescImpUse *)cfi.icb.impUse)->impUse =
 		cpu_to_le32(UDF_I_UNIQUE(inode) & 0x00000000FFFFFFFFUL);
 	cfi.fileCharacteristics |= FID_FILE_CHAR_DIRECTORY;
-	udf_write_fi(&cfi, fi, &fibh, NULL, NULL);
+	udf_write_fi(dir, &cfi, fi, &fibh, NULL, NULL);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
 	dir->i_version = ++event;
 #else
@@ -896,7 +896,7 @@ static int empty_dir(struct inode *dir)
 		{
 			if (fibh.sbh != fibh.ebh)
 				udf_release_data(fibh.ebh);
-			udf_release_data(fibh.sbh)
+			udf_release_data(fibh.sbh);
 			udf_release_data(bh);
 			return 0;
 		}
@@ -942,14 +942,14 @@ int udf_rmdir(struct inode * dir, struct dentry * dentry)
 	}
 	else
 	{
-		retval = udf_delete_entry(dir->i_sb, fi, &fibh, &cfi);
+		retval = udf_delete_entry(dir, fi, &fibh, &cfi);
 		dir->i_version = ++event;
 	}
 #else
 	retval = -ENOTEMPTY;
 	if (!empty_dir(inode))
 		goto end_rmdir;
-	retval = udf_delete_entry(dir->i_sb, fi, &fibh, &cfi);
+	retval = udf_delete_entry(dir, fi, &fibh, &cfi);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
 	dir->i_version = ++event;
 #else
@@ -1019,7 +1019,7 @@ int udf_unlink(struct inode * dir, struct dentry * dentry)
 			inode->i_ino, inode->i_nlink);
 		inode->i_nlink = 1;
 	}
-	retval = udf_delete_entry(dir->i_sb, fi, &fibh, &cfi);
+	retval = udf_delete_entry(dir, fi, &fibh, &cfi);
 	if (retval)
 		goto end_unlink;
 	dir->i_ctime = dir->i_mtime = CURRENT_TIME;
@@ -1181,7 +1181,7 @@ int udf_symlink(struct inode * dir, struct dentry * dentry, const char * symname
 		lvhd->uniqueID = cpu_to_le64(uniqueID);
 		mark_buffer_dirty(UDF_SB_LVIDBH(inode->i_sb), 1);
 	}
-	udf_write_fi(&cfi, fi, &fibh, NULL, NULL);
+	udf_write_fi(dir, &cfi, fi, &fibh, NULL, NULL);
 	if (UDF_I_ALLOCTYPE(dir) == ICBTAG_FLAG_AD_IN_ICB)
 	{
 		mark_inode_dirty(dir);
@@ -1243,7 +1243,7 @@ int udf_link(struct dentry * old_dentry, struct inode * dir,
 		lvhd->uniqueID = cpu_to_le64(uniqueID);
 		mark_buffer_dirty(UDF_SB_LVIDBH(inode->i_sb), 1);
 	}
-	udf_write_fi(&cfi, fi, &fibh, NULL, NULL);
+	udf_write_fi(dir, &cfi, fi, &fibh, NULL, NULL);
 	if (UDF_I_ALLOCTYPE(dir) == ICBTAG_FLAG_AD_IN_ICB)
 	{
 		mark_inode_dirty(dir);
@@ -1390,11 +1390,11 @@ static int do_udf_rename(struct inode *old_dir, struct dentry *old_dentry,
 	ncfi.fileVersionNum = ocfi.fileVersionNum;
 	ncfi.fileCharacteristics = ocfi.fileCharacteristics;
 	memcpy(&(ncfi.icb), &(ocfi.icb), sizeof(long_ad));
-	udf_write_fi(&ncfi, nfi, &nfibh, NULL, NULL);
+	udf_write_fi(new_dir, &ncfi, nfi, &nfibh, NULL, NULL);
 
 	/* The old fid may have moved - find it again */
 	ofi = udf_find_entry(old_dir, old_dentry, &ofibh, &ocfi);
-	udf_delete_entry(old_inode->i_sb, ofi, &ofibh, &ocfi);
+	udf_delete_entry(old_inode, ofi, &ofibh, &ocfi);
 
 	old_dir->i_version = ++event;
 	if (new_inode)
@@ -1570,11 +1570,11 @@ int udf_rename (struct inode * old_dir, struct dentry * old_dentry,
 	ncfi.fileVersionNum = ocfi.fileVersionNum;
 	ncfi.fileCharacteristics = ocfi.fileCharacteristics;
 	memcpy(&(ncfi.icb), &(ocfi.icb), sizeof(long_ad));
-	udf_write_fi(&ncfi, nfi, &nfibh, NULL, NULL);
+	udf_write_fi(new_dir, &ncfi, nfi, &nfibh, NULL, NULL);
 
 	/* The old fid may have moved - find it again */
 	ofi = udf_find_entry(old_dir, old_dentry, &ofibh, &ocfi);
-	udf_delete_entry(old_inode->i_sb, ofi, &ofibh, &ocfi);
+	udf_delete_entry(old_inode, ofi, &ofibh, &ocfi);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
 	old_dir->i_version = ++event;
