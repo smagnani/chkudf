@@ -1,3 +1,0 @@
-#undef CONFIG_UDF
-#undef CONFIG_UDF_WRITE
-#define CONFIG_UDF_MODULE 1

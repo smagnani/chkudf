@@ -17,19 +17,20 @@
  */
 
 
+#include "udfdecl.h"
+#include "udf_sb.h"
+
 #if defined(__linux__) && defined(__KERNEL__)
 
 #include <linux/fs.h>
-#include <linux/udf_fs.h>
 
 #else
-
-#include <sys/types.h>
+/*#include <sys/types.h>*/
 #include <stdio.h>
 #include <unistd.h>
-#include <linux/udf_fs.h>
 
 #endif
+
 
 struct FileIdentDesc * 
 udf_get_fileident(void * buffer, int bufsize, int * offset, int * remainder)

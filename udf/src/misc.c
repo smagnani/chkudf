@@ -19,15 +19,19 @@
 
 #if defined(__linux__) && defined(__KERNEL__)
 
+#include "udfdecl.h"
+
+#include "udf_sb.h"
+#include "udf_i.h"
+
 #include <linux/fs.h>
-#include <linux/udf_fs.h>
 
 #else
-
-#include <sys/types.h>
+#include "udfdecl.h"
+#include <linux/types.h>
 #include <stdio.h>
+/*#include <sys/types.h>*/
 #include <unistd.h>
-#include <linux/udf_fs.h>
 
 int udf_blocksize=0;
 int udf_errno=0;
@@ -98,10 +102,26 @@ gid_t udf_convert_gid(int gidin)
 }
 
 #if defined(__linux__) && defined(__KERNEL__)
-extern struct buffer_head *
-udf_read_untagged(struct super_block *sb, Uint32 block, Uint32 offset)
+struct buffer_head *
+udf_read_sector(struct super_block *sb, unsigned long sector)
+{
+	return bread(sb->s_dev, sector, sb->s_blocksize);
+}
+
+/*
+ * read file or directory data from a logical block
+ *
+ */
+struct buffer_head *
+udf_read_untagged(struct super_block *sb, Uint32 block, int partref)
 {
 	struct buffer_head *bh;
+	Uint32 offset;
+
+	if ( partref != -1 )
+		offset=UDF_SB_PARTROOT(sb);	
+	else
+		offset=0;
 
 	/* Read the block */
 	bh = bread(sb->s_dev, block+offset, sb->s_blocksize);
@@ -123,14 +143,19 @@ udf_read_untagged(struct super_block *sb, Uint32 block, Uint32 offset)
  *	July 1, 1997 - Andrew E. Mileski
  *	Written, tested, and released.
  */
-extern struct buffer_head *
-udf_read_tagged(struct super_block *sb, Uint32 block, Uint32 offset)
+struct buffer_head *
+udf_read_tagged(struct super_block *sb, Uint32 block, int partref)
 {
 	tag *tag_p;
 	struct buffer_head *bh;
 	register Uint8 checksum;
 	register int i;
+	Uint32 offset;
 
+	if ( partref != -1 )
+		offset=UDF_SB_PARTROOT(sb);	
+	else
+		offset=0;
 	/* Read the block */
 	bh = bread(sb->s_dev, block, sb->s_blocksize);
 	if (!bh) {
@@ -295,20 +320,6 @@ udf_read_tagged_data(char *buffer, int size, int fd, int block, int offset)
 
 error_out:
 	return -1;
-}
-#endif
-
-#ifdef __KERNEL__
-long
-udf_block_from_inode(struct super_block *sb, long ino)
-{
-	return ino + UDF_BLOCK_OFFSET(sb);
-}
-
-long
-udf_inode_from_block(struct super_block *sb, long block)
-{
-	return block - UDF_BLOCK_OFFSET(sb);
 }
 #endif
 

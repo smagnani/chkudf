@@ -18,3 +18,7 @@
 		Incorporated some changes from Ben Fennema, including mkudf.
 		Still can't handle the "Sequential.img" test case from Adaptec.
 		Improved taglist and added a new dumpfe tool.
+
+12/6/98		Good results with Thomas Tempelmann's UDF1.02.img, although
+		still needs some 'short_ad' updates, and filename translation.
+		Superficial support for virtual & sparable partitions.

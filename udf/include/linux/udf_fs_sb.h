@@ -1,6 +1,10 @@
 #if !defined(_LINUX_UDF_FS_SB_H)
 #define _LINUX_UDF_FS_SB_H
 /*
+ * udf_fs_sb.h
+ * 
+ * This include file is for the Linux kernel/module.
+ *
  * CONTACTS
  *	E-mail regarding any portion of the Linux UDF file system should be
  *	directed to the development team mailing list (run by majordomo):
@@ -12,46 +16,69 @@
  *		ftp://prep.ai.mit.edu/pub/gnu/GPL
  *	Each contributing author retains all rights to their own work.
  */
-#ifdef __KERNEL__
 
-#include <linux/time.h>
+#define UDF_SB_APPROX_SIZE	40
 
+#if !defined(CONFIG_UDF_FS)
+
+/* make things easier for the kernel when we're not compiled in ... */
+struct udf_sb_info {
+	__u32 reserved[UDF_SB_APPROX_SIZE]; 
+			/* ... but leave enough room for the module! */
+};
+
+#else
+
+#pragma pack(1)
+
+#define UDF_SB_PARTITIONS	4
+
+struct udf_partition {
+	__u16 p_reference;
+	__u16 p_type; /* 0 'unused', 1 'type 1', 2 'virtual', 3 'sparable' */
+	__u32 p_sector; /* sector offset for 1, VAT for 2, SpareTab for 3 */
+};
 
 struct udf_sb_info {
+	struct udf_partition s_partmap[UDF_SB_PARTITIONS];
+	__u8  s_volident[32];
+	__u64 s_nextid;
+
 	/* Default permissions */
 	mode_t s_mode;
 	gid_t s_gid;
 	uid_t s_uid;
 
 	/* Overall info */
-	Uint16 s_maxVolSeqNum;
-	Uint16 s_partitions;
-	Uint16 s_thispartition;
-	Uint16 s_thisvolume;
+	__u16 s_blocksize; 
+	__u16 s_maxVolSeqNum;
+	__u16 s_partitions;
+	__u32 s_thispartition;
 
 	/* Volume ID */
-	Uint32 s_id_block;
-	Uint16 s_id_crc;
+	__u32 s_id_block;
+	__u16 s_id_crc;
 
-	/* Block headers */
-	Uint32 s_session;
-	Uint32 s_anchor;
-	Uint32 s_lastblock;
-	Uint32 s_voldesc;
-	Uint32 s_fileset;
-	Uint32 s_rootdir;
-	Uint32 s_partition_root;
-	Uint32 s_partition_len;
-	Uint32 s_filecount;
-	Uint8  s_volident[32];
+	/* Sector headers */
+	__u32 s_session;
+	__u32 s_anchor;
+	__u32 s_lastblock;
+	__u32 s_voldesc;
+	__u32 s_fileset;
+	__u32 s_rootdir;
+	__u32 s_partition_root;
+	__u32 s_partition_len;
+
+	__u32 s_filecount;
+
 
 	/* directory info */
-	Uint32 s_lastdirino;
-	Uint32 s_lastdirnum;
+	__u32 s_lastdirino;
+	__u32 s_lastdirnum;
 
 	/* Root Info */
 	time_t s_recordtime;
-	timestamp s_timestamp;
+	__u8  s_timestamp[12];
 
 	/* Miscellaneous flags */
 	int s_flags;
@@ -59,46 +86,8 @@ struct udf_sb_info {
 	/* Debugging level */
 	int s_debug;
 };
+#pragma pack()
 
-#define UDF_FLAG_STRICT	0x00000001U
-#define UDF_FLAG_FIXED	0x00000004U
+#endif  /* !defined(CONFIG_UDF_FS) */
 
-#ifdef CONFIG_UDF_FS
-#define UDF_SB_ALLOC(X) 
-#define UDF_SB_FREE(X)  
-#define UDF_SB(X)	(&((X)->u.udf_sb))
-#else
-	/* else we kmalloc a page to hold our stuff */
-#define UDF_SB_ALLOC(X) \
-	((X)->u.generic_sbp=kmalloc(sizeof(struct udf_sb_info), GFP_KERNEL))
-#define UDF_SB_FREE(X)  { if ((X)->u.generic_sbp) { \
-				kfree( (X)->u.generic_sbp ); \
-				(X)->u.generic_sbp=NULL; \
-			  } }
-#define UDF_SB(X)	((struct udf_sb_info *) ((X)->u.generic_sbp))
-#endif
-
-#define IS_STRICT(X)	( UDF_SB(X)->s_flags & UDF_FLAG_STRICT)
-#define IS_FIXED(X)	( UDF_SB(X)->s_flags & UDF_FLAG_DEBUG)
-
-#define UDF_SB_SESSION(X)	( UDF_SB(X)->s_session )
-#define UDF_SB_ANCHOR(X)	( UDF_SB(X)->s_anchor )
-#define UDF_SB_VOLUME(X)	( UDF_SB(X)->s_thisvolume )
-#define UDF_SB_PARTITION(X)	( UDF_SB(X)->s_thispartition )
-#define UDF_SB_LASTBLOCK(X)	( UDF_SB(X)->s_lastblock )
-#define UDF_SB_VOLDESC(X)	( UDF_SB(X)->s_voldesc )
-#define UDF_SB_FILESET(X)	( UDF_SB(X)->s_fileset )
-#define UDF_SB_ROOTDIR(X)	( UDF_SB(X)->s_rootdir )
-#define UDF_SB_RECORDTIME(X)	( UDF_SB(X)->s_recordtime )
-#define UDF_SB_TIMESTAMP(X)	( UDF_SB(X)->s_timestamp )
-#define UDF_SB_PARTROOT(X)	( UDF_SB(X)->s_partition_root )
-#define UDF_SB_PARTLEN(X)	( UDF_SB(X)->s_partition_len )
-#define UDF_SB_FILECOUNT(X)	( UDF_SB(X)->s_filecount )
-#define UDF_SB_VOLIDENT(X)	( UDF_SB(X)->s_volident )
-#define UDF_SB_LASTDIRINO(X)	( UDF_SB(X)->s_lastdirino )
-#define UDF_SB_LASTDIRNUM(X)	( UDF_SB(X)->s_lastdirnum )
-
-#define UDF_BLOCK_OFFSET(X)	  ( UDF_SB_PARTROOT(X) )
-
-#endif	/* defined(__KERNEL__) */
 #endif /* !defined(_LINUX_UDF_FS_SB_H) */

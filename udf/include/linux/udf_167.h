@@ -48,14 +48,17 @@
  * 10/7/98	Changed FILE_EXISTENCE to FILE_HIDDEN, per UDF 2.0 spec
  * 11/26/98	Modifed some entries for UDF 1.5/2.0
  * 11/26/98 bf  Fixed typos, non-linux types, more structures
+ * 12/5/98 dgb  Adjusted structure and content of include files.
  */
 
 #ifdef __linux__
+#include <linux/types.h>
 #define Uint8	__u8
 #define Uint16	__u16
 #define Uint32	__u32
 #define Uint64	__u64
 typedef __u8	dstring;
+#pragma pack(1)
 #else
 #define Uint8	unsigned char
 #define Uint16	unsigned short
@@ -66,9 +69,6 @@ typedef char	dstring;
 
 
 /* make sure all structures are packed! */
-#ifdef __linux__
-#pragma pack(1)
-#endif /*__linux__ */
 
 /* CS0 Charspec (ECMA 167 1/7.2.1) */
 typedef struct {
@@ -266,28 +266,6 @@ struct ImpUseVolDesc {
 	Uint8 impUse[460];
 };
 
-struct LogicalVolIntegrityDescImpUse
-{
-	EntityID	impIdent;
-	Uint32		numFiles;
-	Uint32		numDirs;
-	Uint16		minUDFReadRev;
-	Uint16		minUDFWriteRev;
-	Uint16		maxUDFWriteRev;
-};
-
-/* LVInformation may be present in ImpUseVolDesc.impUse */
-struct ImpUseVolDescImpUse
-{
-	charspec	LVICharset;
-	dstring		logicalVolIdent[128];
-	dstring		LVInfo1[36];
-	dstring		LVInfo2[36];
-	dstring		LVInfo3[36];
-	EntityID	impIdent;
-	Uint8		impUse[128];
-};
-
 /* Partition Descriptor (ECMA 167 3/10.5) */
 struct PartitionDesc {
 	tag descTag;
@@ -365,37 +343,6 @@ struct GenericPartitionMap2 {
 	Uint8 partitionIdent[62];
 };
 
-/* A Type 2 Partition Map */
-struct VirtualPartitionMap
-{
-	Uint8		partitionMapType;	/* 2 */
-	Uint8		partitionMapLength;	/* 64 */
-	Uint8		reserved1[2];		/* #00 */
-	EntityID	partIdent;
-	Uint16		volSeqNum;
-	Uint16		partitionNum;
-	Uint8		reserved2[24];		/* #00 */
-};
-
-/* A Type 2 Partition Map */
-struct SparablePartitionMap
-{
-	Uint8		partitionMapType;	/* 2 */
-	Uint8		partitionMapLength;	/* 64 */
-	Uint8		reserved1[2];		/* #00 */
-	EntityID	partIdent;		/* Flags = 0 */
-						/* Id = UDF_ID_SPARABLE */
-						/* IdSuf = 2.1.5.3 */
-	Uint16		volSeqNum;
-	Uint16		partitioNum;
-	Uint16		packetLength;		/* 32 */
-	Uint8		numSparingTables;
-	Uint8		reserved2[1];		/* #00 */
-	Uint32		sizeSparingTable;
-	Uint32		locSparingTable[0];
-	Uint8		pad[0];
-};
- 
 /* Unallocated Space Descriptor (ECMA 167 3/10.8) */
 struct UnallocatedSpaceDesc {
 	tag descTag;
@@ -425,38 +372,6 @@ struct LogicalVolIntegrityDesc {
 	/*struct LogicalVolIntegrityDescImpUse impUse;*/
 };
 
-/* virtual allocation, see UDF 2.0 2.2.10 */
-struct VirtualAllocationTable {
-	Uint16 lengthHeader;
-	Uint16 lengthImpUse;
-	dstring logicalVolIdent[128];
-	Uint32	previousVatICBLoc;
-	Uint32  numFIDSFiles;
-	Uint32  numFIDSDirectories; /* non-parent */
-	Uint16  minReadRevision;
-	Uint16	minWriteRevision;
-	Uint16  maxWriteRevision;
-	Uint16  reserved;
-	Uint8	impUse[0];
-	Uint32  vatEntry[0];
-};
-
-/* sparing maps, see UDF 2.0 2.2.11 */
-typedef struct {
-	Uint32  origLocation;
-	Uint32  mappedLocation;
-} SparingEntry;
-
-/* sparing maps, see UDF 2.0 2.2.11 */
-struct SparingTable {
-	Uint16  tag;
-	EntityID sparingIdent; /* *UDF Sparing Table */
-	Uint16   reallocationTableLen;
-	Uint16   reserved;
-	Uint32   sequenceNum;
-	SparingEntry mapEntry[0];
-};
-
 /* Integrity Types (ECMA 167 3/10.10.3) */
 #define INTEGRITY_TYPE_OPEN	0
 #define INTEGRITY_TYPE_CLOSE	1
@@ -480,21 +395,6 @@ typedef struct {
 	Uint8 impUse[6];
 } long_ad;
 	/* upper 2 bits of extLength indicate type */
-
-/* the impUse of long_ad used with FileIdent */
-struct UniqueID {
-	Uint16 reserved;
-	Uint32 uniqueIdent;
-};
-/* the impUse of long_ad used in AllocDescs */
-struct ADImpUse {
-	Uint16 flags;
-	Uint8  impUse[4];
-};
-
-#define UDF_EXTENT_LENGTH_MASK		0x3FFFFFFF
-#define UDF_EXTENT_FLAG_MASK		0xc0000000
-#define UDF_EXTENT_FLAG_ERASED		0x40000000
 
 /* File Set Descriptor (ECMA 167 4/14.1) */
 struct FileSetDesc {
@@ -588,9 +488,7 @@ typedef struct {
 #define FILE_TYPE_SOCKET	0x0aU
 #define FILE_TYPE_TERMINAL	0x0bU
 #define FILE_TYPE_SYMLINK	0x0cU
-#define FILE_TYPE_STREAMDIR	0x0dU /* UDF 2.0 */
-/* VAT added for CD-R, see UDF 2.0 2.2.10 */
-#define FILE_TYPE_VAT		0xf8U
+#define FILE_TYPE_STREAMDIR	0x0dU /* ECMA 167 4/13 */
 
 /* ICB Flags (ECMA 167 4/14.6.8) */
 #define ICB_FLAG_ALLOC_MASK	0x0007U
@@ -768,15 +666,6 @@ struct ImpUseExtendedAttr {
 	Uint32 impUseLength;
 	EntityID impIdent;
 	Uint8 impUse[0];
-};
-
-/* DVD Copyright Management Info, see UDF 2.0 3.3.4.5.1.2 */
-/* when ImpUseExtendedAttr.impIdent= "*UDF DVD CGMS Info" */
-struct DVDCopyrightImpUse {
-	Uint16 headerChecksum;
-	Uint8  CGMSInfo;
-	Uint8  dataType;
-	Uint8  protectionSystemInfo[4];
 };
 
 /* Application Use Extended Attribute (ECMA 167 4/14.10.9) */
