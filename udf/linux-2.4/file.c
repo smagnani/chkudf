@@ -60,6 +60,7 @@ static int udf_adinicb_writepage(struct file *file, struct page *page)
 	memcpy(bh->b_data + udf_ext0_offset(inode), kaddr, inode->i_size);
 	mark_buffer_dirty(bh, 0);
 	brelse(bh);
+	flush_dcache_page(page);
 	SetPageUptodate(page);
 	kunmap(page);
 	return 0;
