@@ -79,10 +79,10 @@ clean-subdirs:
 	-@$(MAKE) -C module clean
 	-@$(MAKE) -C tools clean
 	-@$(MAKE) -C patch-2.2 clean
-	-@$(MAKE) -C patch-2.3 clean
+	-@$(MAKE) -C patch-2.4 clean
 
 distclean: clean
 	-@$(MAKE) -C patch-2.2 distclean
-	-@$(MAKE) -C patch-2.3 distclean
+	-@$(MAKE) -C patch-2.4 distclean
 	-@rm patch src
 	rm -f *~ *.bak .prereq.ok config.out config.mk include/linux/modversions.h
