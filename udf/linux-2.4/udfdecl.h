@@ -119,7 +119,7 @@ extern void udf_error(struct super_block *, const char *, const char *, ...);
 extern void udf_warning(struct super_block *, const char *, const char *, ...);
 
 /* namei.c */
-extern int udf_write_fi(struct FileIdentDesc *, struct FileIdentDesc *, struct udf_fileident_bh *, Uint8 *, Uint8 *);
+extern int udf_write_fi(struct inode *inode, struct FileIdentDesc *, struct FileIdentDesc *, struct udf_fileident_bh *, Uint8 *, Uint8 *);
 
 /* file.c */
 extern int udf_ioctl(struct inode *, struct file *, unsigned int, unsigned long);
