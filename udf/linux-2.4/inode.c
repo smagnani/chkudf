@@ -16,7 +16,7 @@
  *  Each contributing author retains all rights to their own work.
  *
  *  (C) 1998 Dave Boynton
- *  (C) 1998-2001 Ben Fennema
+ *  (C) 1998-2003 Ben Fennema
  *  (C) 1999-2000 Stelias Computing Inc
  *
  * HISTORY
@@ -127,7 +127,8 @@ no_delete:
 
 void udf_clear_inode(struct inode *inode)
 {
-	kfree(UDF_I_DATA(inode));
+	if (!is_bad_inode(inode))
+		kfree(UDF_I_DATA(inode));
 }
 
 void udf_discard_prealloc(struct inode * inode)
