@@ -610,7 +610,10 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 	}
 
 	memset(cfi, 0, sizeof(struct fileIdentDesc));
-	udf_new_tag((char *)cfi, TAG_IDENT_FID, 2, 1, block, sizeof(tag));
+	if (UDF_SB_UDFREV(sb) >= 0x0200)
+		udf_new_tag((char *)cfi, TAG_IDENT_FID, 3, 1, block, sizeof(tag));
+	else
+		udf_new_tag((char *)cfi, TAG_IDENT_FID, 2, 1, block, sizeof(tag));
 	cfi->fileVersionNum = cpu_to_le16(1);
 	cfi->lengthFileIdent = namelen;
 	cfi->lengthOfImpUse = cpu_to_le16(0);

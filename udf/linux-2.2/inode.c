@@ -1447,7 +1447,10 @@ udf_update_inode(struct inode *inode, int do_sync)
 				ICBTAG_FLAG_SETGID | ICBTAG_FLAG_STICKY));
 
 	fe->icbTag.flags = cpu_to_le16(icbflags);
-	fe->descTag.descVersion = cpu_to_le16(2);
+	if (UDF_SB_UDFREV(inode->i_sb) >= 0x0200)
+		fe->descTag.descVersion = cpu_to_le16(3);
+	else
+		fe->descTag.descVersion = cpu_to_le16(2);
 	fe->descTag.tagSerialNum = cpu_to_le16(UDF_SB_SERIALNUM(inode->i_sb));
 	fe->descTag.tagLocation = cpu_to_le32(UDF_I_LOCATION(inode).logicalBlockNum);
 	crclen += UDF_I_LENEATTR(inode) + UDF_I_LENALLOC(inode) - sizeof(tag);
@@ -1614,8 +1617,12 @@ int8_t udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 				mark_inode_dirty(inode);
 			}
 		}
-		udf_new_tag(nbh->b_data, TAG_IDENT_AED, 2, 1,
-			bloc->logicalBlockNum, sizeof(tag));
+		if (UDF_SB_UDFREV(inode->i_sb) >= 0x0200)
+			udf_new_tag(nbh->b_data, TAG_IDENT_AED, 3, 1,
+				bloc->logicalBlockNum, sizeof(tag));
+		else
+			udf_new_tag(nbh->b_data, TAG_IDENT_AED, 2, 1,
+				bloc->logicalBlockNum, sizeof(tag));
 		switch (UDF_I_ALLOCTYPE(inode))
 		{
 			case ICBTAG_FLAG_AD_SHORT:
