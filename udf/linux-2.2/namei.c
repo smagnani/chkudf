@@ -154,7 +154,7 @@ udf_find_entry(struct inode *dir, struct dentry *dentry,
 	struct fileIdentDesc *fi=NULL;
 	loff_t f_pos;
 	int block, flen;
-	char fname[255];
+	char fname[UDF_NAME_LEN];
 	char *nameptr;
 	uint8_t lfi;
 	uint16_t liu;
@@ -308,7 +308,7 @@ udf_lookup(struct inode *dir, struct dentry *dentry)
 	struct fileIdentDesc cfi, *fi;
 	struct udf_fileident_bh fibh;
 
-	if (dentry->d_name.len > UDF_NAME_LEN)
+	if (dentry->d_name.len > UDF_NAME_LEN-2)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,7)
 		return -ENAMETOOLONG;
 #else
