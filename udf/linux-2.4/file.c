@@ -43,7 +43,7 @@
 #include "udf_i.h"
 #include "udf_sb.h"
 
-static int udf_adinicb_writepage(struct file *file, struct page *page)
+static int udf_adinicb_writepage(struct page *page)
 {
 	struct inode *inode = (struct inode *)page->mapping->host;
 
@@ -54,7 +54,7 @@ static int udf_adinicb_writepage(struct file *file, struct page *page)
 	if (!PageLocked(page))
 		PAGE_BUG(page);
 
-	kaddr = (char *)kmap(page);
+	kaddr = kmap(page);
 	block = udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0);
 	bh = bread (inode->i_dev, block, inode->i_sb->s_blocksize);
 	memcpy(bh->b_data + udf_ext0_offset(inode), kaddr, inode->i_size);
@@ -63,6 +63,7 @@ static int udf_adinicb_writepage(struct file *file, struct page *page)
 	flush_dcache_page(page);
 	SetPageUptodate(page);
 	kunmap(page);
+	UnlockPage(page);
 	return 0;
 }
 
@@ -77,7 +78,7 @@ static int udf_adinicb_readpage(struct file *file, struct page * page)
 	if (!PageLocked(page))
 		PAGE_BUG(page);
 
-	kaddr = (char *)kmap(page);
+	kaddr = kmap(page);
 	memset(kaddr, 0, PAGE_CACHE_SIZE);
 	block = udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0);
 	bh = bread (inode->i_dev, block, inode->i_sb->s_blocksize);
@@ -101,7 +102,7 @@ static int udf_adinicb_commit_write(struct file *file, struct page *page, unsign
 
 	struct buffer_head *bh;
 	int block;
-	char *kaddr = (char*)page_address(page);
+	char *kaddr = page_address(page);
 
 	block = udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0);
 	bh = bread (inode->i_dev, block, inode->i_sb->s_blocksize);
@@ -235,13 +236,34 @@ int udf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 	}
 
 	/* ok, we need to read the inode */
-	bh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode), 0, &ident);
-
-	if (!bh || (ident != TID_FILE_ENTRY && ident != TID_EXTENDED_FILE_ENTRY))
+	if (UDF_I_NEW_INODE(inode) == 1)
 	{
-		udf_debug("bread failed (ino=%ld) or ident (%d) != TID_(EXTENDED_)FILE_ENTRY",
-			inode->i_ino, ident);
-		return -EFAULT;
+		bh = udf_tread(inode->i_sb,
+			udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0),
+			inode->i_sb->s_blocksize);
+	}
+	else
+	{
+		bh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode), 0, &ident);
+
+		if (UDF_I_EXTENDED_FE(inode) == 0 && ident != TID_FILE_ENTRY)
+		{
+			udf_debug("ident (%d) != TID_FILE_ENTRY (%d)",
+				ident, TID_FILE_ENTRY);
+			return -EFAULT;
+		}
+		else if (UDF_I_EXTENDED_FE(inode) == 1 && ident != TID_EXTENDED_FILE_ENTRY)
+		{
+			udf_debug("ident (%d) != TID_EXTENDED_FILE_ENTRY (%d)",
+				ident, TID_EXTENDED_FILE_ENTRY);
+			return -EFAULT;
+		}
+	}
+
+	if (!bh)
+	{
+		udf_debug("bread failed (inode=%ld)\n", inode->i_ino);
+		return -EIO;
 	}
 
 	if (UDF_I_EXTENDED_FE(inode) == 0)
@@ -322,7 +344,7 @@ static int udf_release_file(struct inode * inode, struct file * filp)
  */
 static int udf_open_file(struct inode * inode, struct file * filp)
 {
-	if ((inode->i_size & 0xFFFFFFFF00000000ULL) && !(filp->f_flags & O_LARGEFILE))
+	if ((inode->i_size & 0xFFFFFFFF80000000ULL) && !(filp->f_flags & O_LARGEFILE))
 		return -EFBIG;
 	return 0;
 }

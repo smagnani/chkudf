@@ -392,13 +392,34 @@ int udf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 	}
 
 	/* ok, we need to read the inode */
-	bh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode), 0, &ident);
-
-	if (!bh || (ident != TID_FILE_ENTRY && ident != TID_EXTENDED_FILE_ENTRY))
+	if (UDF_I_NEW_INODE(inode) == 1)
 	{
-		udf_debug("bread failed (ino=%ld) or ident (%d) != TID_(EXTENDED_)FILE_ENTRY",
-			inode->i_ino, ident);
-		return -EFAULT;
+		bh = udf_tread(inode->i_sb,
+			udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0),
+			inode->i_sb->s_blocksize);
+	}
+	else
+	{
+		bh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode), 0, &ident);
+
+		if (UDF_I_EXTENDED_FE(inode) == 0 && ident != TID_FILE_ENTRY)
+		{
+			udf_debug("ident (%d) != TID_FILE_ENTRY (%d)",
+				ident, TID_FILE_ENTRY);
+			return -EFAULT;
+		}
+		else if (UDF_I_EXTENDED_FE(inode) == 1 && ident != TID_EXTENDED_FILE_ENTRY)
+		{
+			udf_debug("ident (%d) != TID_EXTENDED_FILE_ENTRY (%d)",
+				ident, TID_EXTENDED_FILE_ENTRY);
+			return -EFAULT;
+		}
+	}
+
+	if (!bh)
+	{
+		udf_debug("bread failed (ino=%ld)\n", inode->i_ino);
+		return -EIO;
 	}
 
 	if (UDF_I_EXTENDED_FE(inode) == 0)
@@ -489,10 +510,10 @@ static struct file_operations udf_file_operations = {
 	NULL,					/* poll */
 	udf_ioctl,				/* ioctl */
 	generic_file_mmap,		/* mmap */
-#if BITS_PER_LONG == 64
-	NULL, 					/* open */
-#else
+#if BITS_PER_LONG < 64
 	udf_open_file,			/* open */
+#else
+	NULL, 					/* open */
 #endif
 	NULL,					/* flush */
 	udf_release_file,		/* release */
