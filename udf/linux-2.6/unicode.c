@@ -36,7 +36,7 @@ static int udf_translate_to_linux(uint8_t *, uint8_t *, int, uint8_t *, int);
 
 static int udf_char_to_ustr(struct ustr *dest, const uint8_t *src, int strlen)
 {
-	if ( (!dest) || (!src) || (!strlen) || (strlen >= UDF_NAME_LEN) )
+	if ( (!dest) || (!src) || (!strlen) || (strlen > UDF_NAME_LEN-2) )
 		return 0;
 	memset(dest, 0, sizeof(struct ustr));
 	memcpy(dest->u_name, src, strlen);

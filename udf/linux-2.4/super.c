@@ -1646,7 +1646,7 @@ udf_statfs(struct super_block *sb, struct statfs *buf)
 		le32_to_cpu(UDF_SB_LVIDIU(sb)->numDirs)) : 0) + buf->f_bfree;
 	buf->f_ffree = buf->f_bfree;
 	/* __kernel_fsid_t f_fsid */
-	buf->f_namelen = UDF_NAME_LEN;
+	buf->f_namelen = UDF_NAME_LEN-2;
 
 	return 0;
 }
