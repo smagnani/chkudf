@@ -13,10 +13,6 @@
 #include <linux/version.h>
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,3,7)
-#error "The UDF Module Current Requires Kernel Version 2.3.7 or greater"
-#endif
-
 #if !defined(CONFIG_UDF_FS) && !defined(CONFIG_UDF_FS_MODULE)
 #define CONFIG_UDF_FS_MODULE
 #include <linux/udf_fs_i.h>
@@ -127,12 +123,11 @@ extern int8_t udf_delete_aext(struct inode *, lb_addr, int, lb_addr, uint32_t, s
 extern int8_t udf_next_aext(struct inode *, lb_addr *, int *, lb_addr *, uint32_t *, struct buffer_head **, int);
 extern int8_t udf_current_aext(struct inode *, lb_addr *, int *, lb_addr *, uint32_t *, struct buffer_head **, int);
 extern void udf_discard_prealloc(struct inode *);
-extern void udf_mark_buffer_dirty_inode(struct buffer_head *, struct inode *);
 
 /* misc.c */
 extern int udf_read_tagged_data(char *, int size, int fd, int block, int partref);
-extern struct buffer_head *udf_tgetblk(struct super_block *, int, int);
-extern struct buffer_head *udf_tread(struct super_block *, int, int);
+extern struct buffer_head *udf_tgetblk(struct super_block *, int);
+extern struct buffer_head *udf_tread(struct super_block *, int);
 extern struct genericFormat *udf_add_extendedattr(struct inode *, uint32_t, uint32_t, uint8_t, struct buffer_head **);
 extern struct genericFormat *udf_get_extendedattr(struct inode *, uint32_t, uint8_t, struct buffer_head **);
 extern struct buffer_head *udf_read_tagged(struct super_block *, uint32_t, uint32_t, uint16_t *);
@@ -155,7 +150,7 @@ extern int udf_get_filename(struct super_block *, uint8_t *, uint8_t *, int);
 
 /* ialloc.c */
 extern void udf_free_inode(struct inode *);
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 extern struct inode * udf_new_inode (struct inode *, int, int *);
 #else
 extern struct inode * udf_new_inode (const struct inode *, int, int *);
@@ -165,7 +160,7 @@ extern struct inode * udf_new_inode (const struct inode *, int, int *);
 extern void udf_truncate_extents(struct inode *);
 
 /* balloc.c */
-#ifdef QUOTA_CHANGE
+#ifndef OLD_QUOTA
 extern void udf_free_blocks(struct super_block *, struct inode *, lb_addr, uint32_t, uint32_t);
 extern int udf_prealloc_blocks(struct super_block *, struct inode *, uint16_t, uint32_t, uint32_t);
 extern int udf_new_blocks(struct super_block *, struct inode *, uint16_t, uint32_t, uint32_t, int *);
@@ -206,8 +201,6 @@ extern uint32_t udf64_low32(uint64_t);
 extern uint32_t udf64_high32(uint64_t);
 extern void udf_update_tag(char *, int);
 extern void udf_new_tag(char *, uint16_t, uint16_t, uint16_t, uint32_t, int);
-extern void udf_adj_dirs(struct super_block *, int);
-extern void udf_adj_files(struct super_block *, int);
 
 /* udftime.c */
 extern time_t *udf_stamp_to_time(time_t *, long *, timestamp);
