@@ -1,11 +1,11 @@
 UDF Filesystem FAQ (Frequently Asked Questions)
-Version 0.2 2/29/2000
+Version 0.3 2/10/2002
 
 1.1) What versions of Linux are supported?
 	2.0 Not supported
-	2.1 Version 2.1.70 or higher
 	2.2 All versions
-	2.3 Version 2.3.7 or higher. Versions 2.3.17 and higher include this driver.
+	2.4 All versions include this driver
+	2.5 All versions include this driver
 	
 2.1) Can I play DVD Roms with this driver?
 No, this is a filesystem driver. It lets you mount the disc, and see the files.  That won't be enough to play DVD movies, since they use an encrypted format.
@@ -21,11 +21,13 @@ This UDF driver has support for writing to UDF filesystems, but only to non-CDRO
 
 As of this writing, the Linux kernel doesn't support writing to writable CDROMs of any kind - it assumes a CDROM is read only at a low level, which isn't easy to work around. Work is under way to fix this. In the meantime, when you mount a writable CDROM (either CDR or CDRW), you will get a notice saying "block device is write-protected, mounting read-only", even if you specify the "-o rw" option.
 
-For "Alpha" support for writing to CDRW's only (2.3 only), ftp to:
-ftp.kernel.org/pub/linux/kernel/people/axboe/packet/
+For "Alpha" support for writing to CDRW's only (2.4+ only), ftp to:
+http://w1.894.telia.com/~u89404340/patches/packet/ or
+ftp.kernel.org/pub/linux/kernel/people/axboe/packet/ for older versions.
+
 
 cdrwtool (used to blank/format media) and pktcdvd (needed for mapping the packet
-write driver to the cdrom device) are included in udf-latest/tools/
+write driver to the cdrom device) are included in udftools.
 
 NOTE: Neither the pktcdvd driver nor the current UDF version support recovering
 from a failed packet write, so do not use this to write mission critical data
