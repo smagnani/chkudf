@@ -52,11 +52,13 @@ static void extent_trunc(struct inode * inode, lb_addr bloc, int extoffset,
 		if (last_block - first_block > 0)
 		{
 			if (etype == EXTENT_RECORDED_ALLOCATED)
+			{
 				inode->i_blocks -= (blocks * (last_block - first_block));
+				mark_inode_dirty(inode);
+			}
 			if (etype != EXTENT_NOT_RECORDED_NOT_ALLOCATED)
 				udf_free_blocks(inode, eloc, first_block, last_block - first_block);
 		}
-		mark_inode_dirty(inode);
 	}
 }
 
@@ -112,11 +114,17 @@ void udf_trunc(struct inode * inode)
 				else
 				{
 					if (!memcmp(&UDF_I_LOCATION(inode), &bloc, sizeof(lb_addr)))
+					{
 						UDF_I_LENALLOC(inode) = lenalloc;
+						mark_inode_dirty(inode);
+					}
 					else
 					{
 						struct AllocExtDesc *aed = (struct AllocExtDesc *)(bh->b_data);
 						aed->lengthAllocDescs = cpu_to_le32(lenalloc);
+						udf_update_tag(bh->b_data, lenalloc +
+							sizeof(struct AllocExtDesc));
+						mark_buffer_dirty(bh, 1);
 					}
 				}
 
@@ -148,11 +156,17 @@ void udf_trunc(struct inode * inode)
 		else
 		{
 			if (!memcmp(&UDF_I_LOCATION(inode), &bloc, sizeof(lb_addr)))
+			{
 				UDF_I_LENALLOC(inode) = lenalloc;
+				mark_inode_dirty(inode);
+			}
 			else
 			{
 				struct AllocExtDesc *aed = (struct AllocExtDesc *)(bh->b_data);
 				aed->lengthAllocDescs = cpu_to_le32(lenalloc);
+				udf_update_tag(bh->b_data, lenalloc +
+					sizeof(struct AllocExtDesc));
+				mark_buffer_dirty(bh, 1);
 			}
 		}
 	}
