@@ -26,16 +26,14 @@
 
 #include "udfdecl.h"
 
-#if defined(__linux__) && defined(__KERNEL__)
-#include <linux/version.h>
 #include "udf_i.h"
 #include "udf_sb.h"
 #include <linux/string.h>
 #include <linux/errno.h>
 #include <linux/mm.h>
 #include <linux/malloc.h>
+#include <linux/quotaops.h>
 #include <linux/udf_fs.h>
-#endif
 
 static inline int udf_match(int len, const char * const name, struct qstr *qs)
 {
@@ -872,6 +870,7 @@ int udf_rmdir(struct inode * dir, struct dentry * dentry)
 		goto out;
 
 	inode = dentry->d_inode;
+	DQUOT_INIT(inode);
 
 	retval = -EIO;
 	if (udf_get_lb_pblock(dir->i_sb, lelb_to_cpu(cfi.icb.extLocation), 0) != inode->i_ino)
@@ -919,6 +918,7 @@ int udf_unlink(struct inode * dir, struct dentry * dentry)
 		goto out;
 
 	inode = dentry->d_inode;
+	DQUOT_INIT(inode);
 
 	retval = -EIO;
 
@@ -1044,18 +1044,18 @@ int udf_symlink(struct inode * dir, struct dentry * dentry, const char * symname
 		goto out;
 	cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize);
 	cfi.icb.extLocation = cpu_to_lelb(UDF_I_LOCATION(inode));
-    if (UDF_SB_LVIDBH(inode->i_sb))
-    {
-        struct LogicalVolHeaderDesc *lvhd;
-        Uint64 uniqueID;
-        lvhd = (struct LogicalVolHeaderDesc *)(UDF_SB_LVID(inode->i_sb)->logicalVolContentsUse);
-        uniqueID = le64_to_cpu(lvhd->uniqueID);
+	if (UDF_SB_LVIDBH(inode->i_sb))
+	{
+		struct LogicalVolHeaderDesc *lvhd;
+		Uint64 uniqueID;
+		lvhd = (struct LogicalVolHeaderDesc *)(UDF_SB_LVID(inode->i_sb)->logicalVolContentsUse);
+		uniqueID = le64_to_cpu(lvhd->uniqueID);
 		*(Uint32 *)((struct ADImpUse *)cfi.icb.impUse)->impUse =
 			le32_to_cpu(uniqueID & 0x00000000FFFFFFFFUL);
-        if (!(++uniqueID & 0x00000000FFFFFFFFUL))
-            uniqueID += 16;
-        lvhd->uniqueID = cpu_to_le64(uniqueID);
-        mark_buffer_dirty(UDF_SB_LVIDBH(inode->i_sb), 1);
+		if (!(++uniqueID & 0x00000000FFFFFFFFUL))
+			uniqueID += 16;
+		lvhd->uniqueID = cpu_to_le64(uniqueID);
+		mark_buffer_dirty(UDF_SB_LVIDBH(inode->i_sb), 1);
 	}
 	udf_write_fi(&cfi, fi, &fibh, NULL, NULL);
 	if (UDF_I_ALLOCTYPE(dir) == ICB_FLAG_AD_IN_ICB)
@@ -1091,18 +1091,18 @@ int udf_link(struct dentry * old_dentry, struct inode * dir,
 		return err;
 	cfi.icb.extLength = cpu_to_le32(inode->i_sb->s_blocksize);
 	cfi.icb.extLocation = cpu_to_lelb(UDF_I_LOCATION(inode));
-    if (UDF_SB_LVIDBH(inode->i_sb))
-    {
-        struct LogicalVolHeaderDesc *lvhd;
-        Uint64 uniqueID;
-        lvhd = (struct LogicalVolHeaderDesc *)(UDF_SB_LVID(inode->i_sb)->logicalVolContentsUse);
-        uniqueID = le64_to_cpu(lvhd->uniqueID);
+	if (UDF_SB_LVIDBH(inode->i_sb))
+	{
+		struct LogicalVolHeaderDesc *lvhd;
+		Uint64 uniqueID;
+		lvhd = (struct LogicalVolHeaderDesc *)(UDF_SB_LVID(inode->i_sb)->logicalVolContentsUse);
+		uniqueID = le64_to_cpu(lvhd->uniqueID);
 		*(Uint32 *)((struct ADImpUse *)cfi.icb.impUse)->impUse =
 			cpu_to_le32(uniqueID & 0x00000000FFFFFFFFUL);
-        if (!(++uniqueID & 0x00000000FFFFFFFFUL))
-            uniqueID += 16;
-        lvhd->uniqueID = cpu_to_le64(uniqueID);
-        mark_buffer_dirty(UDF_SB_LVIDBH(inode->i_sb), 1);
+		if (!(++uniqueID & 0x00000000FFFFFFFFUL))
+			uniqueID += 16;
+		lvhd->uniqueID = cpu_to_le64(uniqueID);
+		mark_buffer_dirty(UDF_SB_LVIDBH(inode->i_sb), 1);
 	}
 	udf_write_fi(&cfi, fi, &fibh, NULL, NULL);
 	if (UDF_I_ALLOCTYPE(dir) == ICB_FLAG_AD_IN_ICB)
@@ -1155,9 +1155,7 @@ int udf_rename (struct inode * old_dir, struct dentry * old_dentry,
 		}
 		else
 		{
-/*
 			DQUOT_INIT(new_inode);
-*/
 		}
 	}
 	if (S_ISDIR(old_inode->i_mode))
