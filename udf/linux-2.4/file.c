@@ -93,17 +93,49 @@ static ssize_t udf_file_write(struct file * file, const char * buf,
 {
 	ssize_t retval;
 	struct inode *inode = file->f_dentry->d_inode;
-	remove_suid(inode);
 
 	retval = generic_file_write(file, buf, count, ppos, block_write_partial_page);
 
 	if (retval > 0)
 	{
+		remove_suid(inode);
 		inode->i_ctime = inode->i_mtime = CURRENT_TIME;
 		UDF_I_UCTIME(inode) = UDF_I_UMTIME(inode) = CURRENT_UTIME;
+		mark_inode_dirty(inode);
 	}
-	mark_inode_dirty(inode);
 	return retval;
+}
+
+int udf_write_partial_page_adinicb(struct file *file, struct page *page, unsigned long offset, unsigned long bytes, const char * buf)
+{
+	struct inode *inode = file->f_dentry->d_inode;
+	int err = 0, block;
+	struct buffer_head *bh;
+	unsigned long kaddr = 0;
+
+	if (!PageLocked(page))
+		BUG();
+	if (offset < 0 || offset >= (inode->i_sb->s_blocksize - udf_file_entry_alloc_offset(inode)))
+		BUG();
+	if (bytes+offset < 0 || bytes+offset > (inode->i_sb->s_blocksize - udf_file_entry_alloc_offset(inode)))
+		BUG();
+
+	kaddr = kmap(page);
+	block = udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0);
+	bh = getblk (inode->i_dev, block, inode->i_sb->s_blocksize);
+	if (!buffer_uptodate(bh))
+	{
+		ll_rw_block (READ, 1, &bh);
+		wait_on_buffer(bh);
+	}
+	err = copy_from_user((char *)kaddr + offset, buf, bytes);
+	memcpy(bh->b_data + udf_file_entry_alloc_offset(inode) + offset,
+		(char *)kaddr + offset, bytes);
+	mark_buffer_dirty(bh, 0);
+	brelse(bh);
+	kunmap(page);
+	SetPageUptodate(page);
+	return bytes;
 }
 
 static ssize_t udf_file_write_adinicb(struct file * file, const char * buf,
@@ -136,14 +168,10 @@ static ssize_t udf_file_write_adinicb(struct file * file, const char * buf,
 			UDF_I_LENALLOC(inode) = pos + count;
 		else
 			UDF_I_LENALLOC(inode) = inode->i_size;
-		*ppos += udf_file_entry_alloc_offset(inode);
-		inode->i_size += udf_file_entry_alloc_offset(inode);
 	}
 
-	retval = generic_file_write(file, buf, count, ppos, block_write_partial_page);
+	retval = generic_file_write(file, buf, count, ppos, udf_write_partial_page_adinicb);
 
-	*ppos -= udf_file_entry_alloc_offset(inode);
-	inode->i_size -= udf_file_entry_alloc_offset(inode);
 	if (retval > 0)
 	{
 		remove_suid(inode);
@@ -152,82 +180,6 @@ static ssize_t udf_file_write_adinicb(struct file * file, const char * buf,
 		mark_inode_dirty(inode);
 	}
 	return retval;
-}
-
-/*
- * udf_file_read
- *
- * PURPOSE
- *	Read from an open file.
- *
- * DESCRIPTION
- *	Optional - sys_read() will return -EINVAL if this routine is not
- *	available.
- *
- *	Refer to sys_read() in fs/read_write.c
- *	sys_read() -> .
- *
- *	Note that you can use generic_file_read() instead, which requires that
- *	udf_readpage() be available, but you can use generic_readpage(), which
- *	requires that udf_block_map() be available. Reading will then be done by
- *	memory-mapping the file a page at a time. This is not suitable for
- *	devices that don't handle read-ahead [example: CD-R/RW that may have
- *	blank sectors that shouldn't be read].
- *
- *	Refer to generic_file_read() in mm/filemap.c and to generic_readpage()
- *	in fs/buffer.c
- *
- *	Block devices can use block_read() instead. Refer to fs/block_dev.c
- *
- * PRE-CONDITIONS
- *	inode			Pointer to inode to read from (never NULL).
- *	filp			Pointer to file to read from (never NULL).
- *	buf			Point to read buffer (validated).
- *	bufsize			Size of read buffer.
- *
- * POST-CONDITIONS
- *	<return>		Bytes read (>=0) or an error code (<0) that
- *				sys_read() will return.
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-static ssize_t udf_file_read_adinicb(struct file * filp, char * buf,
-	size_t bufsize, loff_t * loff)
-{
-	struct inode *inode = filp->f_dentry->d_inode;
-	loff_t size, left, pos;
-	Uint32 block;
-	struct buffer_head *bh = NULL;
-
-	size = inode->i_size;
-	if (*loff > size)
-		left = 0;
-	else
-		left = size - *loff;
-	if (left > bufsize)
-		left = bufsize;
-
-	if (left <= 0)
-		return 0;
-
-	pos = *loff + udf_ext0_offset(inode);
-	block = udf_block_map(inode, 0);
-	if (!(bh = udf_tread(inode->i_sb,
-		udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0),
-		inode->i_sb->s_blocksize)))
-	{
-		return 0;
-	}
-	if (!copy_to_user(buf, bh->b_data + pos, left))
-		*loff += left;
-	else
-		left = -EFAULT;
-
-	udf_release_data(bh);
-
-	return left;
 }
 
 /*
@@ -428,7 +380,7 @@ struct inode_operations udf_file_inode_operations = {
 
 static struct file_operations udf_file_operations_adinicb = {
 	udf_file_llseek,		/* llseek */
-	udf_file_read_adinicb,	/* read */
+	generic_file_read,		/* read */
 	udf_file_write_adinicb,	/* write */
 	NULL,					/* readdir */
 	NULL,					/* poll */
