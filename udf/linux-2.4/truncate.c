@@ -159,6 +159,7 @@ void udf_trunc(struct inode * inode)
 			{
 				UDF_I_LENALLOC(inode) = lenalloc;
 				mark_inode_dirty(inode);
+			}
 			else
 			{
 				struct AllocExtDesc *aed = (struct AllocExtDesc *)(bh->b_data);
