@@ -377,10 +377,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 			}
 		}
 		else
-		{
-			*err = -ENAMETOOLONG;
 			return NULL;
-		}
 	}
 	else
 		namelen = 0;
@@ -785,7 +782,7 @@ static int empty_dir(struct inode *dir)
 	fibh.soffset = fibh.eoffset = (f_pos & ((dir->i_sb->s_blocksize - 1) >> 2)) << 2;
 	if (inode_bmap(dir, f_pos >> (dir->i_sb->s_blocksize_bits - 2),
 		&bloc, &extoffset, &eloc, &elen, &offset, &bh) == EXTENT_RECORDED_ALLOCATED)
-	{ 
+	{
 		offset >>= dir->i_sb->s_blocksize_bits;
 		block = udf_get_lb_pblock(dir->i_sb, eloc, offset);
 		if ((++offset << dir->i_sb->s_blocksize_bits) < elen)
