@@ -150,19 +150,19 @@ static int udf_bmap(struct address_space *mapping, long block)
 }
 
 struct address_space_operations udf_aops = {
-	readpage:			udf_readpage,
-	writepage:			udf_writepage,
-	sync_page:			block_sync_page,
+	readpage:		udf_readpage,
+	writepage:		udf_writepage,
+	sync_page:		block_sync_page,
 	prepare_write:		udf_prepare_write,
 	commit_write:		generic_commit_write,
-	bmap:				udf_bmap,
+	bmap:			udf_bmap,
 };
 
 void udf_expand_file_adinicb(struct inode * inode, int newsize, int * err)
 {
 	struct buffer_head *bh = NULL;
 	struct page *page;
-    char *kaddr;
+	char *kaddr;
 	int block;
 
 	/* from now on we have normal address_space methods */
@@ -1241,11 +1241,11 @@ udf_convert_permissions(struct FileEntry *fe)
 	flags = le16_to_cpu(fe->icbTag.flags);
 
 	mode =	(( permissions      ) & S_IRWXO) |
-			(( permissions >> 2 ) & S_IRWXG) |
-			(( permissions >> 4 ) & S_IRWXU) |
-			(( flags & ICB_FLAG_SETUID) ? S_ISUID : 0) |
-			(( flags & ICB_FLAG_SETGID) ? S_ISGID : 0) |
-			(( flags & ICB_FLAG_STICKY) ? S_ISVTX : 0);
+		(( permissions >> 2 ) & S_IRWXG) |
+		(( permissions >> 4 ) & S_IRWXU) |
+		(( flags & ICB_FLAG_SETUID) ? S_ISUID : 0) |
+		(( flags & ICB_FLAG_SETGID) ? S_ISGID : 0) |
+		(( flags & ICB_FLAG_STICKY) ? S_ISVTX : 0);
 
 	return mode;
 }
@@ -1340,14 +1340,14 @@ udf_update_inode(struct inode *inode, int do_sync)
 	if (inode->i_gid != UDF_SB(inode->i_sb)->s_gid)
 		fe->gid = cpu_to_le32(inode->i_gid);
 
-	udfperms =  ((inode->i_mode & S_IRWXO)     ) |
-				((inode->i_mode & S_IRWXG) << 2) |
-				((inode->i_mode & S_IRWXU) << 4);
+	udfperms =	((inode->i_mode & S_IRWXO)     ) |
+			((inode->i_mode & S_IRWXG) << 2) |
+			((inode->i_mode & S_IRWXU) << 4);
 
-	udfperms |= (le32_to_cpu(fe->permissions) &
-		(PERM_O_DELETE | PERM_O_CHATTR |
-		 PERM_G_DELETE | PERM_G_CHATTR |
-		 PERM_U_DELETE | PERM_U_CHATTR));
+	udfperms |=	(le32_to_cpu(fe->permissions) &
+			(PERM_O_DELETE | PERM_O_CHATTR |
+			 PERM_G_DELETE | PERM_G_CHATTR |
+			 PERM_U_DELETE | PERM_U_CHATTR));
 	fe->permissions = cpu_to_le32(udfperms);
 
 	if (S_ISDIR(inode->i_mode))
@@ -1461,7 +1461,7 @@ udf_update_inode(struct inode *inode, int do_sync)
 	else if (S_ISFIFO(inode->i_mode))
 		fe->icbTag.fileType = FILE_TYPE_FIFO;
 
-	icbflags = UDF_I_ALLOCTYPE(inode) |
+	icbflags =	UDF_I_ALLOCTYPE(inode) |
 			((inode->i_mode & S_ISUID) ? ICB_FLAG_SETUID : 0) |
 			((inode->i_mode & S_ISGID) ? ICB_FLAG_SETGID : 0) |
 			((inode->i_mode & S_ISVTX) ? ICB_FLAG_STICKY : 0) |
@@ -1955,7 +1955,7 @@ int udf_current_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 }
 
 int udf_insert_aext(struct inode *inode, lb_addr bloc, int extoffset,
-    lb_addr neloc, Uint32 nelen, struct buffer_head *bh)
+	lb_addr neloc, Uint32 nelen, struct buffer_head *bh)
 {
 	lb_addr oeloc;
 	Uint32 oelen;
