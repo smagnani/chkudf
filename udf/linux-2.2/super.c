@@ -794,8 +794,9 @@ udf_load_pvoldesc(struct super_block *sb, struct buffer_head *bh)
 	{
 		if (udf_CS0toUTF8(&outstr, &instr))
 		{
-			udf_debug("volIdent[] = '%s'\n", outstr.u_name);
-			strncpy( UDF_SB_VOLIDENT(sb), outstr.u_name, outstr.u_len);
+			strncpy( UDF_SB_VOLIDENT(sb), outstr.u_name,
+				outstr.u_len > 31 ? 31 : outstr.u_len);
+			udf_debug("volIdent[] = '%s'\n", UDF_SB_VOLIDENT(sb));
 		}
 	}
 
@@ -837,7 +838,6 @@ udf_load_partdesc(struct super_block *sb, struct buffer_head *bh)
 		{
 			UDF_SB_PARTLEN(sb,i) = le32_to_cpu(p->partitionLength); /* blocks */
 			UDF_SB_PARTROOT(sb,i) = le32_to_cpu(p->partitionStartingLocation) + UDF_SB_SESSION(sb);
-			UDF_SB_PARTMAPS(sb)[i].s_uspace_bitmap = 0xFFFFFFFF;
 
 			if (UDF_SB_PARTTYPE(sb,i) == UDF_SPARABLE_MAP15)
 				udf_fill_spartable(sb, &UDF_SB_TYPESPAR(sb,i), UDF_SB_PARTLEN(sb,i));
@@ -849,20 +849,49 @@ udf_load_partdesc(struct super_block *sb, struct buffer_head *bh)
 
 				phd = (struct PartitionHeaderDesc *)(p->partitionContentsUse);
 				if (phd->unallocatedSpaceTable.extLength)
-					udf_debug("unallocatedSpaceTable (part %d)\n", i);
+				{
+					lb_addr loc = { i, phd->unallocatedSpaceTable.extPosition };
+
+					UDF_SB_PARTMAPS(sb)[i].s_uspace.s_table =
+						udf_iget(sb, loc);
+					UDF_SB_PARTFLAGS(sb,i) |= UDF_PART_FLAG_UNALLOC_TABLE;
+					udf_debug("unallocatedSpaceTable (part %d) @ %ld\n",
+						i, UDF_SB_PARTMAPS(sb)[i].s_uspace.s_table->i_ino);
+				}
 				if (phd->unallocatedSpaceBitmap.extLength)
 				{
-					UDF_SB_PARTMAPS(sb)[i].s_uspace_bitmap =
-						le32_to_cpu(phd->unallocatedSpaceBitmap.extPosition);
+					UDF_SB_ALLOC_BITMAP(sb, i, s_uspace);
+					UDF_SB_PARTMAPS(sb)[i].s_uspace.s_bitmap->s_ad =
+						lesa_to_cpu(phd->unallocatedSpaceBitmap);
+					udf_debug("bitmap=%p, block=%p, size=%d\n",
+						UDF_SB_PARTMAPS(sb)[i].s_uspace.s_bitmap,
+						UDF_SB_PARTMAPS(sb)[i].s_uspace.s_bitmap->s_block_bitmap,
+						sizeof(struct udf_bitmap));
+					UDF_SB_PARTFLAGS(sb,i) |= UDF_PART_FLAG_UNALLOC_BITMAP;
 					udf_debug("unallocatedSpaceBitmap (part %d) @ %d\n",
-						i, UDF_SB_PARTMAPS(sb)[i].s_uspace_bitmap);
+						i, UDF_SB_PARTMAPS(sb)[i].s_uspace.s_bitmap->s_ad.extPosition);
 				}
 				if (phd->partitionIntegrityTable.extLength)
 					udf_debug("partitionIntegrityTable (part %d)\n", i);
 				if (phd->freedSpaceTable.extLength)
-					udf_debug("freedSpaceTable (part %d)\n", i);
+				{
+					lb_addr loc = { i, phd->freedSpaceTable.extPosition };
+
+					UDF_SB_PARTMAPS(sb)[i].s_fspace.s_table =
+						udf_iget(sb, loc);
+					UDF_SB_PARTFLAGS(sb,i) |= UDF_PART_FLAG_FREED_TABLE;
+					udf_debug("freedSpaceTable (part %d) @ %ld\n",
+						i, UDF_SB_PARTMAPS(sb)[i].s_fspace.s_table->i_ino);
+				}
 				if (phd->freedSpaceBitmap.extLength)
-					udf_debug("freedSpaceBitmap (part %d\n", i);
+				{
+					UDF_SB_ALLOC_BITMAP(sb, i, s_fspace);
+					UDF_SB_PARTMAPS(sb)[i].s_fspace.s_bitmap->s_ad =
+						lesa_to_cpu(phd->freedSpaceBitmap);
+					UDF_SB_PARTFLAGS(sb,i) |= UDF_PART_FLAG_FREED_BITMAP;
+					udf_debug("freedSpaceBitmap (part %d) @ %d\n",
+						i, UDF_SB_PARTMAPS(sb)[i].s_fspace.s_bitmap->s_ad.extPosition);
+				}
 			}
 			break;
 		}
@@ -1234,7 +1263,6 @@ udf_load_partition(struct super_block *sb, lb_addr *fileset)
 				}
 				UDF_SB_PARTROOT(sb,i) = udf_get_pblock(sb, 0, i, 0);
 				UDF_SB_PARTLEN(sb,i) = UDF_SB_PARTLEN(sb,ino.partitionReferenceNum);
-				UDF_SB_PARTMAPS(sb)[i].s_uspace_bitmap = 0xFFFFFFFF;
 			}
 		}
 	}
@@ -1324,7 +1352,6 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	struct inode *inode=NULL;
 	struct udf_options uopt;
 	lb_addr rootdir, fileset;
-	int i;
 
 	uopt.flags = (1 << UDF_FLAG_USE_AD_IN_ICB);
 	uopt.uid = 0;
@@ -1384,13 +1411,6 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	sb->dq_op = NULL;
 	sb->s_dirt = 0;
 	sb->s_magic = UDF_SUPER_MAGIC;
-
-	for (i=0; i<UDF_MAX_BLOCK_LOADED; i++)
-	{
-		UDF_SB_BLOCK_BITMAP_NUMBER(sb,i) = 0;
-		UDF_SB_BLOCK_BITMAP(sb,i) = NULL;
-	}
-	UDF_SB_LOADED_BLOCK_BITMAPS(sb) = 0;
 
 	if (udf_load_partition(sb, &fileset))
 	{
@@ -1472,6 +1492,17 @@ error_out:
 	sb->s_dev = NODEV;
 	if (UDF_SB_VAT(sb))
 		iput(UDF_SB_VAT(sb));
+	if (UDF_SB_NUMPARTS(sb))
+	{
+		if (UDF_SB_PARTFLAGS(sb, UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_UNALLOC_TABLE)
+			iput(UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_uspace.s_table);
+		if (UDF_SB_PARTFLAGS(sb, UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_FREED_TABLE)
+			iput(UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_fspace.s_table);
+		if (UDF_SB_PARTFLAGS(sb, UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_UNALLOC_BITMAP)
+			kfree(UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_uspace.s_bitmap);
+		if (UDF_SB_PARTFLAGS(sb, UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_FREED_BITMAP)
+			kfree(UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_fspace.s_bitmap);
+	}
 	if (!(sb->s_flags & MS_RDONLY))
 		udf_close_lvid(sb);
 	udf_release_data(UDF_SB_LVIDBH(sb));
@@ -1530,11 +1561,34 @@ udf_put_super(struct super_block *sb)
 
 	if (UDF_SB_VAT(sb))
 		iput(UDF_SB_VAT(sb));
+	if (UDF_SB_NUMPARTS(sb))
+	{
+		if (UDF_SB_PARTFLAGS(sb, UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_UNALLOC_TABLE)
+			iput(UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_uspace.s_table);
+		if (UDF_SB_PARTFLAGS(sb, UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_FREED_TABLE)
+			iput(UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_fspace.s_table);
+		if (UDF_SB_PARTFLAGS(sb, UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_UNALLOC_BITMAP)
+		{
+			for (i=0; i<UDF_SB_BITMAP_NR_GROUPS(sb,UDF_SB_PARTITION(sb),s_uspace); i++)
+			{
+				if (UDF_SB_BITMAP(sb,UDF_SB_PARTITION(sb),s_uspace,i))
+					udf_release_data(UDF_SB_BITMAP(sb,UDF_SB_PARTITION(sb),s_uspace,i));
+			}
+			kfree(UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_uspace.s_bitmap);
+		}
+		if (UDF_SB_PARTFLAGS(sb, UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_FREED_BITMAP)
+		{
+			for (i=0; i<UDF_SB_BITMAP_NR_GROUPS(sb,UDF_SB_PARTITION(sb),s_fspace); i++)
+			{
+				if (UDF_SB_BITMAP(sb,UDF_SB_PARTITION(sb),s_fspace,i))
+					udf_release_data(UDF_SB_BITMAP(sb,UDF_SB_PARTITION(sb),s_fspace,i));
+			}
+			kfree(UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_fspace.s_bitmap);
+		}
+	}
 	if (!(sb->s_flags & MS_RDONLY))
 		udf_close_lvid(sb);
 	udf_release_data(UDF_SB_LVIDBH(sb));
-	for (i=0; i<UDF_MAX_BLOCK_LOADED; i++)
-		udf_release_data(UDF_SB_BLOCK_BITMAP(sb, i));
 	UDF_SB_FREE(sb);
 
 	MOD_DEC_USE_COUNT;
@@ -1582,84 +1636,130 @@ udf_statfs(struct super_block *sb, struct statfs *buf, int bufsize)
 static unsigned char udf_bitmap_lookup[16] = {
 	0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4
 };
+
+static unsigned int
+udf_count_free_bitmap(struct super_block *sb, struct udf_bitmap *bitmap)
+{
+	struct buffer_head *bh = NULL;
+	unsigned int accum = 0;
+	int index;
+	int block = 0, newblock;
+	lb_addr loc;
+	Uint32 bytes;
+	Uint8 value;
+	Uint8 *ptr;
+	Uint16 ident;
+	struct SpaceBitmapDesc *bm;
+
+	loc.logicalBlockNum = bitmap->s_ad.extPosition;
+	loc.partitionReferenceNum = UDF_SB_PARTITION(sb);
+	bh = udf_read_ptagged(sb, loc, 0, &ident);
+
+	if (!bh)
+	{
+		printk(KERN_ERR "udf: udf_count_free failed\n");
+		return 0;
+	}
+	else if (ident != TID_SPACE_BITMAP_DESC)
+	{
+		udf_release_data(bh);
+		printk(KERN_ERR "udf: udf_count_free failed\n");
+		return 0;
+	}
+
+	bm = (struct SpaceBitmapDesc *)bh->b_data;
+	bytes = bm->numOfBytes;
+	index = sizeof(struct SpaceBitmapDesc); /* offset in first block only */
+	ptr = (Uint8 *)bh->b_data;
+
+	while ( bytes > 0 )
+	{
+		while ((bytes > 0) && (index < sb->s_blocksize))
+		{
+			value = ptr[index];
+			accum += udf_bitmap_lookup[ value & 0x0f ];
+			accum += udf_bitmap_lookup[ value >> 4 ];
+			index++;
+			bytes--;
+		}
+		if ( bytes )
+		{
+			udf_release_data(bh);
+			newblock = udf_get_lb_pblock(sb, loc, ++block);
+			bh = udf_tread(sb, newblock, sb->s_blocksize);
+			if (!bh)
+			{
+				udf_debug("read failed\n");
+				return accum;
+			}
+			index = 0;
+			ptr = (Uint8 *)bh->b_data;
+		}
+	}
+	udf_release_data(bh);
+	return accum;
+}
+
+static unsigned int
+udf_count_free_table(struct super_block *sb, struct inode * table)
+{
+	unsigned int accum = 0;
+	Uint32 extoffset, elen;
+	lb_addr bloc, eloc;
+	char etype;
+	struct buffer_head *bh = NULL;
+
+	bloc = UDF_I_LOCATION(table);
+	extoffset = sizeof(struct UnallocatedSpaceEntry);
+
+	while ((etype = udf_next_aext(table, &bloc, &extoffset, &eloc, &elen, &bh, 1)) != -1)
+	{
+		accum += (elen >> table->i_sb->s_blocksize_bits);
+	}
+	udf_release_data(bh);
+	return accum;
+}
 	
 static unsigned int
 udf_count_free(struct super_block *sb)
 {
-	struct buffer_head *bh = NULL;
-	unsigned int accum=0;
-	int index;
-	int block=0, newblock;
-	lb_addr loc;
-	Uint32  bytes;
-	Uint8   value;
-	Uint8 * ptr;
-	Uint16 ident;
+	unsigned int accum = 0;
 
-	if (UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_uspace_bitmap == 0xFFFFFFFF)
+	if (UDF_SB_PARTFLAGS(sb,UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_UNALLOC_BITMAP)
 	{
-		if (UDF_SB_LVIDBH(sb))
+		accum += udf_count_free_bitmap(sb,
+			UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_uspace.s_bitmap);
+	}
+	if (UDF_SB_PARTFLAGS(sb,UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_FREED_BITMAP)
+	{
+		accum += udf_count_free_bitmap(sb,
+			UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_fspace.s_bitmap);
+	}
+	if (accum)
+		return accum;
+
+	if (UDF_SB_PARTFLAGS(sb,UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_UNALLOC_TABLE)
+	{
+		accum += udf_count_free_table(sb,
+			UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_uspace.s_table);
+	}
+	if (UDF_SB_PARTFLAGS(sb,UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_FREED_TABLE)
+	{
+		accum += udf_count_free_table(sb,
+			UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_fspace.s_table);
+	}
+	if (accum)
+		return accum;
+
+	if (UDF_SB_LVIDBH(sb))
+	{
+		if (le32_to_cpu(UDF_SB_LVID(sb)->numOfPartitions) > UDF_SB_PARTITION(sb))
 		{
-			if (le32_to_cpu(UDF_SB_LVID(sb)->numOfPartitions) > UDF_SB_PARTITION(sb))
-				accum = le32_to_cpu(UDF_SB_LVID(sb)->freeSpaceTable[UDF_SB_PARTITION(sb)]);
+			accum = le32_to_cpu(UDF_SB_LVID(sb)->freeSpaceTable[UDF_SB_PARTITION(sb)]);
 
 			if (accum == 0xFFFFFFFF)
 				accum = 0;
-
-			return accum;
 		}
-		else
-			return 0;
 	}
-	else
-	{
-		struct SpaceBitmapDesc *bm;
-		loc.logicalBlockNum = UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_uspace_bitmap;
-		loc.partitionReferenceNum = UDF_SB_PARTITION(sb);
-		bh = udf_read_ptagged(sb, loc, 0, &ident);
-
-		if (!bh)
-		{
-			printk(KERN_ERR "udf: udf_count_free failed\n");
-			return 0;
-		}
-		else if (ident != TID_SPACE_BITMAP_DESC)
-		{
-			udf_release_data(bh);
-			printk(KERN_ERR "udf: udf_count_free failed\n");
-			return 0;
-		}
-
-		bm = (struct SpaceBitmapDesc *)bh->b_data;
-		bytes = bm->numOfBytes;
-		index = sizeof(struct SpaceBitmapDesc); /* offset in first block only */
-		ptr = (Uint8 *)bh->b_data;
-
-		while ( bytes > 0 )
-		{
-			while ((bytes > 0) && (index < sb->s_blocksize))
-			{
-				value = ptr[index];
-				accum += udf_bitmap_lookup[ value & 0x0f ];
-				accum += udf_bitmap_lookup[ value >> 4 ];
-				index++;
-				bytes--;
-			}
-			if ( bytes )
-			{
-				udf_release_data(bh);
-				newblock = udf_get_lb_pblock(sb, loc, ++block);
-				bh = udf_tread(sb, newblock, sb->s_blocksize);
-				if (!bh)
-				{
-					udf_debug("read failed\n");
-					return accum;
-				}
-				index = 0;
-				ptr = (Uint8 *)bh->b_data;
-			}
-		}
-		udf_release_data(bh);
-		return accum;
-	}
+	return accum;
 }
