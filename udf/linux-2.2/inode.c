@@ -1676,7 +1676,8 @@ int udf_next_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 	if (*elen)
 		return etype;
 
-	udf_debug("Empty Extent!\n");
+	udf_debug("Empty Extent, inode=%ld, alloctype=%d, elen=%d, etype=%d, extoffset=%d\n",
+		inode->i_ino, UDF_I_ALLOCTYPE(inode), *elen, etype, *extoffset);
 	if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_SHORT)
 		*extoffset -= sizeof(short_ad);
 	else if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_LONG)
