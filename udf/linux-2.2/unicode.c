@@ -181,14 +181,14 @@ int udf_CS0toUTF8(struct ustr *utf_o, struct ustr *ocu_i)
 static int udf_UTF8toCS0(dstring *ocu, struct ustr *utf, int length)
 {
 	unsigned c, i, max_val, utf_char;
-	int utf_cnt;
-	int u_len = 0;
+	int utf_cnt, u_len;
 
 	memset(ocu, 0, sizeof(dstring) * length);
 	ocu[0] = 8;
 	max_val = 0xffU;
 
 try_again:
+	u_len = 0U;
 	utf_char = 0U;
 	utf_cnt = 0U;
 	for (i = 0U; i < utf->u_len; i++)
@@ -329,16 +329,14 @@ static int udf_NLStoCS0(struct nls_table *nls, dstring *ocu, struct ustr *uni, i
 	unsigned len, i, max_val;
 	uint8_t cl, ch;
 	uint16_t uni_char;
-	int uni_cnt;
-	int u_len = 0;
+	int u_len;
 
 	memset(ocu, 0, sizeof(dstring) * length);
 	ocu[0] = 8;
 	max_val = 0xffU;
 
 try_again:
-	uni_char = 0U;
-	uni_cnt = 0U;
+	u_len = 0U;
 	for (i = 0U; i < uni->u_len;)
 	{
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,16)
