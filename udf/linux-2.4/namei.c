@@ -238,7 +238,7 @@ udf_find_entry(struct inode *dir, struct dentry *dentry,
 		if (!lfi)
 			continue;
 
-		if ((flen = udf_get_filename(nameptr, fname, lfi)))
+		if ((flen = udf_get_filename(dir->i_sb, nameptr, fname, lfi)))
 		{
 			if (udf_match(flen, fname, &(dentry->d_name)))
 			{
@@ -360,7 +360,23 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 			return NULL;
 		}
 
-		if ( !(namelen = udf_UTF8toCS0(name, &unifilename, UDF_NAME_LEN)) )
+		if (UDF_SB(sb)->s_flags & (1 << UDF_FLAG_UTF8))
+		{
+			if ( !(namelen = udf_UTF8toCS0(name, &unifilename, UDF_NAME_LEN)) )
+			{
+				*err = -ENAMETOOLONG;
+				return NULL;
+			}
+		}
+		else if (UDF_SB(sb)->s_flags & (1 << UDF_FLAG_NLS_MAP))
+		{
+			if ( !(namelen = udf_NLStoCS0(UDF_SB(sb)->s_nls_map, name, &unifilename, UDF_NAME_LEN)) )
+			{
+				*err = -ENAMETOOLONG;
+				return NULL;
+			}
+		}
+		else
 		{
 			*err = -ENAMETOOLONG;
 			return NULL;
@@ -456,7 +472,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 			if (!lfi || !dentry)
 				continue;
 
-			if ((flen = udf_get_filename(nameptr, fname, lfi)) &&
+			if ((flen = udf_get_filename(dir->i_sb, nameptr, fname, lfi)) &&
 				udf_match(flen, fname, &(dentry->d_name)))
 			{
 				if (fibh->sbh != fibh->ebh)

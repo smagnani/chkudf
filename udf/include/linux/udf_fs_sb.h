@@ -112,6 +112,9 @@ struct udf_sb_info
 	/* Miscellaneous flags */
 	__u32			s_flags;
 
+	/* Encoding info */
+	struct nls_table	*s_nls_map;
+
 	/* VAT inode */
 	struct inode		*s_vat;
 

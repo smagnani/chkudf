@@ -125,6 +125,7 @@ struct udf_options
 	mode_t umask;
 	gid_t gid;
 	uid_t uid;
+	struct nls_table *nls_map;
 };
 
 static int __init init_udf_fs(void)
@@ -211,6 +212,7 @@ udf_parse_options(char *options, struct udf_options *uopt)
 	uopt->volume = 0xFFFFFFFF;
 	uopt->rootdir = 0xFFFFFFFF;
 	uopt->fileset = 0xFFFFFFFF;
+	uopt->nls_map = NULL;
 
 	if (!options)
 		return 1;
@@ -259,6 +261,13 @@ udf_parse_options(char *options, struct udf_options *uopt)
 			uopt->fileset = simple_strtoul(val, NULL, 0);
 		else if (!strcmp(opt, "rootdir") && val)
 			uopt->rootdir = simple_strtoul(val, NULL, 0);
+		else if (!strcmp(opt, "iocharset") && val)
+		{
+			uopt->nls_map = load_nls(val);
+			uopt->flags |= (1 << UDF_FLAG_NLS_MAP);
+		}
+		else if (!strcmp(opt, "utf8") && !val)
+			uopt->flags |= (1 << UDF_FLAG_UTF8);
 		else if (val)
 		{
 			printk(KERN_ERR "udf: bad mount option \"%s=%s\"\n",
@@ -1356,6 +1365,25 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	if (!udf_parse_options((char *)options, &uopt))
 		goto error_out;
 
+	if (uopt.flags & (1 << UDF_FLAG_UTF8) &&
+	    uopt.flags & (1 << UDF_FLAG_NLS_MAP))
+	{
+		udf_error(sb, "udf_read_super",
+			"utf8 cannot be combined with iocharset\n");
+		goto error_out;
+	}
+
+	if ((uopt.flags & (1 << UDF_FLAG_NLS_MAP)) && !uopt.nls_map)
+	{
+		uopt.nls_map = load_nls_default();
+		if (!uopt.nls_map)
+			uopt.flags &= ~(1 << UDF_FLAG_NLS_MAP);
+		else
+			udf_debug("Using default NLS map\n");
+	}
+	if (!(uopt.flags & (1 << UDF_FLAG_NLS_MAP)))
+		uopt.flags |= (1 << UDF_FLAG_UTF8);
+
 	fileset.logicalBlockNum = 0xFFFFFFFF;
 	fileset.partitionReferenceNum = 0xFFFF;
 
@@ -1363,6 +1391,7 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	UDF_SB(sb)->s_uid = uopt.uid;
 	UDF_SB(sb)->s_gid = uopt.gid;
 	UDF_SB(sb)->s_umask = uopt.umask;
+	UDF_SB(sb)->s_nls_map = uopt.nls_map;
 
 	/* Set the block size for all transfers */
 	if (!udf_set_blocksize(sb, uopt.blocksize))
@@ -1571,6 +1600,8 @@ udf_put_super(struct super_block *sb)
 				udf_release_data(UDF_SB_TYPESPAR(sb, UDF_SB_PARTITION(sb)).s_spar_map[i]);
 		}
 	}
+	if (UDF_SB(sb)->s_flags & (1 << UDF_FLAG_NLS_MAP))
+		unload_nls(UDF_SB(sb)->s_nls_map);
 	if (!(sb->s_flags & MS_RDONLY))
 		udf_close_lvid(sb);
 	udf_release_data(UDF_SB_LVIDBH(sb));

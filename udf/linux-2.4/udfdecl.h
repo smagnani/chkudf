@@ -169,7 +169,7 @@ extern Uint32 udf_get_pblock_spar15(struct super_block *, Uint32, Uint16, Uint32
 extern int udf_relocate_blocks(struct super_block *, long, long *);
 
 /* unicode.c */
-extern int udf_get_filename(Uint8 *, Uint8 *, int);
+extern int udf_get_filename(struct super_block *, Uint8 *, Uint8 *, int);
 
 /* ialloc.c */
 extern void udf_free_inode(struct inode *);
@@ -207,6 +207,8 @@ extern int udf_build_ustr(struct ustr *, dstring *, int);
 extern int udf_build_ustr_exact(struct ustr *, dstring *, int);
 extern int udf_CS0toUTF8(struct ustr *, struct ustr *);
 extern int udf_UTF8toCS0(dstring *, struct ustr *, int);
+extern int udf_CS0toNLS(struct nls_table *, struct ustr *, struct ustr *);
+extern int udf_NLStoCS0(struct nls_table *, dstring *, struct ustr *, int);
 
 /* crc.c */
 extern Uint16 udf_crc(Uint8 *, Uint32, Uint16);

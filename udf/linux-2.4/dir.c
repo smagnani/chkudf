@@ -49,10 +49,10 @@ static int do_udf_readdir(struct inode *, struct file *, filldir_t, void *);
 /* readdir and lookup functions */
 
 struct file_operations udf_dir_operations = {
-	read:				generic_read_dir,
-	readdir:			udf_readdir,
-	ioctl:				udf_ioctl,
-	fsync:				udf_fsync_file,
+	read:			generic_read_dir,
+	readdir:		udf_readdir,
+	ioctl:			udf_ioctl,
+	fsync:			udf_fsync_file,
 };
 
 /*
@@ -232,7 +232,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 		else
 		{
 			iblock = udf_get_lb_pblock(dir->i_sb, lelb_to_cpu(cfi.icb.extLocation), 0);
-			flen = udf_get_filename(nameptr, fname, lfi);
+			flen = udf_get_filename(dir->i_sb, nameptr, fname, lfi);
 			dt_type = DT_UNKNOWN;
 		}
 
