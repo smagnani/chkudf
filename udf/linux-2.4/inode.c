@@ -203,7 +203,6 @@ void udf_expand_file_adinicb(struct inode * inode, int newsize, int * err)
 		UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_SHORT;
 	else
 		UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_LONG;
-	inode->i_blocks = inode->i_sb->s_blocksize / 512;
 	mark_buffer_dirty_inode(bh, inode);
 	udf_release_data(bh);
 
