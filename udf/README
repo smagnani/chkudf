@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------
  * Linux(r) UDF Filesystem Driver
- * Version: 0.8.7
+ * Version: 0.8.6
  * --------------------------------------------------------------- */
 
 REQUIRED:
@@ -20,9 +20,6 @@ TESTING:
     or
          "mount -t udf -o loop image /mnt"
 		(Substitute "scd0", "image",  and "/mnt" as appropriate for your system)
-
-	Warning: although it will compile and load in kernel 2.3.x, 
-	it probably won't work.
 
     For sample images, send email to Thomas Tempelmann <tempel@corp.adaptec.com>
     with a subject of "Get UDF Sample Discs Access". You should get the URL

@@ -38,7 +38,7 @@ clean:
 
 # Stuff to automatically maintain dependency files
 
-%.o:	../src/%.c
+%.o:	../linux-$(UTS_SHORT)/%.c
 	$(CC) -MD $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
 	@mkdir -p .depfiles ; mv $*.d .depfiles
 

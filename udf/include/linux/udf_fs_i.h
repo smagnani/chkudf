@@ -41,10 +41,6 @@ struct udf_inode_info
 	__u64 i_unique;
 	__u32 i_lenEAttr;
 	__u32 i_lenAlloc;
-#ifdef UDF_PREALLOCATE
-	__u32 i_prealloc_block;
-	__u32 i_prealloc_count;
-#endif
 	__u32 i_next_alloc_block;
 	__u32 i_next_alloc_goal;
 	unsigned i_alloc_type : 3;

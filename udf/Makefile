@@ -42,8 +42,10 @@ clean-subdirs:
 	-@make -C lib clean
 	-@make -C module clean
 	-@make -C tools clean
-	-@make -C patch distclean
+	-@make -C patch-2.2 clean
+	-@make -C patch-2.3 clean
 
 distclean: clean
-	-@make -C patch distclean
+	-@make -C patch-2.2 distclean
+	-@make -C patch-2.3 distclean
 	rm -f *~ *.bak .prereq.ok config.out config.mk include/linux/modversions.h

@@ -10,8 +10,7 @@ include ../config.mk
 MODDIR	= $(PREFIX)/lib/modules/$(UTS_RELEASE)
 
 ifndef CFLAGS
-#KFLAGS	= -O2 -Wall -Wstrict-prototypes -Winline -pipe
-KFLAGS	= -O2 -Wall -Wstrict-prototypes -pipe
+KFLAGS	= -O2 -Wall -Wstrict-prototypes -Winline -pipe
 endif
 
 CPPFLAGS= $(PCDEBUG) -D__KERNEL__ -DMODULE -I../include\
@@ -47,7 +46,7 @@ install: $(MODULES) ../.prereq.ok kcheck
 
 # Stuff to automatically maintain dependency files
 
-%.o:	../src/%.c
+%.o:	../linux-$(UTS_SHORT)/%.c
 	$(CC) -MD $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
 	@mkdir -p .depfiles ; mv $*.d .depfiles
 
