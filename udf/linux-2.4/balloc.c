@@ -296,7 +296,7 @@ out:
 static int udf_bitmap_new_block(const struct inode * inode,
 	struct udf_bitmap *bitmap, Uint16 partition, Uint32 goal, int *err)
 {
-	int tmp, newbit, bit=0, block, block_group, group_start;
+	int newbit, bit=0, block, block_group, group_start;
 	int end_goal, nr_groups, bitmap_nr, i;
 	struct buffer_head *bh = NULL;
 	struct super_block *sb;
@@ -414,7 +414,6 @@ got_block:
 	newblock = bit + (block_group << (sb->s_blocksize_bits + 3)) -
 		(sizeof(struct SpaceBitmapDesc) << 3);
 
-	tmp = udf_get_pblock(sb, newblock, partition, 0);
 	if (!udf_clear_bit(bit, bh->b_data))
 	{
 		udf_debug("bit already cleared for block %d\n", bit);
@@ -778,7 +777,7 @@ static int udf_table_new_block(const struct inode * inode,
 {
 	struct super_block *sb;
 	Uint32 spread = 0xFFFFFFFF, nspread;
-	Uint32 newblock = 0, tmp, adsize;
+	Uint32 newblock = 0, adsize;
 	Uint32 extoffset, goal_extoffset, elen, goal_elen = 0;
 	lb_addr bloc, goal_bloc, eloc, goal_eloc;
 	struct buffer_head *bh, *goal_bh;
@@ -868,19 +867,6 @@ static int udf_table_new_block(const struct inode * inode,
 	newblock = goal_eloc.logicalBlockNum;
 	goal_eloc.logicalBlockNum ++;
 	goal_elen -= sb->s_blocksize;
-
-	tmp = udf_get_pblock(sb, newblock, partition, 0);
-	if (!(bh = getblk(sb->s_dev, tmp, sb->s_blocksize)))
-	{
-		udf_debug("cannot get block %d\n", tmp);
-		udf_release_data(bh);
-		unlock_super(sb);
-		return 0;
-	}
-	memset(bh->b_data, 0, sb->s_blocksize);
-	mark_buffer_uptodate(bh, 1);
-	mark_buffer_dirty(bh);
-	udf_release_data(bh);
 
 	if (goal_elen)
 		udf_write_aext(table, goal_bloc, &goal_extoffset, goal_eloc, goal_elen, goal_bh, 1);
