@@ -49,6 +49,7 @@
 #include <linux/version.h>
 #include <linux/blkdev.h>
 #include <linux/slab.h>
+#include <linux/vmalloc.h>
 #include <linux/kernel.h>
 #include <linux/locks.h>
 #include <linux/module.h>
