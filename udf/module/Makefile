@@ -24,6 +24,7 @@ ifeq (${IN_KERNEL},y)
 	-DMODULE -Wall -Wstrict-prototypes -I. -I../../include \
 	-O2 -fomit-frame-pointer
     CONFIG=../../include/config/udf.h
+    UDFINC=../../include/linux/udf_fs.h
 
     include ../../.config
 
@@ -35,15 +36,16 @@ else
 	-O2 -Wall -Wstrict-prototypes -I.. -fomit-frame-pointer 
   MODFLAGS	= -DMODULE 
   CONFIG=../config/udf.h
+  UDFINC=../linux/udf_fs.h
   LD		= ld
   LD_RFLAGS	=
   TOPDIR 	= .
 endif
 
-all: $(O_TARGET) dump
+all: $(O_TARGET) 
 
-dump: 	dump.c
-	$(CC) dump.c -o $@
+clean:
+	/bin/rm -f *.o $(O_TARGET)
 
 # file.c lookup.c and vat.c aren't intergrated in yet, as of 0.2
 newobj: file.o lookup.o vat.o
@@ -51,19 +53,19 @@ newobj: file.o lookup.o vat.o
 udf.o:  crc.o inode.o misc.o super.o unicode.o debug.o
 	$(LD) $(LD_RFLAGS) -r -o $@ crc.o inode.o misc.o super.o unicode.o debug.o
 
-crc.o:  crc.c $(CONFIG)
+crc.o:  crc.c $(CONFIG) $(UDFINC)
 	$(CC) $(CFLAGS) $(MODFLAGS) -c crc.c -o $@
 
-inode.o:  inode.c 
+inode.o:  inode.c $(UDFINC)
 	$(CC) $(CFLAGS) $(MODFLAGS) -c inode.c -o $@
 
-misc.o:  misc.c 
+misc.o:  misc.c $(UDFINC)
 	$(CC) $(CFLAGS) $(MODFLAGS) -c misc.c -o $@
 
-super.o:  super.c 
+super.o:  super.c $(UDFINC)
 	$(CC) $(CFLAGS) $(MODFLAGS) -c super.c -o $@
 
-unicode.o:  unicode.c 
+unicode.o:  unicode.c  $(UDFINC)
 	$(CC) $(CFLAGS) $(MODFLAGS) -c unicode.c -o $@
 
 file.o:  file.c 

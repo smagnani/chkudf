@@ -1,7 +1,7 @@
 #if !defined(_LINUX_UDF_167_H)
 #define _LINUX_UDF_167_H
 /*
- * udf_fmt.h
+ * udf_167.h
  *
  * DESCRIPTION
  *	Definitions from the ECMA 167 standard.
@@ -44,7 +44,7 @@
  *	Adapted from the ECMA-167 standard.
  */
 
-#include <linux/udf_fs.h>
+#include <linux/udf_udf.h>
 
 /* CS0 Charspec (ECMA 167 1/7.2.1) */
 typedef struct {
@@ -205,7 +205,7 @@ struct PrimaryVolDesc {
 	extent_ad volAbstract;
 	extent_ad volCopyrightNotice;
 	regid appIdent;
-	timestamp recordingDateAndTIme;
+	timestamp recordingDateAndTime;
 	regid impdent;
 	__u8 impUse[64];
 	__u32 predcessorVolDescSeqLocation;

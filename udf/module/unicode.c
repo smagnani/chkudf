@@ -48,7 +48,6 @@
  *	Written, tested, and released.
  */
 int udf_CS0toUTF8(struct ustr *utf_o, struct ustr *ocu_i)
-/*int udf_ocu_to_utf8(char *utf, dstring *ocu) */
 {
 	char *ocu;
 	unsigned c, cmp_id, ocu_len;
@@ -60,11 +59,12 @@ int udf_CS0toUTF8(struct ustr *utf_o, struct ustr *ocu_i)
 	cmp_id = ocu[0];
 	utf_o->u_len=0;
 
-	if (cmp_id != 8 || cmp_id != 16) {
+	if ((cmp_id != 8) && (cmp_id != 16)) {
 		printk(KERN_ERR "udf: unknown compression code (%d)\n", cmp_id);
 		return -1;
 	}
 
+#ifdef USE_REAL_UNICODE
 	for (i = 1; (i < ocu_len) && (utf_o->u_len < UDF_NAME_LEN) ;) {
 
 		/* Expand OSTA compressed Unicode to Unicode */
@@ -85,6 +85,19 @@ int udf_CS0toUTF8(struct ustr *utf_o, struct ustr *ocu_i)
 		}
 	}
 	utf_o->u_cmpID=cmp_id;
+#else
+	/* cheat, just for now. 8= already decoded, 16= << 8 */
+	if ( cmp_id == 8 ) {
+	    strncpy(utf_o->u_name, ocu+1, ocu_len-1);
+	    utf_o->u_len=ocu_len-1;
+	} else {
+	    for (i=2; i<ocu_len; i+=2) {
+		utf_o->u_name[i/2]=ocu[i];
+		utf_o->u_len=ocu_len/2;
+	    }	
+	}
+	utf_o->u_cmpID=8;
+#endif
 	utf_o->u_hash=0L;
 	utf_o->padding=0;
 

@@ -12,7 +12,7 @@
  *		ftp://prep.ai.mit.edu/pub/gnu/GPL
  *	Each contributing author retains all rights to their own work.
  */
-#include <linux/udf_fs.h>
+#include <linux/time.h>
 
 
 struct udf_sb_info {
@@ -24,6 +24,8 @@ struct udf_sb_info {
 	/* Overall info */
 	__u16 s_maxVolSeqNum;
 	__u16 s_partitions;
+	__u16 s_thispartition;
+	__u16 s_thisvolume;
 
 	/* Volume ID */
 	__u32 s_id_block;
@@ -34,6 +36,13 @@ struct udf_sb_info {
 	__u32 s_lastblock;
 	__u32 s_voldesc;
 	__u32 s_fileset;
+	__u32 s_rootdir;
+	__u32 s_partition_root;
+	__u32 s_partition_len;
+	__u32 s_filecount;
+
+	/* Root Info */
+	time_t s_recordtime;
 
 	/* Miscellaneous flags */
 	int s_flags;
@@ -63,8 +72,15 @@ struct udf_sb_info {
 #define IS_FIXED(X)	( UDF_SB(X)->s_flags & UDF_FLAG_DEBUG)
 
 #define UDF_SB_ANCHOR(X)	( UDF_SB(X)->s_anchor )
+#define UDF_SB_VOLUME(X)	( UDF_SB(X)->s_thisvolume )
+#define UDF_SB_PARTITION(X)	( UDF_SB(X)->s_thispartition )
 #define UDF_SB_LASTBLOCK(X)	( UDF_SB(X)->s_lastblock )
 #define UDF_SB_VOLDESC(X)	( UDF_SB(X)->s_voldesc )
 #define UDF_SB_FILESET(X)	( UDF_SB(X)->s_fileset )
+#define UDF_SB_ROOTDIR(X)	( UDF_SB(X)->s_rootdir )
+#define UDF_SB_RECORDTIME(X)	( UDF_SB(X)->s_recordtime )
+#define UDF_SB_PARTROOT(X)	( UDF_SB(X)->s_partition_root )
+#define UDF_SB_PARTLEN(X)	( UDF_SB(X)->s_partition_len )
+#define UDF_SB_FILECOUNT(X)	( UDF_SB(X)->s_filecount )
 
 #endif /* !defined(_LINUX_UDF_FS_SB_H) */

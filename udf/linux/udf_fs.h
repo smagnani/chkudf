@@ -27,7 +27,11 @@
 
 #include <linux/types.h>
 #include <linux/fs.h>
+
 #include <linux/udf_udf.h>
+#include <linux/udf_167.h>
+#include <linux/udf_fs_sb.h>
+#include <linux/udf_fs_i.h>
 
 /* Since UDF 1.50 is ISO 13346 based... */
 #define UDF_SUPER_MAGIC	0x15013346
@@ -45,7 +49,6 @@
 /* Prototype for fs/filesystem.c */
 extern int init_udf_fs(void);
 
-typedef __u8 dstring;
 struct ustr {
 	__u8 u_cmpID;
 	__u8 u_name[UDF_NAME_LEN];
@@ -59,6 +62,7 @@ extern void udf_debug_dump(struct buffer_head *);
 extern __u16 udf_crc(__u8 *, __u32);
 extern int udf_CS0toUTF8(struct ustr *, struct ustr *);
 extern int udf_UTF8toCS0(struct ustr *, struct ustr *);
-extern struct buffer_head *udf_read_tagged(struct super_block *, __u32);
+extern struct buffer_head *udf_read_tagged(struct super_block *, __u32, __u32);
+extern time_t * udf_stamp_to_time(time_t *, void *);
 
 #endif /* !defined(_LINUX_UDF_FS_H) */

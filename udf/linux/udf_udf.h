@@ -23,6 +23,9 @@
  *	Written, tested, and released.
  */
 
+/* -------- Basic types and constants ----------- */
+typedef __u8 dstring;
+
 /* UDF character set (UDF 1.50 2.1.2) */
 #define UDF_CHAR_SET_TYPE	0
 #define UDF_CHAR_SET_INFO	"OSTA Compressed Unicode"

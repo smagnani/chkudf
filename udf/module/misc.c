@@ -16,9 +16,35 @@
  *	Each contributing author retains all rights to their own work.
  */
 
+#include <linux/types.h>
 #include <linux/fs.h>
-#include <linux/udf_167.h>
-#include <linux/udf_udf.h>
+#include <linux/udf_fs.h>
+
+/*
+ * udf_stamp_to_time
+ */
+time_t * udf_stamp_to_time(time_t *dest, void * srcp)
+{
+	timestamp *src;
+
+	if ((!dest) || (!srcp) )
+	    return NULL;
+	src=(timestamp *)srcp;
+
+	/* this is very rough. need to find source to mktime() */
+	*dest=(src->year) - 1970;
+	*dest *= 12;
+	*dest += src->month;
+	*dest *= 30;
+	*dest += src->day;
+	*dest *= 24;
+	*dest += src->hour;
+	*dest *= 60;
+	*dest += src->minute;
+	*dest *= 60;
+	*dest += src->second;
+	return dest;
+}
 
 /*
  * udf_read_tagged
@@ -31,7 +57,7 @@
  *	Written, tested, and released.
  */
 extern struct buffer_head *
-udf_read_tagged(struct super_block *sb, __u32 block)
+udf_read_tagged(struct super_block *sb, __u32 block, __u32 offset)
 {
 	tag *tag_p;
 	struct buffer_head *bh;
@@ -40,13 +66,22 @@ udf_read_tagged(struct super_block *sb, __u32 block)
 
 	/* Read the block */
 	bh = bread(sb->s_dev, block, sb->s_blocksize);
-	if (!bh)
+	if (!bh) {
+		printk(KERN_ERR "udf: udf_read_tagged(,%d) failed\n",
+			block);
 		return NULL;
+	}
 
-	/* Verify the tag location */
 	tag_p = (tag *)(bh->b_data);
-	if (block != tag_p->tagLocation)
+
+#ifdef USE_STRICT_LOCATION
+	/* Verify the tag location */
+	if ((block-offset) != tag_p->tagLocation) {
+		printk(KERN_ERR "udf: location mismatch block %d, tag %d\n",
+			block, tag_p->tagLocation);
 		goto error_out;
+	}
+#endif
 	
 	/* Verify the tag checksum */
 	checksum = 0U;
@@ -54,16 +89,25 @@ udf_read_tagged(struct super_block *sb, __u32 block)
 		checksum += (__u8)(bh->b_data[i]);
 	for (i = 5; i < 16; i++)
 		checksum += (__u8)(bh->b_data[i]);
-	if (checksum != tag_p->tagChecksum)
+	if (checksum != tag_p->tagChecksum) {
+		printk(KERN_ERR "udf: tag checksum failed\n");
 		goto error_out;
+	}
 
+#ifdef USE_STRICT_VERSION
 	/* Verify the tag version */
-	if (tag_p->descVersion != 0x0002U)
+	if (tag_p->descVersion != 0x0002U) {
+		printk(KERN_ERR "udf: tag version 0x%04x != 0x0002U\n",
+			tag_p->descVersion);
 		goto error_out;
+	}
+#endif
 
 	/* Verify the descriptor CRC */
-	if (tag_p->descCRC == udf_crc(bh->b_data + 16, tag_p->descCRCLength))
+	if (tag_p->descCRC == udf_crc(bh->b_data + 16, tag_p->descCRCLength)) {
 		return bh;
+	}
+	printk(KERN_ERR "udf: crc failure in udf_read_tagged\n");
 
 error_out:
 	brelse(bh);

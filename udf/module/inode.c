@@ -178,17 +178,14 @@ udf_iget(struct super_block *sb, unsigned long ino)
 	 *	i_nlink = 0
 	 */
 	inode->i_blksize = sb->s_blocksize;
-	if ( UDF_SB(sb) ) {
-		inode->i_mode = UDF_SB(sb)->s_mode;
-		inode->i_gid = UDF_SB(sb)->s_gid;
-		inode->i_uid = UDF_SB(sb)->s_uid;
-	} else {
-		inode->i_mode = S_IRUGO | S_IXUGO;
-		inode->i_gid = 0;
-		inode->i_uid = 0;
-	}
-	if ( inode->i_ino == UDF_ROOT_INODE )
+	inode->i_mode = UDF_SB(sb)->s_mode;
+	inode->i_gid = UDF_SB(sb)->s_gid;
+	inode->i_uid = UDF_SB(sb)->s_uid;
+	if ( inode->i_ino == UDF_ROOT_INODE ) {
 		inode->i_mode = S_IFDIR;
+		inode->i_mtime = UDF_SB_RECORDTIME(sb);
+		inode->i_ctime = UDF_SB_RECORDTIME(sb);
+	}
 
 	inode->i_version = 1;
 
