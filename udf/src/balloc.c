@@ -36,14 +36,14 @@
 static int read_block_bitmap(struct super_block * sb, unsigned int block,
 	unsigned long bitmap_nr)
 {
-	struct buffer_head *bh;
+	struct buffer_head *bh = NULL;
 	int retval = 0;
 	lb_addr loc;
 
 	loc.logicalBlockNum = UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_uspace_bitmap;
 	loc.partitionReferenceNum = UDF_SB_PARTITION(sb);
 
-	bh = udf_bread(sb, udf_get_lb_pblock(sb, loc, block), sb->s_blocksize);
+	bh = udf_tread(sb, udf_get_lb_pblock(sb, loc, block), sb->s_blocksize);
 	if (!bh)
 	{
 		retval = -EIO;
@@ -57,7 +57,7 @@ static int load__block_bitmap(struct super_block * sb, unsigned int block)
 {
 	int i, j, retval = 0;
 	unsigned long block_bitmap_number;
-	struct buffer_head * block_bitmap;
+	struct buffer_head * block_bitmap = NULL;
     int nr_groups = (UDF_SB_PARTLEN(sb, UDF_SB_PARTITION(sb)) +
         (sizeof(struct SpaceBitmapDesc) << 3) + sb->s_blocksize - 1) / sb->s_blocksize;
 
@@ -159,7 +159,7 @@ static inline int load_block_bitmap(struct super_block *sb, unsigned int block)
 void udf_free_blocks(const struct inode * inode, lb_addr bloc, Uint32 offset,
 	Uint32 count)
 {
-	struct buffer_head * bh;
+	struct buffer_head * bh = NULL;
 	unsigned long block;
 	unsigned long block_group;
 	unsigned long bit;
@@ -245,19 +245,18 @@ error_return:
 	return;
 }
 
-lb_addr udf_new_block(const struct inode * inode, lb_addr goal,
+int udf_new_block(const struct inode * inode, Uint16 partition, Uint32 goal,
 				Uint32 *prealloc_count, Uint32 *prealloc_block, int *err)
 {
 	int tmp, newbit, bit, block, block_group, group_start;
 	int end_goal, nr_groups, bitmap_nr, i;
-	struct buffer_head *bh;
+	struct buffer_head *bh = NULL;
 	struct super_block *sb;
 	char *ptr;
-	lb_addr newblock = goal;
+	int newblock = 0;
 
 #ifdef VDEBUG
-	udf_debug("ino=%ld, block=%d, partition=%d\n", inode->i_ino, goal.logicalBlockNum,
-		goal.partitionReferenceNum);
+	udf_debug("ino=%ld, block=%d, partition=%d\n", inode->i_ino, goal, partition);
 #endif
 	
 	*err = -ENOSPC;
@@ -270,14 +269,13 @@ lb_addr udf_new_block(const struct inode * inode, lb_addr goal,
 	lock_super(sb);
 
 repeat:
-	if (goal.logicalBlockNum < 0 ||
-		goal.logicalBlockNum >= UDF_SB_PARTLEN(sb, goal.partitionReferenceNum))
+	if (goal < 0 || goal >= UDF_SB_PARTLEN(sb, partition))
 	{
-		goal.logicalBlockNum = 0;
+		goal = 0;
 	}
-	nr_groups = (UDF_SB_PARTLEN(sb, goal.partitionReferenceNum) +
+	nr_groups = (UDF_SB_PARTLEN(sb, partition) +
 		(sizeof(struct SpaceBitmapDesc) << 3) + sb->s_blocksize - 1) / sb->s_blocksize;
-	block = goal.logicalBlockNum + (sizeof(struct SpaceBitmapDesc) << 3);
+	block = goal + (sizeof(struct SpaceBitmapDesc) << 3);
 	block_group = block >> (sb->s_blocksize_bits + 3);
 	group_start = block_group ? 0 : sizeof(struct SpaceBitmapDesc);
 
@@ -306,7 +304,9 @@ repeat:
 			goto got_block;
 		}
 		end_goal = (bit + 63) & ~63;
+		udf_debug("end_goal=%d, bit=%d\n", end_goal, bit);
 		bit = udf_find_next_one_bit(bh->b_data, end_goal, bit);
+		udf_debug("bit=%d\n", bit);
 		if (bit < end_goal)
 			goto got_block;
 		ptr = memscan((char *)bh->b_data + (bit >> 3), 0xFF, sb->s_blocksize - ((bit + 7) >> 3));
@@ -353,19 +353,22 @@ repeat:
 	if (bit >= sb->s_blocksize << 3)
 	{
 		unlock_super(sb);
-		return newblock;
+		return 0;
 	}
 
 search_back:
 	for (i=0; i<7 && bit > (group_start << 3) && udf_test_bit(bit - 1, bh->b_data); i++, bit--);
 
 got_block:
-	newblock.logicalBlockNum = bit + (block_group << (sb->s_blocksize_bits + 3)) -
+	newblock = bit + (block_group << (sb->s_blocksize_bits + 3)) -
 		(group_start << 3);
-	tmp = udf_get_lb_pblock(sb, newblock, 0);
+
+	udf_debug("newblock=%d, bit=%d, block_group=%d, group_start=%d\n",
+		newblock, bit, block_group, group_start);
+	tmp = udf_get_pblock(sb, newblock, partition, 0);
 #ifdef VDEBUG
-	udf_debug("got block! bit=%d, block_group=%d, newblock=%d,%d, block=%d\n",
-		bit, block_group, newblock.logicalBlockNum, newblock.partitionReferenceNum, tmp);
+	udf_debug("got block! bit=%d, block_group=%d, newblock=%d, block=%d\n",
+		bit, block_group, newblock, tmp);
 #endif
 	if (!udf_clear_bit(bit, bh->b_data))
 	{
@@ -381,7 +384,7 @@ got_block:
 
 		*prealloc_count = 0;
 		*prealloc_block = tmp + 1;
-		for (i=1; i< peralloc_goal && (bit + i) < (sb->s_blocksize << 3); i++)
+		for (i=1; i< prealloc_goal && (bit + i) < (sb->s_blocksize << 3); i++)
 		{
 			if (!udf_clear_bit(bit + i, bh->b_data))
 				break;
@@ -389,11 +392,11 @@ got_block:
 		}
 		if (UDF_SB_LVIDBH(sb))
 		{
-			UDF_SB_LVID(sb)->freeSpaceTable[newblock.partitionReferenceNum] =
-				cpu_to_le32(le32_to_cpu(UDF_SB_LVID(sb)->freeSpaceTable[newblock.partitionReferenceNum])-*prealloc_count);
+			UDF_SB_LVID(sb)->freeSpaceTable[partition] =
+				cpu_to_le32(le32_to_cpu(UDF_SB_LVID(sb)->freeSpaceTable[partition])-*prealloc_count);
 			mark_buffer_dirty(UDF_SB_LVIDBH(sb), 1);
 		}
-		udf_debug("Prealloced a further %lu bits.\n", *prealloc_count);
+		udf_debug("Prealloced a further %u bits.\n", *prealloc_count);
 	}
 #endif
 
@@ -402,7 +405,7 @@ got_block:
 	{
 		udf_debug("cannot get block %d\n", tmp);
 		unlock_super(sb);
-		return newblock;
+		return 0;
 	}
 	memset(bh->b_data, 0, sb->s_blocksize);
 	mark_buffer_uptodate(bh, 1);
@@ -411,8 +414,8 @@ got_block:
 
 	if (UDF_SB_LVIDBH(sb))
 	{
-		UDF_SB_LVID(sb)->freeSpaceTable[newblock.partitionReferenceNum] =
-			cpu_to_le32(le32_to_cpu(UDF_SB_LVID(sb)->freeSpaceTable[newblock.partitionReferenceNum])-1);
+		UDF_SB_LVID(sb)->freeSpaceTable[partition] =
+			cpu_to_le32(le32_to_cpu(UDF_SB_LVID(sb)->freeSpaceTable[partition])-1);
 		mark_buffer_dirty(UDF_SB_LVIDBH(sb), 1);
 	}
 	sb->s_dirt = 1;
@@ -423,5 +426,5 @@ got_block:
 error_return:
 	*err = -EIO;
 	unlock_super(sb);
-	return newblock;
+	return 0;
 }

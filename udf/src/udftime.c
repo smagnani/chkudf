@@ -130,40 +130,57 @@ time_t udf_converttime (struct ktm *tm)
 
 #ifdef __KERNEL__
 
+extern struct timezone sys_tz;
+
+#define SECS_PER_HOUR   (60 * 60)
+#define SECS_PER_DAY    (SECS_PER_HOUR * 24)
+
 timestamp *
-udf_time_to_stamp(timestamp *dest, time_t src)
+udf_time_to_stamp(timestamp *dest, time_t tv_sec, long tv_usec)
 {
-    int i;
+	long int days, rem, y;
+	const unsigned short int *ip;
+	int offset = (-sys_tz.tz_minuteswest + (sys_tz.tz_dsttime ? 60 : 0));
 
     if (!dest)
         return NULL;
 
-	dest->typeAndTimezone = 0x1000;
+	dest->typeAndTimezone = 0x1000 | (offset & 0x0FFF);
 
-    for (i=src / 31536000; i<MAX_YEAR_SECONDS; i++)
-    {
-        if (src < year_seconds[i])
-            break;
-    }
-    dest->year = i - 1 + EPOCH_YEAR;
-    src -= year_seconds[i-1];
-    for (i=1; i<13; i++)
-    {
-        if (src < __mon_yday[__isleap(dest->year)][i] * 86400)
-            break;
-    }
-    dest->month = i;
-    src -= __mon_yday[__isleap(dest->year + TM_YEAR_BASE)][i-1] * 86400;
-    dest->day = src / 86400 + 1;
-    src -= (dest->day - 1) * 86400;
-    dest->hour = src / 3600 + 1;
-    src -= (dest->hour - 1) * 3600;
-    dest->minute = src / 60;
-    src -= (dest->minute) * 60;
-    dest->second = src;
-	dest->centiseconds = 0;
-	dest->hundredsOfMicroseconds = 0;
-	dest->microseconds = 0;
+	tv_sec += offset * 60;
+	days = tv_sec / SECS_PER_DAY;
+	rem = tv_sec % SECS_PER_DAY;
+	dest->hour = rem / SECS_PER_HOUR;
+	rem %= SECS_PER_HOUR;
+	dest->minute = rem / 60;
+	dest->second = rem % 60;
+	y = 1970;
+
+#define DIV(a,b) ((a) / (b) - ((a) % (b) < 0))
+#define LEAPS_THRU_END_OF(y) (DIV (y, 4) - DIV (y, 100) + DIV (y, 400))
+
+	while (days < 0 || days >= (__isleap(y) ? 366 : 365))
+	{
+		long int yg = y + days / 365 - (days % 365 < 0);
+
+		/* Adjust DAYS and Y to match the guessed year.  */
+		days -= ((yg - y) * 365
+			+ LEAPS_THRU_END_OF (yg - 1)
+			- LEAPS_THRU_END_OF (y - 1));
+		y = yg;
+	}
+	dest->year = y;
+	ip = __mon_yday[__isleap(y)];
+	for (y = 11; days < (long int) ip[y]; --y)
+		continue;
+	days -= ip[y];
+	dest->month = y + 1;
+	dest->day = days + 1;
+
+	dest->centiseconds = tv_usec / 10000;
+	dest->hundredsOfMicroseconds = (tv_usec - dest->centiseconds * 10000) / 100;
+	dest->microseconds = (tv_usec - dest->centiseconds * 10000 -
+		dest->hundredsOfMicroseconds * 100);
     return dest;
 }
 #endif

@@ -28,9 +28,10 @@
 
 #undef UDF_PREALLOCATE
 #define UDF_DEFAULT_PREALLOC_BLOCKS		8
+#define UDF_DEFAULT_PREALLOC_DIR_BLOCKS	0
 
-#define UDFFS_DATE		"99/04/06"
-#define UDFFS_VERSION	"0.8.2"
+#define UDFFS_DATE		"99/05/12"
+#define UDFFS_VERSION	"0.8.4"
 #define UDFFS_DEBUG
 
 #ifdef UDFFS_DEBUG
@@ -46,6 +47,15 @@
 
 #define udf_info(f, a...) \
 		printk (KERN_INFO "UDF-fs INFO " ## f, ## a);
+
+struct udf_addr
+{
+	__u32 block;
+	__u16 partition;
+	unsigned error : 1;
+	unsigned reserved : 15;
+};
+	
 
 /* Prototype for fs/filesystem.c (the only thing really required in this file) */
 extern int init_udf_fs(void);

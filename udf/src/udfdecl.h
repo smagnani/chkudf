@@ -1,12 +1,13 @@
 #ifndef __UDF_DECL_H
 #define __UDF_DECL_H
 
-#define UDF_VERSION_NOTICE "v0.8.2"
+#define UDF_VERSION_NOTICE "v0.8.4"
 
 #ifdef __KERNEL__
 
 #include <linux/types.h>
 #include <linux/udf_udf.h>
+#include <linux/udf_fs.h>
 #include <linux/config.h>
 
 #ifndef LINUX_VERSION_CODE
@@ -39,8 +40,22 @@ extern struct inode_operations udf_dir_inode_operations;
 extern struct inode_operations udf_file_inode_operations;
 extern struct inode_operations udf_symlink_inode_operations;
 
+struct udf_fileident_bh
+{
+	struct buffer_head *sbh;
+	struct buffer_head *ebh;
+	int soffset;
+	int eoffset;
+};
+
+extern void udf_error(struct super_block *, const char *, const char *, ...);
 extern void udf_warning(struct super_block *, const char *, const char *, ...);
+extern int udf_write_fi(struct FileIdentDesc *, struct FileIdentDesc *, struct udf_fileident_bh *, Uint8 *, Uint8 *);
+#if LINUX_VERSION_CODE < 0x020207
 extern int udf_lookup(struct inode *, struct dentry *);
+#else
+extern struct dentry * udf_lookup(struct inode *, struct dentry *);
+#endif
 extern int udf_create(struct inode *, struct dentry *, int);
 extern int udf_mknod(struct inode *, struct dentry *, int, int);
 extern int udf_mkdir(struct inode *, struct dentry *, int);
@@ -50,17 +65,21 @@ extern int udf_symlink(struct inode *, struct dentry *, const char *);
 extern int udf_link(struct dentry *, struct inode *, struct dentry *);
 extern int udf_ioctl(struct inode *, struct file *, unsigned int, unsigned long);
 extern struct inode *udf_iget(struct super_block *, lb_addr);
+extern struct buffer_head * udf_expand_adinicb(struct inode *, int *, int, int *);
+extern struct buffer_head * udf_getblk(struct inode *, long, int, int *);
+extern struct buffer_head * udf_bread(struct inode *, int, int, int *);
 extern void udf_read_inode(struct inode *);
 extern void udf_put_inode(struct inode *);
 extern void udf_delete_inode(struct inode *);
 extern void udf_write_inode(struct inode *);
 extern int udf_bmap(struct inode *, int);
-extern int block_bmap(struct inode *, int, lb_addr *, Uint32 *, lb_addr *, Uint32 *, Uint32 *);
-extern int udf_next_aext(struct inode *, lb_addr *, int *, lb_addr *, Uint32 *);
+extern int inode_bmap(struct inode *, int, lb_addr *, Uint32 *, lb_addr *, Uint32 *, Uint32 *, struct buffer_head **);
+extern int udf_add_aext(struct inode *, lb_addr *, int *, lb_addr, Uint32, struct buffer_head **);
+extern int udf_next_aext(struct inode *, lb_addr *, int *, lb_addr *, Uint32 *, struct buffer_head **);
 
 extern int udf_read_tagged_data(char *, int size, int fd, int block, int partref);
 
-extern struct buffer_head *udf_bread(struct super_block *, int, int);
+extern struct buffer_head *udf_tread(struct super_block *, int, int);
 extern struct GenericAttrFormat *udf_add_extendedattr(struct inode *, Uint32, Uint32, Uint8, struct buffer_head **);
 extern struct GenericAttrFormat *udf_get_extendedattr(struct inode *, Uint32, Uint8, struct buffer_head **);
 extern struct buffer_head *udf_read_tagged(struct super_block *, Uint32, Uint32, Uint16 *);
@@ -81,7 +100,7 @@ struct inode * udf_new_inode (const struct inode *, int, int *);
 void udf_discard_prealloc(struct inode *);
 void udf_truncate(struct inode *);
 void udf_free_blocks(const struct inode *, lb_addr, Uint32, Uint32);
-lb_addr udf_new_block(const struct inode *, lb_addr, Uint32 *, Uint32 *, int *);
+int udf_new_block(const struct inode *, Uint16, Uint32, Uint32 *, Uint32 *, int *);
 
 #else
 
@@ -135,10 +154,18 @@ struct ustr
 	unsigned long u_hash;
 };
 
+
 #define udf_fixed_to_variable(x) ( ( ( x >> 5 ) * 39 ) + ( x & 0x0000001F ) )
 #define udf_variable_to_fixed(x) ( ( ( x / 39 ) << 5 ) + ( x % 39 ) )
 
 #ifdef __KERNEL__
+
+#define CURRENT_UTIME	(xtime.tv_usec)
+
+#define udf_file_entry_alloc_offset(inode)\
+	((UDF_I_EXTENDED_FE(inode) ?\
+		sizeof(struct ExtendedFileEntry) :\
+		sizeof(struct FileEntry)) + UDF_I_LENEATTR(inode))
 
 #define udf_clear_bit(nr,addr) ext2_clear_bit(nr,addr)
 #define udf_set_bit(nr,addr) ext2_set_bit(nr,addr)
@@ -156,10 +183,14 @@ extern inline int find_next_one_bit (void * addr, int size, int offset)
 		return size;
 	size -= result;
 	offset &= (BITS_PER_LONG-1);
+	udf_debug("addr=%p, p=%p, offset=%d, size=%d, result=%ld\n",
+		addr, p, offset, size, result);
 	if (offset)
 	{
 		tmp = *(p++);
-		tmp |= ~0UL >> (BITS_PER_LONG-offset);
+		udf_debug("tmp=%lx\n", tmp);
+		tmp &= ~0UL << offset;
+		udf_debug("tmp=%lx\n", tmp);
 		if (size < BITS_PER_LONG)
 			goto found_first;
 		if (tmp)
@@ -167,6 +198,7 @@ extern inline int find_next_one_bit (void * addr, int size, int offset)
 		size -= BITS_PER_LONG;
 		result += BITS_PER_LONG;
 	}
+	udf_debug("size=%d, result=%ld\n", size, result);
 	while (size & ~(BITS_PER_LONG-1))
 	{
 		if ((tmp = *(p++)))
@@ -178,9 +210,10 @@ extern inline int find_next_one_bit (void * addr, int size, int offset)
 		return result;
 	tmp = *p;
 found_first:
-	tmp |= ~0UL << size;
+	tmp &= ~0UL >> (BITS_PER_LONG-size);
 found_middle:
-	return result + ffs(tmp);
+	udf_debug("result=%ld, ffs(tmp)=%d\n", result, ffs(tmp));
+	return result + ffs(tmp) - 1;
 }
 
 #define find_first_one_bit(addr, size)\
@@ -211,7 +244,7 @@ extern Uint32 udf64_high32(Uint64);
 
 
 extern time_t *udf_stamp_to_time(time_t *, timestamp);
-extern timestamp *udf_time_to_stamp(timestamp *dest, time_t src);
+extern timestamp *udf_time_to_stamp(timestamp *, time_t, long);
 extern time_t udf_converttime (struct ktm *);
 
 #ifdef __KERNEL__
@@ -221,8 +254,7 @@ udf_filead_read(struct inode *, Uint8 *, Uint8, lb_addr, int *, int *,
 
 extern struct FileIdentDesc *
 udf_fileident_read(struct inode *, int *,
-	int *, struct buffer_head **,
-	int *, struct buffer_head **,
+	struct udf_fileident_bh *,
 	struct FileIdentDesc *);
 #endif
 extern struct FileIdentDesc * 
@@ -232,5 +264,7 @@ extern long_ad * udf_get_filelongad(void * buffer, int bufsize, int * offset);
 extern short_ad * udf_get_fileshortad(void * buffer, int bufsize, int * offset);
 extern Uint8 * udf_get_filead(struct FileEntry *, Uint8 *, int, int, int, int *);
 
+extern void udf_update_tag(char *, int);
+extern void udf_new_tag(char *, Uint16, Uint16, Uint16, Uint32, int);
 
 #endif

@@ -55,7 +55,7 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 		case UDF_VIRTUAL_MAP15:
 		case UDF_VIRTUAL_MAP20:
 		{
-			struct buffer_head *bh;
+			struct buffer_head *bh = NULL;
 			Uint32 newblock;
 			Uint32 index;
 			Uint32 loc;
@@ -109,7 +109,7 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 			Uint32 spartable = UDF_SB_TYPESPAR(sb, partition).s_spar_loc;
 			Uint32 plength = UDF_SB_TYPESPAR(sb,partition).s_spar_plen;
 			Uint32 packet = (block + offset) & (~(plength-1));
-			struct buffer_head *bh;
+			struct buffer_head *bh = NULL;
 			struct SparingTable *st;
 			SparingEntry *se;
 
@@ -147,7 +147,7 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 							do
 							{
 								udf_release_data(bh);
-								bh = udf_bread(sb, spartable, sb->s_blocksize);
+								bh = udf_tread(sb, spartable, sb->s_blocksize);
 								if (!bh)
 									return 0xFFFFFFFF;
 								se = (SparingEntry *)bh->b_data;

@@ -22,5 +22,12 @@
 #define UDF_I_ALLOCTYPE(X)	( UDF_I(X)->i_alloc_type )
 #define UDF_I_EXTENDED_FE(X)( UDF_I(X)->i_extended_fe )
 #define UDF_I_STRAT4096(X)	( UDF_I(X)->i_strat_4096 )
+#define UDF_I_PREALLOC_COUNT(X)	( UDF_I(X)->i_prealloc_count )
+#define UDF_I_PREALLOC_BLOCK(X)	( UDF_I(X)->i_prealloc_block )
+#define UDF_I_NEXT_ALLOC_BLOCK(X)	( UDF_I(X)->i_next_alloc_block )
+#define UDF_I_NEXT_ALLOC_GOAL(X)	( UDF_I(X)->i_next_alloc_goal )
+#define UDF_I_UATIME(X)		( UDF_I(X)->i_uatime )
+#define UDF_I_UMTIME(X)		( UDF_I(X)->i_umtime )
+#define UDF_I_UCTIME(X)		( UDF_I(X)->i_uctime )
 
 #endif /* !defined(_LINUX_UDF_I_H) */

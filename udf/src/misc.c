@@ -109,7 +109,7 @@ gid_t udf_convert_gid(int gidin)
 #if defined(__linux__) && defined(__KERNEL__)
 
 extern struct buffer_head *
-udf_bread(struct super_block *sb, int block, int size)
+udf_tread(struct super_block *sb, int block, int size)
 {
 	if (UDF_SB(sb)->s_flags & UDF_FLAG_VARCONV)
 		return bread(sb->s_dev, udf_fixed_to_variable(block), size);
@@ -125,7 +125,7 @@ udf_add_extendedattr(struct inode * inode, Uint32 size, Uint32 type,
 	long_ad eaicb;
 	int offset;
 
-	*bh = udf_bread(inode->i_sb, inode->i_ino, inode->i_sb->s_blocksize);
+	*bh = udf_tread(inode->i_sb, inode->i_ino, inode->i_sb->s_blocksize);
 
 	if (UDF_I_EXTENDED_FE(inode) == 0)
 	{
@@ -242,7 +242,7 @@ udf_get_extendedattr(struct inode * inode, Uint32 type, Uint8 subtype,
 	long_ad eaicb;
 	Uint32 offset;
 
-	*bh = udf_bread(inode->i_sb, inode->i_ino, inode->i_sb->s_blocksize);
+	*bh = udf_tread(inode->i_sb, inode->i_ino, inode->i_sb->s_blocksize);
 
 	if (UDF_I_EXTENDED_FE(inode) == 0)
 	{
@@ -304,10 +304,10 @@ udf_get_extendedattr(struct inode * inode, Uint32 type, Uint8 subtype,
 extern struct buffer_head *
 udf_read_untagged(struct super_block *sb, Uint32 block, Uint32 offset)
 {
-	struct buffer_head *bh;
+	struct buffer_head *bh = NULL;
 
 	/* Read the block */
-	bh = udf_bread(sb, block+offset, sb->s_blocksize);
+	bh = udf_tread(sb, block+offset, sb->s_blocksize);
 	if (!bh)
 	{
 		printk(KERN_ERR "udf: udf_read_untagged(%p,%d,%d) failed\n",
@@ -331,7 +331,7 @@ extern struct buffer_head *
 udf_read_tagged(struct super_block *sb, Uint32 block, Uint32 location, Uint16 *ident)
 {
 	tag *tag_p;
-	struct buffer_head *bh;
+	struct buffer_head *bh = NULL;
 	register Uint8 checksum;
 	register int i;
 
@@ -342,7 +342,7 @@ udf_read_tagged(struct super_block *sb, Uint32 block, Uint32 location, Uint16 *i
 	if (block == 0xFFFFFFFF)
 		return NULL;
 
-	bh = udf_bread(sb, block, sb->s_blocksize);
+	bh = udf_tread(sb, block, sb->s_blocksize);
 	if (!bh)
 	{
 		udf_debug("block=%d, location=%d: read failed\n", block, location);
@@ -413,6 +413,33 @@ void udf_release_data(struct buffer_head *bh)
 }
 
 #endif
+
+void udf_update_tag(char *data, int length)
+{
+	tag *tptr = (tag *)data;
+	int i;
+
+	length -= sizeof(tag);
+
+	tptr->tagChecksum = 0;
+	tptr->descCRCLength = le16_to_cpu(length);
+	tptr->descCRC = le16_to_cpu(udf_crc(data + sizeof(tag), length, 0));
+
+	for (i=0; i<16; i++)
+		if (i != 4)
+			tptr->tagChecksum += (Uint8)(data[i]);
+}
+
+void udf_new_tag(char *data, Uint16 ident, Uint16 version, Uint16 snum,
+	Uint32 loc, int length)
+{
+	tag *tptr = (tag *)data;
+	tptr->tagIdent = le16_to_cpu(ident);
+	tptr->descVersion = le16_to_cpu(version);
+	tptr->tagSerialNum = le16_to_cpu(snum);
+	tptr->tagLocation = le32_to_cpu(loc);
+	udf_update_tag(data, length);
+}
 
 #ifndef __KERNEL__
 /*

@@ -34,7 +34,7 @@
 static int extent_trunc(struct inode * inode, lb_addr eloc, Uint32 elen,
 	Uint32 offset)
 {
-	struct buffer_head *bh;
+	struct buffer_head *bh = NULL;
 	int i, retry = 0;
 	unsigned long block_to_free = 0, free_count = 0;
 	int blocks = inode->i_sb->s_blocksize / 512;
@@ -91,27 +91,31 @@ static int extent_trunc(struct inode * inode, lb_addr eloc, Uint32 elen,
 static int trunc(struct inode * inode)
 {
 	lb_addr bloc, eloc;
-	Uint32 ext, elen, offset;
-	int retry = 0;
+	Uint32 extoffset, elen, offset;
+	int retry = 0, etype;
 	int first_block = (inode->i_size + inode->i_sb->s_blocksize - 1) / inode->i_sb->s_blocksize;
+	struct buffer_head *bh = NULL;
 
-	if (block_bmap(inode, first_block, &bloc, &ext, &eloc, &elen, &offset))
+	if ((etype = inode_bmap(inode, first_block, &bloc, &extoffset, &eloc, &elen, &offset, &bh)) != -1)
 	{
 #ifdef VDEBUG
 		udf_debug("first_block = %d\n", first_block);
 #endif
 		retry |= extent_trunc(inode, eloc, elen, offset);
 
-		while (udf_next_aext(inode, &bloc, &ext, &eloc, &elen))
+		while ((etype = udf_next_aext(inode, &bloc, &extoffset, &eloc, &elen, &bh)) != -1)
 		{
 #ifdef VDEBUG
 			udf_debug("bloc: block=%d, partition=%d, ext=%d, eloc: block=%d, partition=%d elen=%d\n",
 				bloc.logicalBlockNum, bloc.partitionReferenceNum, ext,
 				eloc.logicalBlockNum, eloc.partitionReferenceNum, elen);
 #endif
-			retry |= extent_trunc(inode, eloc, elen, 0);
+			if (etype != EXTENT_NOT_RECORDED_NOT_ALLOCATED)
+				retry |= extent_trunc(inode, eloc, elen, 0);
 		}
 	}
+	if (bh)
+		udf_release_data(bh);
 	return retry;
 }
 

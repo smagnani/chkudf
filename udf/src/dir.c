@@ -153,11 +153,10 @@ int udf_readdir(struct file *filp, void *dirent, filldir_t filldir)
 static int 
 do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *dirent)
 {
-	struct buffer_head *sbh, *ebh;
+	struct udf_fileident_bh fibh;
 	struct FileIdentDesc *fi=NULL;
 	struct FileIdentDesc cfi;
 	int block, iblock;
-	int soffset, eoffset;
 	int nf_pos = filp->f_pos;
 	int flen;
 	char fname[255];
@@ -176,45 +175,45 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 	if (nf_pos == 0)
 		nf_pos = (UDF_I_EXT0OFFS(dir) >> 2);
 
-	soffset = eoffset = (nf_pos & ((dir->i_sb->s_blocksize - 1) >> 2)) << 2;
+	fibh.soffset = fibh.eoffset = (nf_pos & ((dir->i_sb->s_blocksize - 1) >> 2)) << 2;
 	block = udf_bmap(dir, nf_pos >> (dir->i_sb->s_blocksize_bits - 2));
 
 	if (!block)
 		return 0;
-	if (!(sbh = ebh = bread(dir->i_dev, block, dir->i_sb->s_blocksize)))
+	if (!(fibh.sbh = fibh.ebh = bread(dir->i_dev, block, dir->i_sb->s_blocksize)))
 		return 0;
 
 	while ( nf_pos < size )
 	{
 		filp->f_pos = nf_pos;
 
-		fi = udf_fileident_read(dir, &nf_pos, &soffset, &sbh, &eoffset, &ebh, &cfi);
+		fi = udf_fileident_read(dir, &nf_pos, &fibh, &cfi);
 		liu = le16_to_cpu(cfi.lengthOfImpUse);
 		lfi = cfi.lengthFileIdent;
 
 		if (!fi)
 		{
-			if (sbh != ebh)
-				udf_release_data(ebh);
-			udf_release_data(sbh);
+			if (fibh.sbh != fibh.ebh)
+				udf_release_data(fibh.ebh);
+			udf_release_data(fibh.sbh);
 			return 1;
 		}
 
-		if (sbh == ebh)
+		if (fibh.sbh == fibh.ebh)
 			nameptr = fi->fileIdent + liu;
 		else
 		{
 			int poffset;	/* Unpaded ending offset */
 
-			poffset = soffset + sizeof(struct FileIdentDesc) + liu + lfi;
+			poffset = fibh.soffset + sizeof(struct FileIdentDesc) + liu + lfi;
 
 			if (poffset >= lfi)
-				nameptr = (char *)(ebh->b_data + poffset - lfi);
+				nameptr = (char *)(fibh.ebh->b_data + poffset - lfi);
 			else
 			{
 				nameptr = fname;
 				memcpy(nameptr, fi->fileIdent + liu, lfi - poffset);
-				memcpy(nameptr + lfi - poffset, ebh->b_data, poffset);
+				memcpy(nameptr + lfi - poffset, fibh.ebh->b_data, poffset);
 			}
 		}
 
@@ -236,30 +235,36 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
  		{
 			if (filldir(dirent, "..", 2, filp->f_pos, filp->f_dentry->d_parent->d_inode->i_ino) < 0)
 			{
-				if (sbh != ebh)
-					udf_release_data(ebh);
-				udf_release_data(sbh);
+				if (fibh.sbh != fibh.ebh)
+					udf_release_data(fibh.ebh);
+				udf_release_data(fibh.sbh);
  				return 1;
 			}
- 		}
-
-		if ((flen = udf_get_filename(nameptr, fname, lfi)))
+		}
+		else
 		{
-			if (filldir(dirent, fname, flen, filp->f_pos, iblock) < 0)
+			if ((flen = udf_get_filename(nameptr, fname, lfi)))
 			{
-				if (sbh != ebh)
-					udf_release_data(ebh);
-				udf_release_data(sbh);
-	 			return 1; /* halt enum */
+				if (filldir(dirent, fname, flen, filp->f_pos, iblock) < 0)
+				{
+					if (fibh.sbh != fibh.ebh)
+						udf_release_data(fibh.ebh);
+					udf_release_data(fibh.sbh);
+		 			return 1; /* halt enum */
+				}
+			}
+			else
+			{
+				udf_debug("size=%d, nf_pos=%d, liu=%d, lfi=%d\n", size, nf_pos, liu, lfi);
 			}
 		}
 	} /* end while */
 
 	filp->f_pos = nf_pos;
 
-	if (sbh != ebh)
-		udf_release_data(ebh);
-	udf_release_data(sbh);
+	if (fibh.sbh != fibh.ebh)
+		udf_release_data(fibh.ebh);
+	udf_release_data(fibh.sbh);
 
 	if ( filp->f_pos >= size)
 		return 1;

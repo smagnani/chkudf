@@ -30,6 +30,9 @@ typedef struct
 
 struct udf_inode_info
 {
+	long i_uatime;
+	long i_umtime;
+	long i_uctime;
 	/* Physical address of inode */
 	lb_addr i_ext0Location;	/* partition relative */
 	lb_addr i_location;
@@ -42,9 +45,12 @@ struct udf_inode_info
 	__u32 i_prealloc_block;
 	__u32 i_prealloc_count;
 #endif
-	int i_alloc_type : 3;
-	int i_extended_fe : 1;
-	int i_strat_4096 : 1;
+	__u32 i_next_alloc_block;
+	__u32 i_next_alloc_goal;
+	unsigned i_alloc_type : 3;
+	unsigned i_extended_fe : 1;
+	unsigned i_strat_4096 : 1;
+	unsigned reserved : 27;
 };
 
 #endif

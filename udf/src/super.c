@@ -413,7 +413,7 @@ udf_vrs(struct super_block *sb, int silent)
 	int block_inc = 2048 >> sb->s_blocksize_bits;
 	int sector = 32768 >> sb->s_blocksize_bits; 
 
-	struct buffer_head *bh;
+	struct buffer_head *bh = NULL;
 	int iso9660=0;
 	int nsr02=0;
 	int nsr03=0;
@@ -429,7 +429,7 @@ udf_vrs(struct super_block *sb, int silent)
 	for (;!nsr02 && !nsr03;sector += block_inc)
 	{
 		/* Read a block */
-		bh = udf_bread(sb, sector, sb->s_blocksize);
+		bh = udf_tread(sb, sector, sb->s_blocksize);
 		if (!bh)
 			break;
 
@@ -556,7 +556,7 @@ udf_find_anchor(struct super_block *sb, long lastblock,
 static int 
 udf_find_fileset(struct super_block *sb, lb_addr *fileset, lb_addr *root)
 {
-	struct buffer_head *bh=NULL;
+	struct buffer_head *bh = NULL;
 	long lastblock;
 	Uint16 ident;
 
@@ -824,7 +824,7 @@ udf_load_logicalvol(struct super_block *sb, struct buffer_head * bh, lb_addr *fi
 static void
 udf_load_logicalvolint(struct super_block *sb, extent_ad loc)
 {
-	struct buffer_head *bh;
+	struct buffer_head *bh = NULL;
 	Uint16 ident;
 
 	while ((bh = udf_read_tagged(sb, loc.extLocation,
@@ -863,8 +863,8 @@ udf_load_logicalvolint(struct super_block *sb, extent_ad loc)
 static  int
 udf_process_sequence(struct super_block *sb, long block, long lastblock, lb_addr *fileset)
 {
-	struct buffer_head *bh;
-	struct udf_vds_record	vds[VDS_POS_LENGTH];
+	struct buffer_head *bh = NULL;
+	struct udf_vds_record vds[VDS_POS_LENGTH];
 	struct GenericDesc *gd;
 	int done=0;
 	int i,j;
@@ -944,7 +944,7 @@ udf_process_sequence(struct super_block *sb, long block, long lastblock, lb_addr
 				udf_load_logicalvol(sb, bh, fileset);
 			else if (i == VDS_POS_PARTITION_DESC)
 			{
-				struct buffer_head *bh2;
+				struct buffer_head *bh2 = NULL;
 				udf_load_partdesc(sb, bh);
 				for (j=vds[i].block+1; j<vds[VDS_POS_TERMINATING_DESC].block; j++)
 				{
@@ -1034,7 +1034,7 @@ udf_load_partition(struct super_block *sb, struct AnchorVolDescPtr *anchor, lb_a
 				}
 				else if (UDF_SB_PARTTYPE(sb,i) == UDF_VIRTUAL_MAP20)
 				{
-					struct buffer_head *bh;
+					struct buffer_head *bh = NULL;
 					Uint32 pos;
 
 					pos = udf_bmap(UDF_SB_VAT(sb), 0);
@@ -1063,7 +1063,7 @@ static void udf_open_lvid(struct super_block *sb)
 
 		UDF_SB_LVIDIU(sb)->impIdent.identSuffix[0] = UDF_OS_CLASS_UNIX;
 		UDF_SB_LVIDIU(sb)->impIdent.identSuffix[1] = UDF_OS_ID_LINUX;
-		if (udf_time_to_stamp(&cpu_time, CURRENT_TIME))
+		if (udf_time_to_stamp(&cpu_time, CURRENT_TIME, CURRENT_UTIME))
 			UDF_SB_LVID(sb)->recordingDateAndTime = cpu_to_lets(cpu_time);
 		UDF_SB_LVID(sb)->integrityType = INTEGRITY_TYPE_OPEN;
 
@@ -1093,8 +1093,9 @@ static void udf_close_lvid(struct super_block *sb)
 
 		UDF_SB_LVIDIU(sb)->impIdent.identSuffix[0] = UDF_OS_CLASS_UNIX;
 		UDF_SB_LVIDIU(sb)->impIdent.identSuffix[1] = UDF_OS_ID_LINUX;
-		if (udf_time_to_stamp(&cpu_time, CURRENT_TIME))
+		if (udf_time_to_stamp(&cpu_time, CURRENT_TIME, CURRENT_UTIME))
 			UDF_SB_LVID(sb)->recordingDateAndTime = cpu_to_lets(cpu_time);
+		
 		UDF_SB_LVID(sb)->integrityType = INTEGRITY_TYPE_CLOSE;
 
 		UDF_SB_LVID(sb)->descTag.descCRC =
@@ -1261,7 +1262,7 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	if (!silent)
 	{
 		timestamp ts;
-		udf_time_to_stamp(&ts, UDF_SB_RECORDTIME(sb));
+		udf_time_to_stamp(&ts, UDF_SB_RECORDTIME(sb), 0);
 		udf_info("Mounting volume '%s', timestamp %u/%02u/%u %02u:%02u\n",
 			UDF_SB_VOLIDENT(sb), ts.year, ts.month, ts.day, ts.hour, ts.minute);
 	}
@@ -1301,6 +1302,23 @@ error_out:
 	unlock_super(sb);
 	MOD_DEC_USE_COUNT;
 	return NULL;
+}
+
+void udf_error(struct super_block *sb, const char *function,
+	const char *fmt, ...)
+{
+	va_list args;
+
+	if (!(sb->s_flags & MS_RDONLY))
+	{
+		/* mark sb error */
+		sb->s_dirt = 1;
+	}
+	va_start(args, fmt);
+	vsprintf(error_buf, fmt, args);
+	va_end(args);
+	printk (KERN_CRIT "UDF-fs error (device %s): %s: %s\n",
+		bdevname(sb->s_dev), function, error_buf);
 }
 
 void udf_warning(struct super_block *sb, const char *function,
@@ -1388,7 +1406,7 @@ static unsigned char udf_bitmap_lookup[16] = {
 static unsigned int
 udf_count_free(struct super_block *sb)
 {
-	struct buffer_head *bh;
+	struct buffer_head *bh = NULL;
 	unsigned int accum=0;
 	int index;
 	int block=0, newblock;
@@ -1451,7 +1469,7 @@ udf_count_free(struct super_block *sb)
 			{
 				udf_release_data(bh);
 				newblock = udf_get_lb_pblock(sb, loc, ++block);
-				bh = udf_bread(sb, newblock, sb->s_blocksize);
+				bh = udf_tread(sb, newblock, sb->s_blocksize);
 				if (!bh)
 				{
 					udf_debug("read failed\n");

@@ -1,4 +1,4 @@
---- linux-2.2.6/fs/Config.in	Mon Apr 19 15:51:44 1999
+--- linux-2.2.8/fs/Config.in	Mon Apr 19 15:51:44 1999
 +++ linux/fs/Config.in	Mon Apr 19 15:57:29 1999
 @@ -26,6 +26,12 @@
    # needed by nls/Config.in

@@ -35,13 +35,17 @@
 #include <linux/kernel.h>
 #include <linux/string.h> /* memset */
 #include <linux/errno.h>
+#include <linux/locks.h>
 
 #include "udf_i.h"
 #include "udf_sb.h"
 
+#define NBUF	32
+
 typedef void * poll_table; 
 
-static ssize_t udf_file_read(struct file *, char *, size_t, loff_t *);
+static ssize_t udf_file_read (struct file *, char *, size_t, loff_t *);
+static ssize_t udf_file_write (struct file *, const char *, size_t, loff_t *);
 #if BITS_PER_LONG < 64
 static int udf_open_file(struct inode *, struct file *);
 #endif
@@ -50,7 +54,7 @@ static int udf_release_file(struct inode *, struct file *);
 static struct file_operations udf_file_operations = {
 	NULL,				/* llseek */
 	udf_file_read,		/* read */
-	NULL,				/* write */
+	udf_file_write,		/* write */
 	NULL,				/* readdir */
 	NULL,				/* poll */
 	udf_ioctl,			/* ioctl */
@@ -95,6 +99,185 @@ struct inode_operations udf_file_inode_operations = {
 	NULL,				/* updatepage */
 	NULL				/* revalidate */
 };
+
+static inline void remove_suid(struct inode * inode)
+{
+	unsigned int mode;
+
+	/* set S_IGID if S_IXGRP is set, and always set S_ISUID */
+	mode = (inode->i_mode & S_IXGRP)*(S_ISGID/S_IXGRP) | S_ISUID;
+
+	/* was any of the uid bits set? */
+	mode &= inode->i_mode;
+	if (mode && !capable(CAP_FSETID))
+	{
+		inode->i_mode &= ~mode;
+		mark_inode_dirty(inode);
+	}
+}
+
+static ssize_t udf_file_write(struct file * filp, const char * buf,
+	size_t count, loff_t *ppos)
+{
+	struct inode * inode = filp->f_dentry->d_inode;
+	off_t pos;
+	long block;
+	int offset;
+	int written, c;
+	struct buffer_head * bh, * bufferlist[NBUF];
+	struct super_block * sb;
+	int err;
+	int i, buffercount, write_error;
+
+	/* POSIX: mtime/ctime may not change for 0 count */
+	if (!count)
+		return 0;
+	write_error = buffercount = 0;
+	if (!inode)
+	{
+		printk("udf_file_write: inode = NULL\n");
+		return -EINVAL;
+	}
+	sb = inode->i_sb;
+	if (sb->s_flags & MS_RDONLY)
+	{
+		return -ENOSPC;
+	}
+
+	if (!S_ISREG(inode->i_mode))
+	{
+		udf_warning(sb, "udf_file_write", "mode = %07o", inode->i_mode);
+		return -EINVAL;
+	}
+	remove_suid(inode);
+
+	if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
+	{
+		if ((bh = udf_expand_adinicb(inode, &i, 0, &err)))
+			udf_release_data(bh);
+	}
+
+	if (filp->f_flags & O_APPEND)
+		pos = inode->i_size;
+	else
+	{
+		pos = *ppos;
+		if (pos != *ppos)
+			return -EINVAL;
+#if BITS_PER_LONG >= 64
+		if (pos > ???)
+			return -EINVAL;
+#endif
+	}
+
+#if BITS_PER_LONG < 64
+	if (pos > (Uint32)(pos + count))
+	{
+		count = ~pos; /* == 0xFFFFFFFF - pos */
+		if (!count)
+			return -EFBIG;
+	}
+#else
+	{
+		off_t max = ???;
+
+		if (pos + count > max)
+		{
+			count = max - pos;
+			if (!count)
+				return -EFBIG;
+		}
+	}
+#endif
+
+	if (filp->f_flags & O_SYNC)
+		; /* Do something */
+	block = pos >> sb->s_blocksize_bits;
+	offset = pos & (sb->s_blocksize - 1);
+	c = sb->s_blocksize - offset;
+	written = 0;
+	do
+	{
+		bh = udf_getblk(inode, block, 1, &err);
+		if (!bh)
+		{
+			if (!written)
+				written = err;
+			break;
+		}
+		if (c > count)
+			c = count;
+		if (c != sb->s_blocksize && !buffer_uptodate(bh))
+		{
+			ll_rw_block (READ, 1, &bh);
+			wait_on_buffer(bh);
+			if (!buffer_uptodate(bh))
+			{
+				brelse(bh);
+				if (!written)
+					written = -EIO;
+				break;
+			}
+		}
+		c -= copy_from_user(bh->b_data + offset, buf, c);
+		if (!c)
+		{
+			brelse(bh);
+			if (!written)
+				written = -EFAULT;
+			break;
+		}
+		update_vm_cache(inode, pos, bh->b_data + offset, c);
+		pos += c;
+		written += c;
+		buf += c;
+		count -= c;
+		mark_buffer_uptodate(bh, 1);
+		mark_buffer_dirty(bh, 0);
+
+		if (filp->f_flags & O_SYNC)
+			bufferlist[buffercount++] = bh;
+		else
+			brelse(bh);
+        if (buffercount == NBUF)
+		{
+			ll_rw_block(WRITE, buffercount, bufferlist);
+			for (i=0; i<buffercount; i++)
+			{
+				wait_on_buffer(bufferlist[i]);
+				if (!buffer_uptodate(bufferlist[i]))
+					write_error = 1;
+				brelse(bufferlist[i]);
+			}
+			buffercount = 0;
+		}
+		if (write_error)
+			break;
+		block++;
+		offset = 0;
+		c = sb->s_blocksize;
+	} while (count);
+    if (buffercount)
+	{
+		ll_rw_block(WRITE, buffercount, bufferlist);
+		for (i=0; i<buffercount; i++)
+		{
+			wait_on_buffer(bufferlist[i]);
+			if (!buffer_uptodate(bufferlist[i]))
+				write_error = 1;
+			brelse(bufferlist[i]);
+		}
+	}       
+	if (pos > inode->i_size)
+		inode->i_size = pos;
+	if (filp->f_flags & O_SYNC)
+		; /* Do something */
+	inode->i_ctime = inode->i_mtime = CURRENT_TIME;
+	UDF_I_UCTIME(inode) = UDF_I_UMTIME(inode) = CURRENT_UTIME;
+	*ppos = pos;
+	mark_inode_dirty(inode);
+	return written;
+}
 
 /*
  * udf_file_read
@@ -150,7 +333,7 @@ static ssize_t udf_file_read(struct file * filp, char * buf, size_t bufsize,
 	else
 	{
 		Uint32 size, left, pos, block;
-		struct buffer_head *bh;
+		struct buffer_head *bh = NULL;
 
 		size = inode->i_size;
 		if (*loff > size)
@@ -215,7 +398,7 @@ int udf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 {
 	int result=-1;
 	int size;
-	struct buffer_head *bh;
+	struct buffer_head *bh = NULL;
 	struct FileEntry *fe;
 	Uint16 ident;
 

@@ -389,7 +389,7 @@ typedef struct {
 
 /* Extent interpretation (ECMA 167 4/14.14.1.1) */
 #define EXTENT_RECORDED_ALLOCATED               0x00
-#define EXTENT_RECORDED_NOT_ALLOCATED           0x01
+#define EXTENT_NOT_RECORDED_ALLOCATED           0x01
 #define EXTENT_NOT_RECORDED_NOT_ALLOCATED       0x02
 #define EXTENT_NEXT_EXTENT_ALLOCDECS            0x03
 

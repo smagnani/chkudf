@@ -1,4 +1,4 @@
---- linux-2.2.6/fs/filesystems.c	Mon Apr 19 15:50:38 1999
+--- linux-2.2.8/fs/filesystems.c	Mon Apr 19 15:50:38 1999
 +++ linux/fs/filesystems.c	Mon Apr 19 15:59:56 1999
 @@ -25,6 +25,7 @@
  #include <linux/romfs_fs.h>

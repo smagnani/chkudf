@@ -82,3 +82,5 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
 04/09/99 blf	Added Configure script
 
 04/19/99 blf	Support for link, symlink, and mknod
+
+05/12/99 blf	Initial support for writing

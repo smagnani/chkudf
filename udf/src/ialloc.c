@@ -87,8 +87,8 @@ struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
 {
 	struct super_block *sb;
 	struct inode * inode;
-	lb_addr block;
-	lb_addr start = { 0, 0 };
+	int block;
+	Uint32 start = UDF_I_LOCATION(dir).logicalBlockNum;
 
 #ifdef VDEBUG
 	udf_debug("mode=%d\n", mode);
@@ -104,9 +104,9 @@ struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
 	inode->i_sb = sb;
 	inode->i_flags = 0;
 	*err = -ENOSPC;
-	start.partitionReferenceNum = UDF_I_LOCATION(dir).partitionReferenceNum;
 
-	block = udf_new_block(dir, start, NULL, NULL, err);
+	block = udf_new_block(dir, UDF_I_LOCATION(dir).partitionReferenceNum,
+		start, NULL, NULL, err);
 	if (*err)
 	{
 		iput(inode);
@@ -144,8 +144,9 @@ struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
 	}
 	else
 		inode->i_gid = current->fsgid;
-	UDF_I_LOCATION(inode) = block;
-	inode->i_ino = udf_get_lb_pblock(sb, block, 0);
+	UDF_I_LOCATION(inode).logicalBlockNum = block;
+	UDF_I_LOCATION(inode).partitionReferenceNum = UDF_I_LOCATION(dir).partitionReferenceNum;
+	inode->i_ino = udf_get_lb_pblock(sb, UDF_I_LOCATION(inode), 0);
 	inode->i_blksize = PAGE_SIZE;
 	inode->i_blocks = 0;
 	inode->i_size = 0;
@@ -153,9 +154,16 @@ struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
 	UDF_I_LENALLOC(inode) = 0;
 	UDF_I_EXT0LOC(inode) = UDF_I_LOCATION(inode);
 	UDF_I_EXT0LEN(inode) = 0;
+#if 1
 	UDF_I_EXT0OFFS(inode) = sizeof(struct FileEntry);
 	UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_IN_ICB;
+#else
+	UDF_I_EXT0OFFS(inode) = 0;
+	UDF_I_ALLOCTYPE(inode) = ICB_FLAG_AD_LONG;
+#endif
+
 	inode->i_mtime = inode->i_atime = inode->i_ctime = CURRENT_TIME;
+	UDF_I_UMTIME(inode) = UDF_I_UATIME(inode) = UDF_I_UCTIME(inode) = CURRENT_UTIME;
 	inode->i_op = NULL;
 	insert_inode_hash(inode);
 	mark_inode_dirty(inode);

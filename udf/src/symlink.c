@@ -118,15 +118,12 @@ static struct dentry * udf_follow_link(struct dentry * dentry,
 	
 	if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
 	{
-		bh = udf_bread(inode->i_sb, inode->i_ino, inode->i_sb->s_blocksize);
+		bh = udf_tread(inode->i_sb, inode->i_ino, inode->i_sb->s_blocksize);
 
 		if (!bh)
 			return 0;
 
-		if (!UDF_I_EXTENDED_FE(inode))
-			symlink = (char *)bh->b_data + sizeof(struct FileEntry) + UDF_I_LENEATTR(inode);
-		else
-			symlink = (char *)bh->b_data + sizeof(struct ExtendedFileEntry) + UDF_I_LENEATTR(inode);
+		symlink = bh->b_data + udf_file_entry_alloc_offset(inode);
 	}
 	else
 	{
@@ -151,21 +148,18 @@ static struct dentry * udf_follow_link(struct dentry * dentry,
 static int udf_readlink(struct dentry * dentry, char * buffer, int buflen)
 {
 	struct inode *inode = dentry->d_inode;
-	struct buffer_head *bh;
+	struct buffer_head *bh = NULL;
 	char *symlink, *tmpbuf;
 	int len;
 	
 	if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
 	{
-		bh = udf_bread(inode->i_sb, inode->i_ino, inode->i_sb->s_blocksize);
+		bh = udf_tread(inode->i_sb, inode->i_ino, inode->i_sb->s_blocksize);
 
 		if (!bh)
 			return 0;
 
-		if (!UDF_I_EXTENDED_FE(inode))
-			symlink = (char *)bh->b_data + sizeof(struct FileEntry) + UDF_I_LENEATTR(inode);
-		else
-			symlink = (char *)bh->b_data + sizeof(struct ExtendedFileEntry) + UDF_I_LENEATTR(inode);
+		symlink = bh->b_data + udf_file_entry_alloc_offset(inode);
 	}
 	else
 	{
