@@ -22,7 +22,7 @@
  *	Each contributing author retains all rights to their own work.
  */
 
-#include "udfdecl.h"
+#include <linux/udf_fs.h>
 
 #ifdef __KERNEL__
 #include <linux/kernel.h>
@@ -30,32 +30,6 @@
 #else
 #include <string.h>
 #endif
-
-
-/* 
- * udf_translate_to_linux()
- *
- * translate a valid UDF filename to a valid Linux filename
- *
- * src may contain NULLs!
- * dest should be fairly long to account for escape codes
- */
-int
-udf_translate_to_linux(struct ustr * dest, struct ustr *src)
-{
-	int i;
-	/* for now */
-	memcpy(dest, src, sizeof(struct ustr));
-	for (i=0; i<(src->u_len-1); i++) {
-		switch (dest->u_name[i]) {
-		case 0:
-		case '/':
-			dest->u_name[i]='_';
-			break;
-		}
-	}
-	return 0;
-}
 
 /*
  * udf_build_ustr

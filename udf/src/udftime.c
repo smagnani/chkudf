@@ -37,7 +37,7 @@
 #include <sys/types.h>
 #endif
 
-#include "udfdecl.h"
+#include <linux/udf_fs.h>
 
 #ifndef CHAR_BIT
 #define CHAR_BIT 8

@@ -28,6 +28,8 @@
 #ifdef __linux__
 #include <linux/version.h>
 #include <linux/mm.h>
+
+#include <linux/udf_fs.h>
 #endif
 
 #include "udfdecl.h"

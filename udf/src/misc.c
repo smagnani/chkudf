@@ -19,19 +19,15 @@
 
 #if defined(__linux__) && defined(__KERNEL__)
 
-#include "udfdecl.h"
-
-#include "udf_sb.h"
-#include "udf_i.h"
-
 #include <linux/fs.h>
+#include <linux/udf_fs.h>
 
 #else
-#include "udfdecl.h"
-#include <linux/types.h>
+
+#include <sys/types.h>
 #include <stdio.h>
-/*#include <sys/types.h>*/
 #include <unistd.h>
+#include <linux/udf_fs.h>
 
 int udf_blocksize=0;
 int udf_errno=0;
@@ -102,35 +98,46 @@ gid_t udf_convert_gid(int gidin)
 }
 
 #if defined(__linux__) && defined(__KERNEL__)
-struct buffer_head *
-udf_read_sector(struct super_block *sb, unsigned long sector)
-{
-	return bread(sb->s_dev, sector, sb->s_blocksize);
-}
-
-/*
- * read file or directory data from a logical block
- *
- */
-struct buffer_head *
-udf_read_untagged(struct super_block *sb, Uint32 block, int partref)
+extern struct buffer_head *
+udf_read_untagged(struct super_block *sb, Uint32 block, Uint32 offset)
 {
 	struct buffer_head *bh;
-	Uint32 offset;
-
-	if ( partref != -1 )
-		offset=UDF_SB_PARTROOT(sb);	
-	else
-		offset=0;
 
 	/* Read the block */
 	bh = bread(sb->s_dev, block+offset, sb->s_blocksize);
-	if (!bh) {
-		printk(KERN_ERR "udf: udf_read_untagged(,%d) failed\n",
-			block);
+	if (!bh)
+	{
+		printk(KERN_ERR "udf: udf_read_untagged(%p,%d,%d) failed\n",
+			sb, block, offset);
 		return NULL;
 	}
 	return bh;
+}
+
+extern Uint32 get_pblock(struct super_block *sb, Uint32 block, Uint16 partition)
+{
+	switch (UDF_SB_PARTTYPE(sb, partition))
+	{
+		case UDF_TYPE1_MAP:
+		{
+			return UDF_SB_PARTROOT(sb, partition) + block;
+		}
+		case UDF_VIRTUAL_MAP:
+		{
+			/* Handle Virtual Partition References */
+		}
+		case UDF_SPARABLE_MAP:
+		{
+			/* Handle Sparable Partition References */
+			return UDF_SB_PARTROOT(sb, partition) + block;
+		}
+	}
+	return 0xFFFFFFFF;
+}
+
+extern Uint32 get_lb_pblock(struct super_block *sb, lb_addr loc)
+{
+	return get_pblock(sb, loc.logicalBlockNum, loc.partitionReferenceNum);
 }
 
 /*
@@ -143,24 +150,24 @@ udf_read_untagged(struct super_block *sb, Uint32 block, int partref)
  *	July 1, 1997 - Andrew E. Mileski
  *	Written, tested, and released.
  */
-struct buffer_head *
-udf_read_tagged(struct super_block *sb, Uint32 block, int partref)
+extern struct buffer_head *
+udf_read_tagged(struct super_block *sb, Uint32 block, Uint32 offset)
 {
 	tag *tag_p;
 	struct buffer_head *bh;
 	register Uint8 checksum;
 	register int i;
-	Uint32 offset;
 
-	if ( partref != -1 )
-		offset=UDF_SB_PARTROOT(sb);	
-	else
-		offset=0;
 	/* Read the block */
+#ifdef VDEBUG
+	printk(KERN_DEBUG "udf: udf_read_tagged(%p,%d,%d)\n",
+		sb, block, offset);
+#endif
 	bh = bread(sb->s_dev, block, sb->s_blocksize);
-	if (!bh) {
-		printk(KERN_ERR "udf: udf_read_tagged(,%d) failed\n",
-			block);
+	if (!bh)
+	{
+		printk(KERN_ERR "udf: udf_read_tagged(%p,%d,%d) failed\n",
+			sb, block, offset);
 		return NULL;
 	}
 
@@ -212,8 +219,18 @@ error_out:
 	return NULL;
 }
 
-void
-udf_release_data(struct buffer_head *bh)
+extern struct buffer_head *
+udf_read_ptagged(struct super_block *sb, lb_addr loc)
+{
+#ifdef VDEBUG
+	printk(KERN_DEBUG "udf: udf_read_ptagged(%p,%d,%d)\n",
+		sb, loc.logicalBlockNum, loc.partitionReferenceNum);
+#endif
+	return udf_read_tagged(sb, get_lb_pblock(sb, loc),
+		 get_pblock(sb, 0, loc.partitionReferenceNum));
+}
+
+void udf_release_data(struct buffer_head *bh)
 {
 	if (bh)
 		brelse(bh);
@@ -322,4 +339,3 @@ error_out:
 	return -1;
 }
 #endif
-

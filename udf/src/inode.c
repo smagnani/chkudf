@@ -20,15 +20,12 @@
  * 10/4/98 dgb	Added rudimentary directory functions
  * 10/7/98	Fully working udf_bmap! It works!
  * 11/25/98	bmap altered to better support extents
- * 12/6/98	Adjusted udf_bmap to call udf_block_from_inode()
  *
  */
 
-#include "udfdecl.h"
-#include <linux/fs.h>
+#include <linux/udf_fs.h>
 
-#include "udf_i.h"
-#include "udf_sb.h"
+#include "udfdecl.h"
 
 /*
  * udf_read_inode
@@ -50,7 +47,6 @@ udf_read_inode(struct inode *inode)
 	struct buffer_head *bh;
 	struct FileEntry *fe;
 	time_t modtime, acctime;
-	int block;
 	int offset;
 
 #ifdef VDEBUG
@@ -60,43 +56,48 @@ udf_read_inode(struct inode *inode)
 	UDF_I_FILELENHIGH(inode)=0;
 	UDF_I_FILELENLOW(inode)=0;
 	UDF_I_EXT0LEN(inode)=0;
-	UDF_I_EXT0LOC(inode)=0;
+	UDF_I_EXT0LOC(inode).logicalBlockNum = 0xFFFFFFFF;
+	UDF_I_EXT0LOC(inode).partitionReferenceNum = 0xFFFF;
 	UDF_I_EXT0OFFS(inode)=0;
-	UDF_I_PARTREF(inode)=0;
+#ifndef BF_CHANGES
 	UDF_I_DIRPOS(inode)=0;
+#endif
 	UDF_I_ALLOCTYPE(inode)=0;
 
-	block=udf_block_from_inode(inode);
-	bh=udf_read_tagged(inode->i_sb, block, UDF_I_PARTREF(inode));
-	if ( !bh ) {
-		printk(KERN_ERR "udf: udf_read_inode(ino %ld) block %d failed !bh\n",
-			inode->i_ino, block);
+#ifdef VDEBUG
+        printk(KERN_DEBUG "udf: udf_read_inode(%d,%d)\n",
+                UDF_I_LOCATION(inode).logicalBlockNum,
+                UDF_I_LOCATION(inode).partitionReferenceNum);
+#endif
+	bh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode));
+#ifdef VDEBUG
+	printk(KERN_DEBUG "udf: block: %ld partroot: %d part: %d\n",
+		inode->i_ino, UDF_SB_PARTROOT(inode->i_sb, UDF_I_PART(inode)), UDF_I_PART(inode));
+#endif
+
+	if (!bh)
+	{
+		printk(KERN_ERR "udf: udf_read_inode(ino %ld) failed !bh\n",
+			inode->i_ino);
 		return;
 	}
 
-	fe=(struct FileEntry *)bh->b_data;
-	if ( fe->descTag.tagIdent == TID_FILE_ENTRY) {
+	fe = (struct FileEntry *)bh->b_data;
+	if (fe->descTag.tagIdent == TID_FILE_ENTRY)
+	{
 		UDF_I_FILELENHIGH(inode)=udf64_high32(fe->informationLength);
 		UDF_I_FILELENLOW(inode)=udf64_low32(fe->informationLength);
 
-#ifdef DEBUG
+#ifdef VDEBUG
 		printk(KERN_DEBUG
-	"udf: block: %u ino %ld FILE_ENTRY: len %u,%u blocks %u perm 0x%x link %d type 0x%x flags 0x%x\n",
-			block, inode->i_ino, 
+	"udf: block: %u ino %ld FILE_ENTRY: len %u blocks %u perm 0x%x link %d type 0x%x flags 0x%x\n",
+			inode->i_ino, 
 			UDF_I_FILELENHIGH(inode),
 			UDF_I_FILELENLOW(inode),
 			udf64_low32(fe->logicalBlocksRecorded), /* may be zero! */
 			fe->permissions, 
 			fe->fileLinkCount, 
 			fe->icbTag.fileType, fe->icbTag.flags);
-#endif
-#ifdef DEBUG
-		if ( fe->lengthExtendedAttr ) {
-		 	printk(KERN_DEBUG
-			 	"udf: block: %u ino %ld EA: len %u\n",
-				block, inode->i_ino,
-				fe->lengthExtendedAttr);
-		}
 #endif
 
 		inode->i_uid = udf_convert_uid(fe->uid);
@@ -108,140 +109,110 @@ udf_read_inode(struct inode *inode)
 		inode->i_nlink = fe->fileLinkCount;
 		inode->i_size = UDF_I_FILELENLOW(inode);
 
-		if ( udf_stamp_to_time(&modtime, &fe->modificationTime) ) {
+		if ( udf_stamp_to_time(&modtime, &fe->modificationTime) )
+		{
 			inode->i_mtime = modtime;
 			inode->i_ctime = modtime;
 		} else {
 			inode->i_mtime = UDF_SB_RECORDTIME(inode->i_sb);
 			inode->i_ctime = UDF_SB_RECORDTIME(inode->i_sb);
 		}
+
 		if ( udf_stamp_to_time(&acctime, &fe->accessTime) ) 
 			inode->i_atime = acctime;
 		else
 			inode->i_atime = UDF_SB_RECORDTIME(inode->i_sb);
 
-		UDF_I_ALLOCTYPE(inode)=fe->icbTag.flags & ICB_FLAG_ALLOC_MASK;
-		switch (UDF_I_ALLOCTYPE(inode)) {
+		UDF_I_ALLOCTYPE(inode) = fe->icbTag.flags & ICB_FLAG_ALLOC_MASK;
+
+		switch (UDF_I_ALLOCTYPE(inode))
+		{
 			case ICB_FLAG_AD_SHORT:
- 			  {
- 			    short_ad * sa;
- 
- 			    offset=0;
- 			    sa=udf_get_fileshortad(fe, 
-				inode->i_sb->s_blocksize, &offset);
- 			    if ( (sa) && (sa->extLength & 0x3FFFFFFF) ) {
- 				UDF_I_EXT0LEN(inode)=sa->extLength & 0x3FFFFFFF;
- 				UDF_I_EXT0LOC(inode)=sa->extPosition;
-				UDF_I_PARTREF(inode)=0; /* need a better way */
+ 			{
+ 				short_ad * sa;
+
+				offset = 0;
+ 			    sa = udf_get_fileshortad(fe, inode->i_sb->s_blocksize, &offset);
+ 			    if ( (sa) && (sa->extLength & 0x3FFFFFFF) )
+				{
+ 					UDF_I_EXT0LEN(inode) = sa->extLength & 0x3FFFFFFF;
+ 					UDF_I_EXT0LOC(inode).logicalBlockNum = sa->extPosition;
+					UDF_I_EXT0LOC(inode).partitionReferenceNum = UDF_I_LOCATION(inode).partitionReferenceNum;
+	
  			    }
- #ifdef DEBUG
- 			    printk(KERN_DEBUG
- 				"udf: ino %lu (AD_SHORT) len %u block %u ref ?\n",
- 				inode->i_ino,
- 				UDF_I_EXT0LEN(inode),
- 				UDF_I_EXT0LOC(inode));
- #endif
- 			  }
-			  break;
+				break;
+ 			}
 			case ICB_FLAG_AD_LONG:
-			  {
+			{
 			    long_ad * la;
-			    int ext=0;
 
 			    offset=0;
-			    la=udf_get_filelongad(fe, inode->i_sb->s_blocksize, &offset);
-			    if ( (la) && (la->extLength) ) {
-				UDF_I_PARTREF(inode)=
-						la->extLocation.partitionReferenceNum;
-				UDF_I_EXT0LEN(inode)=la->extLength;
-				UDF_I_EXT0LOC(inode)=la->extLocation.logicalBlockNum;
-#ifdef DEBUG
-				printk(KERN_DEBUG
-				   "udf: ino %lu AD_LONG ext[0]-> %u len %u ref %u\n",
-				   inode->i_ino,
-				   UDF_I_EXT0LOC(inode),
-				   UDF_I_EXT0LEN(inode),
-				   UDF_I_PARTREF(inode));
-#endif
-			        la=udf_get_filelongad(fe, inode->i_sb->s_blocksize, &offset);
-#ifdef DEBUG
-				while ( (la) &&
-				    (la->extLength) &&
-				    (offset < fe->lengthAllocDescs)) {
-					printk(KERN_DEBUG
-					   "udf: ino %lu AD_LONG ext[%u]-> %u len %u ref %u\n",
-						inode->i_ino,
-						++ext, 
-						la->extLocation.logicalBlockNum,
-						la->extLength, 
-						la->extLocation.partitionReferenceNum);
-			        	la=udf_get_filelongad(fe, inode->i_sb->s_blocksize, 
-								&offset);
-				}
-#endif
-			    } 
-			  }
-			  break;
-			case ICB_FLAG_AD_EXTENDED:
-			  {
-			    extent_ad * ext;
-			    offset=0;
-			    ext=udf_get_fileextent(fe, inode->i_sb->s_blocksize, &offset);
-			    if ( (ext) && (ext->extLength) ) {
-				UDF_I_EXT0LEN(inode)=ext->extLength;
-				UDF_I_EXT0LOC(inode)=ext->extLocation;
-				UDF_I_PARTREF(inode)=0; /* ah oh. */
-			        while (offset < fe->lengthAllocDescs) {
-#ifdef VDEBUG
-				   printk(KERN_DEBUG
-				      "udf: ino %lu AD_EXT ext[0]-> %u len %u ref ?\n",
-				      inode->i_ino,
-					  ext->extLocation,
-					  ext->extLength);
-#endif
-			    		ext=udf_get_fileextent(fe, inode->i_sb->s_blocksize, &offset);
-				}
+			    la = udf_get_filelongad(fe, inode->i_sb->s_blocksize, &offset);
+			    if ( (la) && (la->extLength) )
+				{
+					UDF_I_EXT0LEN(inode) = la->extLength;
+					UDF_I_EXT0LOC(inode) = la->extLocation;
 			    }
-			  }
-			  break;
-			case ICB_FLAG_AD_IN_ICB: /* short directories */
-#ifdef VDEBUG
-			  printk(KERN_DEBUG "udf: ino %lu (AD_IN_ICB) len %u\n",
-					  inode->i_ino, fe->lengthAllocDescs);
+				break;
+			}
+			case ICB_FLAG_AD_EXTENDED:
+			{
+				extent_ad * ext;
+
+			    offset=0;
+			    ext = udf_get_fileextent(fe, inode->i_sb->s_blocksize, &offset);
+			    if ( (ext) && (ext->extLength) )
+				{
+					UDF_I_EXT0LEN(inode) = ext->extLength;
+#if 0
+					UDF_I_EXT0LOC(inode) = ext->extLocation;
 #endif
-			  UDF_I_EXT0LEN(inode)=fe->lengthAllocDescs;
-			  UDF_I_EXT0LOC(inode)=inode->i_ino;
-			  UDF_I_EXT0OFFS(inode)= (int)fe->extendedAttr - (int)fe +
-						fe->lengthExtendedAttr;
-			  break;
+				}
+				break;
+			}
+			case ICB_FLAG_AD_IN_ICB: /* short directories */
+			{
+				UDF_I_EXT0LEN(inode) = fe->lengthAllocDescs;
+				UDF_I_EXT0LOC(inode) = UDF_I_LOCATION(inode);
+				UDF_I_EXT0OFFS(inode) = (int)fe->extendedAttr - (int)fe +
+					fe->lengthExtendedAttr;
+				break;
+			}
 		} /* end switch ad_type */
 
-		switch (fe->icbTag.fileType) {
-		case FILE_TYPE_DIRECTORY:
+		switch (fe->icbTag.fileType)
+		{
+			case FILE_TYPE_DIRECTORY:
+			{
 #ifdef VDEBUG
 			printk(KERN_DEBUG "udf: ino %lu directory %u len %u loc %u offs %u\n",
 				inode->i_ino,
 				UDF_I_ALLOCTYPE(inode), UDF_I_EXT0LEN(inode), 
 				UDF_I_EXT0LOC(inode), UDF_I_EXT0OFFS(inode));
 #endif
-			inode->i_op = &udf_dir_inode_operations;
-			inode->i_mode = S_IFDIR|(fe->permissions & 00007)|((fe->permissions >> 2) & 00070)|((fe->permissions >> 4) & 00700);
-			break;
-		case FILE_TYPE_REGULAR:
-		case FILE_TYPE_NONE:
-			inode->i_op = &udf_file_inode_operations;
-			inode->i_mode = S_IFREG|(fe->permissions & 00007)|((fe->permissions >> 2) & 00070)|((fe->permissions >> 4) & 00700);
-			break;
-		case FILE_TYPE_SYMLINK:
-			/* untested! */
+				inode->i_op = &udf_dir_inode_operations;
+				inode->i_mode = S_IFDIR|(fe->permissions & 00007)|((fe->permissions >> 2) & 00070)|((fe->permissions >> 4) & 00700);
+				break;
+			}
+			case FILE_TYPE_REGULAR:
+			case FILE_TYPE_NONE:
+			{
+				inode->i_op = &udf_file_inode_operations;
+				inode->i_mode = S_IFREG|(fe->permissions & 00007)|((fe->permissions >> 2) & 00070)|((fe->permissions >> 4) & 00700);
+				break;
+			}
+			case FILE_TYPE_SYMLINK:
+			{
+				/* untested! */
 #ifdef VDEBUG
-			printk(KERN_DEBUG "udf: ino %lu symlink %u\n",
-				inode->i_ino,
-				UDF_I_ALLOCTYPE(inode));
+				printk(KERN_DEBUG "udf: ino %lu symlink %u\n",
+					inode->i_ino,
+					UDF_I_ALLOCTYPE(inode));
 #endif
-			inode->i_op = &udf_file_inode_operations;
-			inode->i_mode = S_IFLNK|(fe->permissions & 00007)|((fe->permissions >> 2) & 00070)|((fe->permissions >> 4) & 00700);
-			break;
+				inode->i_op = &udf_file_inode_operations;
+				inode->i_mode = S_IFLNK|(fe->permissions & 00007)|((fe->permissions >> 2) & 00070)|((fe->permissions >> 4) & 00700);
+				break;
+			}
 		}
 	} else {
 		printk(KERN_ERR "udf: ino %lu is tag 0x%x, not FILE_ENTRY\n",
@@ -329,24 +300,25 @@ udf_delete_inode(struct inode *inode)
  *	Written, tested, and released.
  */
 struct inode *
-udf_iget(struct super_block *sb, unsigned long ino)
+udf_iget(struct super_block *sb, lb_addr ino)
 {
 	struct inode *inode;
 
-#ifdef DEBUG
-	printk(KERN_DEBUG "udf_iget: ino=0x%lx\n", ino);
+#ifdef VDEBUG
+	printk(KERN_DEBUG "udf_iget: ino=0x%x (%x)\n", ino.logicalBlockNum, ino.partitionReferenceNum);
 #endif
 
 	/* Get the inode */
-	inode = iget(sb, ino);
+	inode = iget(sb, UDF_SB_PARTROOT(sb, ino.partitionReferenceNum) + ino.logicalBlockNum);
 	if (!inode) {
 		printk(KERN_ERR "udf: iget() failed\n");
 		return NULL;
 	}
 
-	if ( ino >= UDF_SB_PARTLEN(sb) ) {
-		printk(KERN_ERR "udf: iget(,%ld) out of range\n",
-			ino);
+	if ( ino.logicalBlockNum >= UDF_SB_PARTLEN(sb, ino.partitionReferenceNum) )
+	{
+		printk(KERN_ERR "udf: iget(%d,%d) out of range\n",
+			ino.partitionReferenceNum, ino.logicalBlockNum);
 		return NULL;
  	}
 
@@ -388,28 +360,32 @@ udf_iget(struct super_block *sb, unsigned long ino)
 	inode->i_nlink = 0; 
 
 	inode->i_version = 1;
+	memcpy(&UDF_I_LOCATION(inode), &ino, sizeof(lb_addr));
+#ifdef VDEBUG
+	printk(KERN_DEBUG "udf: udf_iget(%d,%d)\n",
+		UDF_I_LOCATION(inode).logicalBlockNum,
+		UDF_I_LOCATION(inode).partitionReferenceNum);
+#endif
 
+#if 1
 	udf_read_inode(inode);
+#endif
 
 	return inode;
 }
 
 /*
- * given an inode and logical block ...
- * 
- * we need to remap this via Virtual and Sparable Partitions
+ * given an inode and block ...
  */
 int 
-udf_bmap(struct inode * inode,int block)
+udf_bmap(struct inode *inode, int block)
 {
-	off_t b_off, size, bsize;
-	unsigned int firstext;
-	int result=-1;
-	int blocksize;
-	int offset;
-	int partref=-1;
+	off_t b_off, size;
+	unsigned int firstext = 0;
+	int offset = 0;
 
-	if (block<0) {
+	if (block < 0)
+	{
 		printk(KERN_ERR "udf: udf_bmap: block<0\n");
 		return 0;
 	}
@@ -419,19 +395,14 @@ udf_bmap(struct inode * inode,int block)
 		return 0;
 	}
 
-	blocksize=inode->i_sb->s_blocksize;
 	b_off = block << inode->i_sb->s_blocksize_bits;
-	partref=udf_part_from_inode(inode); 	/* default to FileEntry's partition  */
-#ifdef VDEBUG
-	printk(KERN_DEBUG "udf: bmap(,%u) partref %u\n",
-		block, partref);
-#endif
 
 	/*
 	 * If we are beyond the end of this file, don't give out any
 	 * blocks.
 	 */
-	if( b_off > inode->i_size ) {
+	if( b_off > inode->i_size )
+	{
 	    off_t	max_legal_read_offset;
 
 	    /*
@@ -444,142 +415,79 @@ udf_bmap(struct inode * inode,int block)
 	     */
 	    max_legal_read_offset = (inode->i_size + PAGE_SIZE - 1)
 	      & ~(PAGE_SIZE - 1);
-	    if( b_off >= max_legal_read_offset ) {
-#ifdef DEBUG
-		printk(KERN_ERR "udf: udf_bmap: block>= EOF(%d, %ld)\n", block,
-		       inode->i_size);
-#endif
+		if (b_off >= max_legal_read_offset)
+		{
+			printk(KERN_ERR "udf: udf_bmap: block>= EOF(%d, %ld)\n", block,
+			inode->i_size);
 	    }
-#ifdef VDEBUG
-	    printk(KERN_DEBUG "udf: bmap() returning 0 at %u\n", __LINE__);
-#endif
 	    return 0;
 	}
 
 	/* check for first extent case, so we don't need to reread FileEntry */
-	offset = 0;
-	firstext = UDF_I_EXT0LOC(inode);
-	bsize = UDF_I_EXT0LEN(inode);
-	size = UDF_I_EXT0LEN(inode) >> inode->i_sb->s_blocksize_bits; /* in blocks */
-	if ( (UDF_I_EXT0LEN(inode) % blocksize) > 0 )
-		size++;
+	size = UDF_I_EXT0LEN(inode);
 
-#ifdef VDEBUG
-	printk(KERN_DEBUG "udf: bmap() first %u at %u\n", firstext, __LINE__);
-#endif
-	if ( block < size ) {
-	   result= firstext + block;
-#ifdef VDEBUG
-	   printk(KERN_DEBUG "udf: bmap() nextext %u = %u + %u\n", 
-		result, firstext, block);
-#endif
-	} else {
-	   /* Bad news:
-	    * we'll have to do this the long way 
-	    */
-	   struct buffer_head *bh;
-	   int dirblock;
-	   struct FileEntry *fe;
+	if (b_off >= size)
+	{
+		/* Bad news:
+		 * we'll have to do this the long way 
+		 */
+		struct buffer_head *bh;
+		struct FileEntry *fe;
 
-	   dirblock=udf_block_from_inode(inode);
-	   bh=udf_read_tagged(inode->i_sb, dirblock, UDF_I_PARTREF(inode));
-	   if ( !bh ) {
-		printk(KERN_ERR 
-			"udf: udf_read_inode(ino %ld) block %d failed !bh\n",
-			inode->i_ino, dirblock);
-		return 0;
-	   }
+		bh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode));
 
-	   fe=(struct FileEntry *)bh->b_data;
-	   switch (UDF_I_ALLOCTYPE(inode)) {
-		case ICB_FLAG_AD_SHORT:
+		if ( !bh )
 		{
-			short_ad * sa;
-			int extblock=0;
-			int ext=0;
-
-			offset = sizeof(short_ad);
-			sa=udf_get_fileshortad(fe, blocksize, &offset);
-			while ( (sa) && (result == -1) ) {
-			    if ( (sa->extLength & UDF_EXTENT_LENGTH_MASK) ) {
-				b_off -= bsize;
-				bsize = sa->extLength & UDF_EXTENT_LENGTH_MASK;
-				extblock += bsize/blocksize;
-				if ( ((sa->extLength & UDF_EXTENT_LENGTH_MASK) % blocksize) )
-					extblock++;
-
-				if ( extblock >= block ) {
-				   result=sa->extPosition;
-				   result += extblock - block;
-#ifdef VDEBUG
-				   printk(KERN_DEBUG
-				 	"udf: ino (short) %lu lblock %u in ext %u, block %u partref %u\n",
-					inode->i_ino, block, ext, result, partref);
-#endif
-				   continue;
-				}
-			    }
-			    ext++;
-			    /* read next extent */
-			    if (offset < fe->lengthAllocDescs) {
-			        sa=udf_get_fileshortad(fe, blocksize, &offset);
-			    } 
-			} /* end while */ 
-			break;
+			printk(KERN_ERR 
+				"udf: udf_read_ptagged(%p,(%d,%d)) (%ld) block failed !bh\n",
+				inode->i_sb, UDF_I_LOCATION(inode).logicalBlockNum,
+				UDF_I_LOCATION(inode).partitionReferenceNum, inode->i_ino);
+			return 0;
 		}
 
-		case ICB_FLAG_AD_LONG:
+		fe = (struct FileEntry *)bh->b_data;
+
+		switch (UDF_I_ALLOCTYPE(inode))
 		{
-			long_ad * la;
-			int extblock=0;
-			int offset=0;
-			int ext=0;
+			case ICB_FLAG_AD_SHORT:
+			{
+				short_ad *sa;
+				offset = sizeof(short_ad);
+				do
+				{
+					b_off -= size;
+					sa = udf_get_fileshortad(fe, inode->i_sb->s_blocksize, &offset);
+					size = sa->extLength & 0x3FFFFFFF;
+				} while ( (sa) && (sa->extLength & 0x3FFFFFFF) &&
+					(offset < UDF_I_EXT0LEN(inode)) &&
+					(b_off >= size) );
 
-			la=udf_get_filelongad(fe, blocksize, &offset);
-			/* loop through all the extents until we get there */
-			while ( (la) && (result == -1) ) {
-			    if ( la->extLength & UDF_EXTENT_LENGTH_MASK ) {
-				extblock += (la->extLength & UDF_EXTENT_LENGTH_MASK)/blocksize;
-				if ( ((la->extLength & UDF_EXTENT_LENGTH_MASK) % blocksize) )
-					extblock++;
-				if ( extblock >= block ) {
-				   partref=la->extLocation.partitionReferenceNum;
-				   result=la->extLocation.logicalBlockNum;
-				   result += extblock - block;
-#ifdef VDEBUG
-				   printk(KERN_DEBUG
-				 	"udf: ino %lu lblock %u in ext %u, block %u partref %u\n",
-					inode->i_ino, block, ext, result, partref);
-#endif
-				   continue;
+				firstext = get_pblock(inode->i_sb, (sa->extPosition & 0x3FFFFFFF),
+					UDF_I_LOCATION(inode).partitionReferenceNum);
+				break;
+			}
+			case ICB_FLAG_AD_LONG:
+			{
+				long_ad *la;
+				offset = sizeof(long_ad);
+				do
+				{
+					b_off -= size;
+					la = udf_get_filelongad(fe, inode->i_sb->s_blocksize, &offset);
+					size = la->extLength;
 				}
-			    }
-			    ext++;
-			    /* read next extent */
-			    if (offset < fe->lengthAllocDescs) {
-			        la=udf_get_filelongad(fe, blocksize, &offset);
-			    } 
-			} /* end while */
-			break;
-		}
+				while ( (la) && (la->extLength) &&
+					 (offset < UDF_I_EXT0LEN(inode)) &&
+					 (b_off >= size) );
 
-		default:
-			printk(KERN_DEBUG "udf: where am I? %u\n", __LINE__);
-			break;
-	   } /* end switch */
-	} /* end if block < size, else */
+				firstext = get_lb_pblock(inode->i_sb, la->extLocation);
+				break;
+			}
+		} /* end switch */
+		udf_release_data(bh);
+	}
+	else
+		firstext = get_lb_pblock(inode->i_sb, UDF_I_EXT0LOC(inode));
 
-	if (result != -1) {
-		int newresult;
-		/* remapping time! */
-		newresult= udf_block_from_bmap(inode, result, partref);
-#ifdef VDEBUG
-		printk(KERN_DEBUG "udf: bmap(%u) returning %u\n",
-			block, newresult);
-#endif
-		result=newresult;
-	} else
-		result=0;
-	return result;
+	return firstext + (b_off >> inode->i_sb->s_blocksize_bits);
 }
-

@@ -26,7 +26,7 @@
  *	Each contributing author retains all rights to their own work.
  */
 
-#include "udfdecl.h"
+#include <linux/udf_fs.h>
 
 static Uint16 crc_table[256] = {
 	0x0000U, 0x1021U, 0x2042U, 0x3063U, 0x4084U, 0x50a5U, 0x60c6U, 0x70e7U,
@@ -120,7 +120,6 @@ int main(void)
 }
 
 #endif /* defined(TEST) */
-
 /****************************************************************************/
 #if defined(GENERATE)
 
