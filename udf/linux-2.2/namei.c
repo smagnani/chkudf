@@ -638,6 +638,7 @@ static int udf_delete_entry(struct FileIdentDesc *fi,
 	struct FileIdentDesc *cfi)
 {
 	cfi->fileCharacteristics |= FILE_DELETED;
+	memset(&(cfi->icb), 0x00, sizeof(long_ad));
 	return udf_write_fi(cfi, fi, fibh, NULL, NULL);
 }
 
