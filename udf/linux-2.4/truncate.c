@@ -32,7 +32,7 @@
 #include "udf_i.h"
 #include "udf_sb.h"
 
-static void extent_trunc(struct inode * inode, lb_addr bloc, int *extoffset,
+static void extent_trunc(struct inode * inode, lb_addr bloc, int extoffset,
 	lb_addr eloc, Uint8 etype, Uint32 elen, struct buffer_head **bh, Uint32 offset)
 {
 	lb_addr neloc = { 0, 0 };
@@ -43,16 +43,21 @@ static void extent_trunc(struct inode * inode, lb_addr bloc, int *extoffset,
 	if (offset)
 	{
 		nelen = (etype << 30) |
-			(((offset - 1) << inode->i_sb->s_blocksize_bits) +
+			((offset << inode->i_sb->s_blocksize_bits) |
 			(inode->i_size & (inode->i_sb->s_blocksize - 1)));
 		neloc = eloc;
+		if (inode->i_size & (inode->i_sb->s_blocksize - 1))
+			offset ++;
 	}
-	if (etype == EXTENT_RECORDED_ALLOCATED)
-		inode->i_blocks -= (blocks * (last_block - offset));
-	udf_write_aext(inode, bloc, extoffset, neloc, nelen, bh, 1);
-	mark_inode_dirty(inode);
-	if (etype != EXTENT_NOT_RECORDED_NOT_ALLOCATED)
-		udf_free_blocks(inode, eloc, offset, last_block - offset);
+	if (elen != nelen)
+	{
+		if (etype == EXTENT_RECORDED_ALLOCATED)
+			inode->i_blocks -= (blocks * (last_block - offset));
+		udf_write_aext(inode, bloc, &extoffset, neloc, nelen, bh, 0);
+		mark_inode_dirty(inode);
+		if (etype != EXTENT_NOT_RECORDED_NOT_ALLOCATED)
+			udf_free_blocks(inode, eloc, offset, last_block - offset);
+	}
 }
 
 void udf_trunc(struct inode * inode)
@@ -60,7 +65,7 @@ void udf_trunc(struct inode * inode)
 	lb_addr bloc, eloc, neloc = { 0, 0 };
 	Uint32 extoffset, elen, offset, nelen = 0, lelen = 0, lenalloc;
 	int etype;
-	int first_block = (inode->i_size + inode->i_sb->s_blocksize - 1) >> inode->i_sb->s_blocksize_bits;
+	int first_block = (inode->i_size - 1) >> inode->i_sb->s_blocksize_bits;
 	struct buffer_head *bh = NULL;
 	int adsize;
 
@@ -74,7 +79,8 @@ void udf_trunc(struct inode * inode)
 	if ((etype = inode_bmap(inode, first_block, &bloc, &extoffset, &eloc, &elen, &offset, &bh)) != -1)
 	{
 		extoffset -= adsize;
-		extent_trunc(inode, bloc, &extoffset, eloc, etype, elen, &bh, offset);
+		extent_trunc(inode, bloc, extoffset, eloc, etype, elen, &bh, offset);
+		extoffset += adsize;
 
 		if (offset)
 			lenalloc = extoffset;
@@ -122,7 +128,10 @@ void udf_trunc(struct inode * inode)
 					lelen = 1;
 			}
 			else
-				extent_trunc(inode, bloc, &extoffset, eloc, etype, elen, &bh, 0);
+			{
+				extent_trunc(inode, bloc, extoffset, eloc, etype, elen, &bh, 0);
+				extoffset += adsize;
+			}
 		}
 
 		if (lelen)
@@ -188,21 +197,10 @@ void udf_truncate(struct inode * inode)
 	if (IS_APPEND(inode) || IS_IMMUTABLE(inode))
 		return;
 
-	udf_trunc(inode);
-
-	inode->i_mtime = inode->i_ctime = CURRENT_TIME;
-	mark_inode_dirty(inode);
-}
-
-void udf_truncate_adinicb(struct inode * inode)
-{
-	if (!(S_ISREG(inode->i_mode) || S_ISDIR(inode->i_mode) ||
-			S_ISLNK(inode->i_mode)))
-		return;
-	if (IS_APPEND(inode) || IS_IMMUTABLE(inode))
-		return;
-
-	UDF_I_LENALLOC(inode) = inode->i_size;
+	if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
+		UDF_I_LENALLOC(inode) = inode->i_size;
+	else
+		udf_trunc(inode);
 
 	inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 	mark_inode_dirty(inode);
