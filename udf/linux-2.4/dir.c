@@ -15,7 +15,7 @@
  *		ftp://prep.ai.mit.edu/pub/gnu/GPL
  *	Each contributing author retains all rights to their own work.
  *
- *  (C) 1998-1999 Ben Fennema
+ *  (C) 1998-2000 Ben Fennema
  *
  * HISTORY
  *
@@ -50,54 +50,22 @@ static int do_udf_readdir(struct inode *, struct file *, filldir_t, void *);
 /* readdir and lookup functions */
 
 static struct file_operations udf_dir_operations = {
-	NULL,			/* lllseek */
-	NULL,			/* read */
-	NULL,			/* write */
-	udf_readdir,	/* readdir */
-	NULL,			/* poll */
-	udf_ioctl,		/* ioctl */
-	NULL,			/* mmap */
-	NULL,			/* open */
-	NULL,			/* flush */
-	NULL,			/* release */
-	udf_sync_file,	/* fsync */
-	NULL,			/* fasync */
-	NULL			/* lock */
+	readdir:			udf_readdir,
+	ioctl:				udf_ioctl,
+	fsync:				udf_sync_file,
 };
 
 struct inode_operations udf_dir_inode_operations = {
-	&udf_dir_operations,
-#if CONFIG_UDF_RW == 1
-	udf_create, 	/* create */
-#else
-	NULL,			/* create */
-#endif
-	udf_lookup,		/* lookup */
-#if CONFIG_UDF_RW == 1
-	udf_link,		/* link */
-	udf_unlink,		/* unlink */
-	udf_symlink,	/* symlink */
-	udf_mkdir,		/* mkdir */
-	udf_rmdir,		/* rmdir */
-	udf_mknod,		/* mknod */
-	udf_rename,		/* rename */
-#else
-	NULL,			/* link */
-	NULL,			/* unlink */
-	NULL,			/* symlink */
-	NULL,			/* mkdir */
-	NULL,			/* rmdir */
-	NULL,			/* mknod */
-	NULL,			/* rename */
-#endif
-	NULL,			/* readlink */
-	NULL,			/* follow_link */
-	NULL,			/* get_block */
-	NULL,			/* readpage */
-	NULL,			/* writepage */
-	NULL,			/* truncate */
-	NULL,			/* permission */
-	NULL			/* revalidate */
+	default_file_ops:	&udf_dir_operations,
+	lookup:				udf_lookup,
+	create:				udf_create,
+	link:				udf_link,
+	unlink:				udf_unlink,
+	symlink:			udf_symlink,
+	mkdir:				udf_mkdir,
+	rmdir:				udf_rmdir,
+	mknod:				udf_mknod,
+	rename:				udf_rename,
 };
 
 /*
@@ -237,13 +205,13 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 
 		if ( (cfi.fileCharacteristics & FILE_DELETED) != 0 )
 		{
-			if ( !IS_UNDELETE(dir->i_sb) )
+			if ( !UDF_QUERY_FLAG(dir->i_sb, UDF_FLAG_UNDELETE) )
 				continue;
 		}
 		
 		if ( (cfi.fileCharacteristics & FILE_HIDDEN) != 0 )
 		{
-			if ( !IS_UNHIDE(dir->i_sb) )
+			if ( !UDF_QUERY_FLAG(dir->i_sb, UDF_FLAG_UNHIDE) )
 				continue;
 		}
 
