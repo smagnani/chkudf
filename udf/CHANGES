@@ -161,3 +161,5 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
                 fixed bugs based on udf plugfest
                 Configure handling for SMP
                 mkudf updates
+
+12/25/00 blf	fixed a bunch of write bugs and a directory read bug
