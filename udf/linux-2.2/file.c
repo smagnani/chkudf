@@ -410,6 +410,17 @@ int udf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 			if ( (result == verify_area(VERIFY_WRITE, (char *)arg, 32)) == 0)
 				result = copy_to_user((char *)arg, UDF_SB_VOLIDENT(inode->i_sb), 32);
 			return result;
+		case UDF_RELOCATE_BLOCKS:
+		{
+			long old, new;
+
+			if (!capable(CAP_SYS_ADMIN)) return -EACCES;
+			get_user(old, (long *)arg);
+			if ((result = udf_relocate_blocks(inode->i_sb, old, &new)) == 0)
+				result = put_user(new, (long *)arg);
+
+			return result;
+		}
 
 	}
 
