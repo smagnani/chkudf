@@ -738,6 +738,7 @@ int udf_mkdir(struct inode * dir, struct dentry * dentry, int mode)
 	inode->i_size = (sizeof(struct FileIdentDesc) + 3) & ~3;
 	UDF_I_LENALLOC(inode) = inode->i_size;
 	loc = UDF_I_LOCATION(inode).logicalBlockNum;
+	fibh.sbh = udf_tread(inode->i_sb, inode->i_ino, inode->i_sb->s_blocksize);
 
 	if (!fibh.sbh)
 	{
