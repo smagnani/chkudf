@@ -161,7 +161,9 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 		nf_pos = (udf_ext0_offset(dir) >> 2);
 
 	fibh.soffset = fibh.eoffset = (nf_pos & ((dir->i_sb->s_blocksize - 1) >> 2)) << 2;
-	if (inode_bmap(dir, nf_pos >> (dir->i_sb->s_blocksize_bits - 2),
+	if (UDF_I_ALLOCTYPE(dir) == ICBTAG_FLAG_AD_IN_ICB)
+		fibh.sbh = fibh.ebh = NULL;
+	else if (inode_bmap(dir, nf_pos >> (dir->i_sb->s_blocksize_bits - 2),
 		&bloc, &extoffset, &eloc, &elen, &offset, &bh) == (EXT_RECORDED_ALLOCATED >> 30))
 	{
 		offset >>= dir->i_sb->s_blocksize_bits;
@@ -175,39 +177,39 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 		}
 		else
 			offset = 0;
+
+		if (!(fibh.sbh = fibh.ebh = udf_tread(dir->i_sb, block, dir->i_sb->s_blocksize)))
+		{
+			udf_release_data(bh);
+			return -EIO;
+		}
+	
+		if (!(offset & ((16 >> (dir->i_sb->s_blocksize_bits - 9))-1)))
+		{
+			i = 16 >> (dir->i_sb->s_blocksize_bits - 9);
+			if (i+offset > (elen >> dir->i_sb->s_blocksize_bits))
+				i = (elen >> dir->i_sb->s_blocksize_bits)-offset;
+			for (num=0; i>0; i--)
+			{
+				block = udf_get_lb_pblock(dir->i_sb, eloc, offset+i);
+				tmp = udf_tgetblk(dir->i_sb, block, dir->i_sb->s_blocksize);
+				if (tmp && !buffer_uptodate(tmp) && !buffer_locked(tmp))
+					bha[num++] = tmp;
+				else
+					brelse(tmp);
+			}
+			if (num)
+			{
+				ll_rw_block(READA, num, bha);
+				for (i=0; i<num; i++)
+					brelse(bha[i]);
+			}
+		}
 	}
 	else
 	{
 		udf_release_data(bh);
 		return -ENOENT;
-	}
-
-	if (!(fibh.sbh = fibh.ebh = udf_tread(dir->i_sb, block, dir->i_sb->s_blocksize)))
-	{
-		udf_release_data(bh);
-		return -EIO;
-	}
-
-	if (!(offset & ((16 >> (dir->i_sb->s_blocksize_bits - 9))-1)))
-	{
-		i = 16 >> (dir->i_sb->s_blocksize_bits - 9);
-		if (i+offset > (elen >> dir->i_sb->s_blocksize_bits))
-			i = (elen >> dir->i_sb->s_blocksize_bits)-offset;
-		for (num=0; i>0; i--)
-		{
-			block = udf_get_lb_pblock(dir->i_sb, eloc, offset+i);
-			tmp = udf_tgetblk(dir->i_sb, block, dir->i_sb->s_blocksize);
-			if (tmp && !buffer_uptodate(tmp) && !buffer_locked(tmp))
-				bha[num++] = tmp;
-			else
-				brelse(tmp);
-		}
-		if (num)
-		{
-			ll_rw_block(READA, num, bha);
-			for (i=0; i<num; i++)
-				brelse(bha[i]);
-		}
 	}
 
 	while ( nf_pos < size )

@@ -135,13 +135,14 @@ struct inode * udf_new_inode (struct inode *dir, int mode, int * err)
 	inode->i_blocks = 0;
 	UDF_I_LENEATTR(inode) = 0;
 	UDF_I_LENALLOC(inode) = 0;
+	UDF_I_USE(inode) = 0;
 	if (UDF_QUERY_FLAG(inode->i_sb, UDF_FLAG_USE_EXTENDED_FE))
 	{
-		UDF_I_EXTENDED_FE(inode) = 1;
+		UDF_I_EFE(inode) = 1;
 		UDF_UPDATE_UDFREV(inode->i_sb, UDF_VERS_USE_EXTENDED_FE);
 	}
 	else
-		UDF_I_EXTENDED_FE(inode) = 0;
+		UDF_I_EFE(inode) = 0;
 	if (UDF_QUERY_FLAG(inode->i_sb, UDF_FLAG_USE_AD_IN_ICB))
 		UDF_I_ALLOCTYPE(inode) = ICBTAG_FLAG_AD_IN_ICB;
 	else if (UDF_QUERY_FLAG(inode->i_sb, UDF_FLAG_USE_SHORT_AD))
@@ -152,7 +153,6 @@ struct inode * udf_new_inode (struct inode *dir, int mode, int * err)
 		UDF_I_CRTIME(inode) = CURRENT_TIME;
 	UDF_I_UMTIME(inode) = UDF_I_UCTIME(inode) =
 		UDF_I_UCRTIME(inode) = CURRENT_UTIME;
-	UDF_I_NEW_INODE(inode) = 1;
 	insert_inode_hash(inode);
 	mark_inode_dirty(inode);
 
