@@ -294,7 +294,9 @@ if [ "$CONFIG_SMP" = "y" ] ; then
 fi
 
 if [ "$CONFIG_WRITE" = "y" ] ; then
-	echo "WRITEFLAG=-DCONFIG_UDF_RW" >> $CONFIG_MK
+	echo "WRITEFLAG=-DCONFIG_UDF_RW=1" >> $CONFIG_MK
+else
+	echo "WRITEFLAG=-DCONFIG_UDF_RW=0" >> $CONFIG_MK
 fi
 
 echo "" >> $CONFIG
@@ -373,7 +375,7 @@ if [ ! $UTS_RELEASE ] ; then
 	echo "Cannot determine version from version.h. Using Makefile."
 	UTS_RELEASE=$CUR_RELEASE
 fi
-UTS_SHORT=`echo $UTS_RELEASE | sed 's/-.*//' | sed 's/.[0-9]*$//'`
+UTS_SHORT=`echo $UTS_RELEASE | sed 's/[^0-9\.].*//' | sed 's/.[0-9]*$//'`
 write_str UTS_RELEASE
 write_str UTS_SHORT
 write_str UTS_VERSION
