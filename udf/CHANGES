@@ -174,3 +174,10 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
 		handle creation time for efe's and use ctime correctly
 		update objectSize on inode write for efe's
 		handle FILE_TYPE_REALTIME as normal file
+
+10/10/01 blf	quota change fixes
+		rm BUG()
+		> 4 GB file bug
+		less stringent on directory errors (Matrix DVD)
+		lazier last block detection
+		default to strict UDF conformance
