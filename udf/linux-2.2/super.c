@@ -361,10 +361,6 @@ udf_remount_fs(struct super_block *sb, int *flags, char *options)
 	UDF_SB(sb)->s_gid   = uopt.gid;
 	UDF_SB(sb)->s_umask = uopt.umask;
 
-#if UDFFS_RW != 1
-	*flags |= MS_RDONLY;
-#endif
-
 	if ((*flags & MS_RDONLY) == (sb->s_flags & MS_RDONLY))
 		return 0;
 	if (*flags & MS_RDONLY)
@@ -1419,10 +1415,6 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	UDF_SB_ALLOC(sb); /* kmalloc, if needed */
 	memset(UDF_SB(sb), 0x00, sizeof(struct udf_sb_info));
 
-#if UDFFS_RW != 1
-	sb->s_flags |= MS_RDONLY;
-#endif
-
 	if (!udf_parse_options((char *)options, &uopt))
 		goto error_out;
 
@@ -1534,8 +1526,8 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	{
 		timestamp ts;
 		udf_time_to_stamp(&ts, UDF_SB_RECORDTIME(sb), 0);
-		udf_info("UDF %s-%s (%s) Mounting volume '%s', timestamp %04u/%02u/%02u %02u:%02u (%x)\n",
-			UDFFS_VERSION, UDFFS_RW ? "rw" : "ro", UDFFS_DATE,
+		udf_info("UDF %s (%s) Mounting volume '%s', timestamp %04u/%02u/%02u %02u:%02u (%x)\n",
+			UDFFS_VERSION, UDFFS_DATE,
 			UDF_SB_VOLIDENT(sb), ts.year, ts.month, ts.day, ts.hour, ts.minute,
 			ts.typeAndTimezone);
 	}

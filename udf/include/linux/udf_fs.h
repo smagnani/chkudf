@@ -42,16 +42,6 @@
 #define UDFFS_DATE			"2002/03/11"
 #define UDFFS_VERSION			"0.9.6"
 
-#if !defined(UDFFS_RW)
-
-#if defined(CONFIG_UDF_RW)
-#define UDFFS_RW			1
-#else /* !defined(CONFIG_UDF_RW) */
-#define UDFFS_RW			0
-#endif /* defined(CONFIG_UDF_RW) */
-
-#endif /* !defined(UDFFS_RW) */
-
 #define UDFFS_DEBUG
 
 #ifdef UDFFS_DEBUG

@@ -2,11 +2,8 @@ UDF File System support (read only)
 CONFIG_UDF_FS
   This is the new file system used on some CDROMs and DVDs. Say Y if
   you intend to mount DVD discs or CDRW's written in packet mode, or
-  if written to by other UDF utilities, such as DirectCD. This UDF
-  file system support is read-only. If you want to write to UDF
-  file systems on some media, you need to say Y to "UDF read-write
-  support" below in addition. Please read
-  Documentation/filesystems/udf.txt.
+  if written to by other UDF utilities, such as DirectCD.
+  Please read Documentation/filesystems/udf.txt.
 
   This file system support is also available as a module ( = code
   which can be inserted in and removed from the running kernel
@@ -15,9 +12,3 @@ CONFIG_UDF_FS
   Documentation/modules.txt.
 
   If unsure, say N.
-
-UDF write support (DANGEROUS)
-CONFIG_UDF_RW
-  Say Y if you want to test write support for UDF file systems.
-  Due to lack of support for writing to CDR/CDRW's, this option
-  is only supported for hard discs, DVD-RAM, and loopback files.

@@ -156,8 +156,6 @@ ask_str "C compiler name" CC
 
 ask_str "Linker name" LD
 
-ask_bool "UDF Write Support" CONFIG_WRITE
-
 ask_str "Compiler flags for debugging" PCDEBUG
 
 echo ""
@@ -305,12 +303,6 @@ fi
 
 if [ "$CONFIG_SMP" = "y" ] ; then
     echo "SMPFLAG=-D__SMP__" >> $CONFIG_MK
-fi
-
-if [ "$CONFIG_WRITE" = "y" ] ; then
-	echo "WRITEFLAG=-DUDFFS_RW=1" >> $CONFIG_MK
-else
-	echo "WRITEFLAG=-DUDFFS_RW=0" >> $CONFIG_MK
 fi
 
 echo "" >> $CONFIG
