@@ -33,18 +33,6 @@
 #include "udf_i.h"
 #include "udf_sb.h"
 
-uint32_t
-udf64_low32(uint64_t indat)
-{
-	return indat & 0x00000000FFFFFFFFULL;
-}
-
-uint32_t
-udf64_high32(uint64_t indat)
-{
-	return indat >> 32;
-}
-
 uid_t udf_convert_uid(int uidin)
 {
 	if ( uidin == -1 )

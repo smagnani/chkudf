@@ -131,8 +131,6 @@ extern struct genericFormat *udf_get_extendedattr(struct inode *, uint32_t, uint
 extern struct buffer_head *udf_read_tagged(struct super_block *, uint32_t, uint32_t, uint16_t *);
 extern struct buffer_head *udf_read_ptagged(struct super_block *, lb_addr, uint32_t, uint16_t *);
 extern void udf_release_data(struct buffer_head *);
-extern uint32_t udf64_low32(uint64_t);
-extern uint32_t udf64_high32(uint64_t);
 extern void udf_update_tag(char *, int);
 extern void udf_new_tag(char *, uint16_t, uint16_t, uint16_t, uint32_t, int);
 

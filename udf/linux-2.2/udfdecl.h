@@ -148,8 +148,6 @@ extern struct buffer_head *udf_read_ptagged(struct super_block *, lb_addr, uint3
 extern void udf_release_data(struct buffer_head *);
 extern uid_t  udf_convert_uid(int);
 extern gid_t  udf_convert_gid(int);
-extern uint32_t udf64_low32(uint64_t);
-extern uint32_t udf64_high32(uint64_t);
 extern void udf_update_tag(char *, int);
 extern void udf_new_tag(char *, uint16_t, uint16_t, uint16_t, uint32_t, int);
 
