@@ -74,7 +74,7 @@ udf_add_extendedattr(struct inode * inode, uint32_t size, uint32_t type,
 
 	*bh = udf_tread(inode->i_sb, inode->i_ino);
 
-	if (UDF_I_EXTENDED_FE(inode) == 0)
+	if (UDF_I_EFE(inode) == 0)
 	{
 		struct fileEntry *fe;
 
@@ -190,7 +190,7 @@ udf_get_extendedattr(struct inode * inode, uint32_t type, uint8_t subtype,
 
 	*bh = udf_tread(inode->i_sb, inode->i_ino);
 
-	if (UDF_I_EXTENDED_FE(inode) == 0)
+	if (UDF_I_EFE(inode) == 0)
 	{
 		struct fileEntry *fe;
 
