@@ -21,7 +21,7 @@ CPPFLAGS= $(PCDEBUG) -D__KERNEL__ -DMODULE -I../include\
 		-I. -I$(LINUX)/include $(SMPFLAG) $(WRITEFLAG) -DCONFIG_UDF_FS_EXT
 COFLAGS	= -kv
 
-CFLAGS	= $(KFLAGS) $(MFLAG)
+CFLAGS	= $(KFLAGS) $(MFLAG) $(ACFLAG)
 
 SRCS	:= balloc.c dir.c file.c ialloc.c inode.c lowlevel.c namei.c
 SRCS	+= partition.c super.c truncate.c symlink.c fsync.c

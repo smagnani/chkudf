@@ -384,6 +384,10 @@ case "$VERSION.$PATCHLEVEL" in
 	;;
 esac
 
+if [ "`grep "DQUOT_ALLOC_INODE(struct inode \*inode)" $LINUX/include/linux/quotaops.h`" ] ; then
+	echo "ACFLAG=-DQUOTA_CHANGE" >> $CONFIG_MK
+fi
+
 UTS_RELEASE=`grep UTS_RELEASE $LINUX/include/linux/version.h | grep -v BOOT | awk '{print $3}' | sed 's/"//g'`
 if [ ! $UTS_RELEASE ] ; then
 	echo "Cannot determine version from version.h. Using Makefile."

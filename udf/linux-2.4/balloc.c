@@ -142,7 +142,11 @@ static inline int load_block_bitmap(struct super_block *sb,
 	return slot;
 }
 
+#ifdef QUOTA_CHANGE
+static void udf_bitmap_free_blocks(struct inode * inode,
+#else
 static void udf_bitmap_free_blocks(const struct inode * inode,
+#endif
 	struct udf_bitmap *bitmap, lb_addr bloc, Uint32 offset, Uint32 count)
 {
 	struct buffer_head * bh = NULL;
@@ -200,7 +204,11 @@ do_more:
 		}
 		else
 		{
+#ifdef QUOTA_CHANGE
+			DQUOT_FREE_BLOCK(inode, 1);
+#else
 			DQUOT_FREE_BLOCK(sb, inode, 1);
+#endif
 			if (UDF_SB_LVIDBH(sb))
 			{
 				UDF_SB_LVID(sb)->freeSpaceTable[UDF_SB_PARTITION(sb)] =
@@ -223,7 +231,11 @@ error_return:
 	return;
 }
 
+#ifdef QUOTA_CHANGE
+static int udf_bitmap_prealloc_blocks(struct inode * inode,
+#else
 static int udf_bitmap_prealloc_blocks(const struct inode * inode,
+#endif
 	struct udf_bitmap *bitmap, Uint16 partition, Uint32 first_block,
 	Uint32 block_count)
 {
@@ -265,12 +277,20 @@ repeat:
 	{
 		if (!udf_test_bit(bit, bh->b_data))
 			goto out;
+#ifdef QUOTA_CHANGE
+		else if (DQUOT_PREALLOC_BLOCK(inode, 1))
+#else
 		else if (DQUOT_PREALLOC_BLOCK(sb, inode, 1))
+#endif
 			goto out;
 		else if (!udf_clear_bit(bit, bh->b_data))
 		{
 			udf_debug("bit already cleared for block %d\n", bit);
+#ifdef QUOTA_CHANGE
+			DQUOT_FREE_BLOCK(inode, 1);
+#else
 			DQUOT_FREE_BLOCK(sb, inode, 1);
+#endif
 			goto out;
 		}
 		block_count --;
@@ -293,7 +313,11 @@ out:
 	return alloc_count;
 }
 
+#ifdef QUOTA_CHANGE
+static int udf_bitmap_new_block(struct inode * inode,
+#else
 static int udf_bitmap_new_block(const struct inode * inode,
+#endif
 	struct udf_bitmap *bitmap, Uint16 partition, Uint32 goal, int *err)
 {
 	int newbit, bit=0, block, block_group, group_start;
@@ -404,7 +428,11 @@ got_block:
 	/*
 	 * Check quota for allocation of this block.
 	 */
+#ifdef QUOTA_CHANGE
+	if (DQUOT_ALLOC_BLOCK(inode, 1))
+#else
 	if (DQUOT_ALLOC_BLOCK(sb, inode, 1))
+#endif
 	{
 		unlock_super(sb);
 		*err = -EDQUOT;
@@ -439,7 +467,11 @@ error_return:
 	return 0;
 }
 
+#ifdef QUOTA_CHANGE
+static void udf_table_free_blocks(struct inode * inode,
+#else
 static void udf_table_free_blocks(const struct inode * inode,
+#endif
 	struct inode * table, lb_addr bloc, Uint32 offset, Uint32 count)
 {
 	struct super_block * sb;
@@ -475,7 +507,11 @@ static void udf_table_free_blocks(const struct inode * inode,
 
 	/* We do this up front - There are some error conditions that could occure,
 	   but.. oh well */
+#ifdef QUOTA_CHANGE
+	DQUOT_FREE_BLOCK(inode, count);
+#else
 	DQUOT_FREE_BLOCK(sb, inode, count);
+#endif
 	if (UDF_SB_LVIDBH(sb))
 	{
 		UDF_SB_LVID(sb)->freeSpaceTable[UDF_SB_PARTITION(sb)] =
@@ -690,7 +726,11 @@ error_return:
 	return;
 }
 
+#ifdef QUOTA_CHANGE
+static int udf_table_prealloc_blocks(struct inode * inode,
+#else
 static int udf_table_prealloc_blocks(const struct inode * inode,
+#endif
 	struct inode *table, Uint16 partition, Uint32 first_block,
 	Uint32 block_count)
 {
@@ -772,7 +812,11 @@ static int udf_table_prealloc_blocks(const struct inode * inode,
 	return alloc_count;
 }
 
+#ifdef QUOTA_CHANGE
+static int udf_table_new_block(struct inode * inode,
+#else
 static int udf_table_new_block(const struct inode * inode,
+#endif
 	struct inode *table, Uint16 partition, Uint32 goal, int *err)
 {
 	struct super_block *sb;
@@ -887,7 +931,11 @@ static int udf_table_new_block(const struct inode * inode,
 	return newblock;
 }
 
+#ifdef QUOTA_CHANGE
+inline void udf_free_blocks(struct inode * inode, lb_addr bloc,
+#else
 inline void udf_free_blocks(const struct inode * inode, lb_addr bloc,
+#endif
 	Uint32 offset, Uint32 count)
 {
 	if (UDF_SB_PARTFLAGS(inode->i_sb, bloc.partitionReferenceNum) & UDF_PART_FLAG_UNALLOC_BITMAP)
@@ -918,7 +966,11 @@ inline void udf_free_blocks(const struct inode * inode, lb_addr bloc,
 		return;
 }
 
+#ifdef QUOTA_CHANGE
+inline int udf_prealloc_blocks(struct inode * inode, Uint16 partition,
+#else
 inline int udf_prealloc_blocks(const struct inode * inode, Uint16 partition,
+#endif
 	Uint32 first_block, Uint32 block_count)
 {
 	if (UDF_SB_PARTFLAGS(inode->i_sb, partition) & UDF_PART_FLAG_UNALLOC_BITMAP)
@@ -949,7 +1001,11 @@ inline int udf_prealloc_blocks(const struct inode * inode, Uint16 partition,
 		return 0;
 }
 
+#ifdef QUOTA_CHANGE
+inline int udf_new_block(struct inode * inode, Uint16 partition,
+#else
 inline int udf_new_block(const struct inode * inode, Uint16 partition,
+#endif
 	Uint32 goal, int *err)
 {
 	if (UDF_SB_PARTFLAGS(inode->i_sb, partition) & UDF_PART_FLAG_UNALLOC_BITMAP)

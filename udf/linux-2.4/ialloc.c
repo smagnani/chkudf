@@ -44,7 +44,11 @@ void udf_free_inode(struct inode * inode)
 	 * Note: we must free any quota before locking the superblock,
 	 * as writing the quota to disk may need the lock as well.
 	 */
+#ifdef QUOTA_CHANGE
+	DQUOT_FREE_INODE(inode);
+#else
 	DQUOT_FREE_INODE(sb, inode);
+#endif
 	DQUOT_DROP(inode);
 
 	lock_super(sb);
@@ -70,7 +74,11 @@ void udf_free_inode(struct inode * inode)
 	udf_free_blocks(inode, UDF_I_LOCATION(inode), 0, 1);
 }
 
+#ifdef QUOTA_CHANGE
+struct inode * udf_new_inode (struct inode *dir, int mode, int * err)
+#else
 struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
+#endif
 {
 	struct super_block *sb;
 	struct inode * inode;
@@ -153,9 +161,15 @@ struct inode * udf_new_inode (const struct inode *dir, int mode, int * err)
 	mark_inode_dirty(inode);
 
 	unlock_super(sb);
+#ifdef QUOTA_CHANGE
+	if (DQUOT_ALLOC_INODE(inode))
+	{
+		DQUOT_DROP(inode);
+#else
 	if (DQUOT_ALLOC_INODE(sb, inode))
 	{
 		sb->dq_op->drop(inode);
+#endif
 		inode->i_nlink = 0;
 		iput(inode);
 		*err = -EDQUOT;
