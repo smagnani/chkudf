@@ -16,8 +16,8 @@
  *  Each contributing author retains all rights to their own work.
  *
  *  (C) 1998-1999 Dave Boynton
- *  (C) 1998-1999 Ben Fennema
- *  (C) 1999 Stelias Computing Inc
+ *  (C) 1998-2000 Ben Fennema
+ *  (C) 1999-2000 Stelias Computing Inc
  *
  * HISTORY
  *
@@ -607,11 +607,7 @@ struct inode_operations udf_file_inode_operations = {
 	generic_readpage,		/* readpage */
 	NULL,					/* writepage */
 	udf_bmap,				/* bmap */
-#ifdef CONFIG_UDF_RW
 	udf_truncate,			/* truncate */
-#else
-	NULL,					/* truncate */
-#endif
 	NULL,					/* permission */
 	NULL,					/* smap */
 	NULL,					/* updatepage */
@@ -652,11 +648,7 @@ struct inode_operations udf_file_inode_operations_adinicb = {
 	udf_readpage_adinicb,	/* readpage */
 	NULL,					/* writepage */
 	NULL,					/* bmap */
-#ifdef CONFIG_UDF_RW
 	udf_truncate_adinicb,	/* truncate */
-#else
-	NULL,					/* truncate */
-#endif
 	NULL,					/* permission */
 	NULL,					/* smap */
 	NULL,					/* updatepage */
