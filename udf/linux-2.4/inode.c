@@ -1224,6 +1224,11 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 			init_special_inode(inode, inode->i_mode | S_IFIFO, 0);
 			break;
 		}
+		case ICBTAG_FILE_TYPE_SOCKET:
+		{
+			init_special_inode(inode, inode->i_mode | S_IFSOCK, 0);
+			break;
+		}
 		case ICBTAG_FILE_TYPE_SYMLINK:
 		{
 			inode->i_data.a_ops = &udf_symlink_aops;
@@ -1501,6 +1506,8 @@ udf_update_inode(struct inode *inode, int do_sync)
 		fe->icbTag.fileType = ICBTAG_FILE_TYPE_CHAR;
 	else if (S_ISFIFO(inode->i_mode))
 		fe->icbTag.fileType = ICBTAG_FILE_TYPE_FIFO;
+	else if (S_ISSOCK(inode->i_mode))
+		fe->icbTag.fileType = ICBTAG_FILE_TYPE_SOCKET;
 
 	icbflags =	UDF_I_ALLOCTYPE(inode) |
 			((inode->i_mode & S_ISUID) ? ICBTAG_FLAG_SETUID : 0) |
