@@ -79,8 +79,7 @@ void udf_truncate_extents(struct inode * inode)
 		adsize = 0;
 
 	etype = inode_bmap(inode, first_block, &bloc, &extoffset, &eloc, &elen, &offset, &bh);
-	offset = (offset << inode->i_sb->s_blocksize_bits) |
-		(inode->i_size & (inode->i_sb->s_blocksize - 1));
+	offset += (inode->i_size & (inode->i_sb->s_blocksize - 1));
 	if (etype != -1)
 	{
 		extoffset -= adsize;
@@ -208,6 +207,7 @@ void udf_truncate_extents(struct inode * inode)
 			}
 		}
 	}
+	UDF_I_LENEXTENTS(inode) = inode->i_size;
 
 	udf_release_data(bh);
 }
