@@ -286,7 +286,6 @@ int udf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 			break;
 
 		default:
-			udf_debug("ino=%ld, cmd=%d\n", inode->i_ino, cmd);
 			break;
 	}
 
