@@ -46,6 +46,7 @@
 {\
 	UDF_SB_NUMPARTS(X) = Y;\
 	UDF_SB_PARTMAPS(X) = kmalloc(sizeof(struct udf_part_map) * Y, GFP_KERNEL);\
+	memset(UDF_SB_PARTMAPS(X), 0x00, sizeof(struct udf_part_map) * Y);\
 }
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,6)
@@ -70,9 +71,7 @@
 #define UDF_SB_RECORDTIME(X)	( UDF_SB(X)->s_recordtime )
 #define UDF_SB_VOLIDENT(X)		( UDF_SB(X)->s_volident )
 #define UDF_SB_PARTMAPS(X)		( UDF_SB(X)->s_partmaps )
-#define UDF_SB_LOCATION(X)		( UDF_SB(X)->s_location )
 #define UDF_SB_SERIALNUM(X)		( UDF_SB(X)->s_serialnum )
-#define UDF_SB_CHARSET(X)		( UDF_SB(X)->s_nls_iocharset )
 #define UDF_SB_VAT(X)			( UDF_SB(X)->s_vat )
 
 #define UDF_SB_BLOCK_BITMAP_NUMBER(X,Y) ( UDF_SB(X)->s_block_bitmap_number[Y] )
@@ -86,5 +85,6 @@
 #define UDF_SB_PARTNUM(X,Y)		( UDF_SB_PARTMAPS(X)[Y].s_partition_num )
 #define UDF_SB_TYPESPAR(X,Y)	( UDF_SB_PARTMAPS(X)[Y].s_type_specific.s_sparing )
 #define UDF_SB_TYPEVIRT(X,Y)	( UDF_SB_PARTMAPS(X)[Y].s_type_specific.s_virtual )
+#define UDF_SB_PARTFUNC(X,Y)	( UDF_SB_PARTMAPS(X)[Y].s_partition_func )
 
 #endif /* __LINUX_UDF_SB_H */
