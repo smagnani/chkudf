@@ -25,7 +25,7 @@
 #define UDF_EXTENT_FLAG_MASK	0xC0000000
 
 #define UDF_NAME_PAD		4
-#define UDF_NAME_LEN		255
+#define UDF_NAME_LEN		256
 #define UDF_PATH_LEN		1023
 
 #define udf_file_entry_alloc_offset(inode)\
@@ -63,13 +63,6 @@ struct udf_fileident_bh
 	int eoffset;
 };
 
-struct udf_directory_record
-{
-	uint32_t	d_parent;
-	uint32_t	d_inode;
-	uint32_t	d_name[255];
-};
-
 struct udf_vds_record
 {
 	uint32_t block;
@@ -85,7 +78,7 @@ struct generic_desc
 struct ustr
 {
 	uint8_t u_cmpID;
-	uint8_t u_name[UDF_NAME_LEN];
+	uint8_t u_name[UDF_NAME_LEN-2];
 	uint8_t u_len;
 };
 
