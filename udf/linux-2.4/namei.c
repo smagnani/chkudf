@@ -1197,7 +1197,7 @@ static int udf_rename (struct inode * old_dir, struct dentry * old_dentry,
 		{
 			dir_fi = udf_get_fileident(UDF_I_DATA(old_inode) -
 				(UDF_I_EFE(old_inode) ?
-				 	sizeof(struct extendedFileEntry) :
+					sizeof(struct extendedFileEntry) :
 					sizeof(struct fileEntry)),
 				old_inode->i_sb->s_blocksize, &offset);
 		}
