@@ -291,7 +291,7 @@ out:
 }
 
 static int udf_bitmap_new_block(const struct inode * inode,
-	struct udf_bitmap *bitmap,Uint16 partition, Uint32 goal, int *err)
+	struct udf_bitmap *bitmap, Uint16 partition, Uint32 goal, int *err)
 {
 	int tmp, newbit, bit=0, block, block_group, group_start;
 	int end_goal, nr_groups, bitmap_nr, i;
