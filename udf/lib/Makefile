@@ -36,7 +36,8 @@ showvars:
 	@echo OBJS $(OBJS)
 
 clean:
-	rm -f core core.* *.o .*.o *.s *.a *.so *~ .depend .depfiles/*.d
+	rm -f core core.* *.o .*.o *.s *.a *.so *~ .depfiles/*.d
+	-rmdir .depfiles
 
 # Stuff to automatically maintain dependency files
 
