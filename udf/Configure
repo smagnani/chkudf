@@ -308,9 +308,9 @@ if [ "$CONFIG_SMP" = "y" ] ; then
 fi
 
 if [ "$CONFIG_WRITE" = "y" ] ; then
-	echo "WRITEFLAG=-DCONFIG_UDF_RW=1" >> $CONFIG_MK
+	echo "WRITEFLAG=-DUDFFS_RW=1" >> $CONFIG_MK
 else
-	echo "WRITEFLAG=-DCONFIG_UDF_RW=0" >> $CONFIG_MK
+	echo "WRITEFLAG=-DUDFFS_RW=0" >> $CONFIG_MK
 fi
 
 echo "" >> $CONFIG

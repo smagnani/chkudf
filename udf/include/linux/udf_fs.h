@@ -34,12 +34,21 @@
 #if !defined(_LINUX_UDF_FS_H)
 #define _LINUX_UDF_FS_H
 
-
 #define UDF_PREALLOCATE
 #define UDF_DEFAULT_PREALLOC_BLOCKS		8
 
-#define UDFFS_DATE		"2000/05/10"
-#define UDFFS_VERSION	"0.9.2.1"
+#define UDFFS_DATE		"2000/06/17"
+#define UDFFS_VERSION	"0.9.3-cvs"
+
+#if !defined(UDFFS_RW)
+
+#if defined(CONFIG_UDF_FS_WRITE)
+#define UDFFS_RW		1
+#else /* !defined(CONFIG_UDF_FS_WRITE) */
+#define UDFFS_RW		0
+#endif /* defined(CONFIG_UDF_FS_WRITE) */
+
+#endif /* !defined(UDFFS_RW) */
 
 #define UDFFS_DEBUG
 
