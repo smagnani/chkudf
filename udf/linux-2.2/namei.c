@@ -648,7 +648,11 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 		dir->i_size += nfidlen;
 		if (UDF_I_ALLOCTYPE(dir) == ICB_FLAG_AD_IN_ICB)
 			UDF_I_LENALLOC(dir) += nfidlen;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
 		dir->i_version = ++event;
+#else
+		dir->i_version = ++global_event;
+#endif
 		mark_inode_dirty(dir);
 		return fi;
 	}
@@ -705,7 +709,11 @@ int udf_create(struct inode *dir, struct dentry *dentry, int mode)
 	if (UDF_I_ALLOCTYPE(dir) == ICB_FLAG_AD_IN_ICB)
 	{
 		mark_inode_dirty(dir);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
 		dir->i_version = ++event;
+#else
+		dir->i_version = ++global_event;
+#endif
 	}
 	if (fibh.sbh != fibh.ebh)
 		udf_release_data(fibh.ebh);
@@ -751,7 +759,11 @@ int udf_mknod(struct inode * dir, struct dentry * dentry, int mode, int rdev)
 	if (UDF_I_ALLOCTYPE(dir) == ICB_FLAG_AD_IN_ICB)
 	{
 		mark_inode_dirty(dir);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
 		dir->i_version = ++event;
+#else
+		dir->i_version = ++global_event;
+#endif
 	}
 	if (S_ISREG(inode->i_mode))
 	{
@@ -859,7 +871,11 @@ int udf_mkdir(struct inode * dir, struct dentry * dentry, int mode)
 		cpu_to_le32(UDF_I_UNIQUE(inode) & 0x00000000FFFFFFFFUL);
 	cfi.fileCharacteristics |= FILE_DIRECTORY;
 	udf_write_fi(&cfi, fi, &fibh, NULL, NULL);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
 	dir->i_version = ++event;
+#else
+	dir->i_version = ++global_event;
+#endif
 	dir->i_nlink++;
 	mark_inode_dirty(dir);
 	d_instantiate(dentry, inode);
@@ -969,14 +985,22 @@ int udf_rmdir(struct inode * dir, struct dentry * dentry)
 	else
 	{
 		retval = udf_delete_entry(fi, &fibh, &cfi);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
 		dir->i_version = ++event;
+#else
+		dir->i_version = ++global_event;
+#endif
 	}
 #else
 	retval = -ENOTEMPTY;
 	if (!empty_dir(inode))
 		goto end_rmdir;
 	retval = udf_delete_entry(fi, &fibh, &cfi);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
 	dir->i_version = ++event;
+#else
+	dir->i_version = ++global_event;
+#endif
 #endif
 	if (retval)
 		goto end_rmdir;
@@ -984,7 +1008,11 @@ int udf_rmdir(struct inode * dir, struct dentry * dentry)
 		udf_warning(inode->i_sb, "udf_rmdir",
 			"empty directory has nlink != 2 (%d)",
 			inode->i_nlink);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
 	inode->i_version = ++event;
+#else
+	inode->i_version = ++global_event;
+#endif
 	inode->i_nlink = 0;
 	inode->i_size = 0;
 	mark_inode_dirty(inode);
@@ -1164,7 +1192,11 @@ int udf_symlink(struct inode * dir, struct dentry * dentry, const char * symname
 	if (UDF_I_ALLOCTYPE(dir) == ICB_FLAG_AD_IN_ICB)
 	{
 		mark_inode_dirty(dir);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
 		dir->i_version = ++event;
+#else
+		dir->i_version = ++global_event;
+#endif
 	}
 	if (fibh.sbh != fibh.ebh)
 		udf_release_data(fibh.ebh);
@@ -1216,7 +1248,11 @@ int udf_link(struct dentry * old_dentry, struct inode * dir,
 	if (UDF_I_ALLOCTYPE(dir) == ICB_FLAG_AD_IN_ICB)
 	{
 		mark_inode_dirty(dir);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
 		dir->i_version = ++event;
+#else
+		dir->i_version = ++global_event;
+#endif
 	}
 	if (fibh.sbh != fibh.ebh)
 		udf_release_data(fibh.ebh);
@@ -1325,7 +1361,11 @@ static int do_udf_rename(struct inode *old_dir, struct dentry *old_dentry,
 		if (!nfi)
 			goto end_rename;
 	}
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
 	new_dir->i_version = ++event;
+#else
+	new_dir->i_version = ++global_event;
+#endif
 
 	/*
 	 * ok, that's it
@@ -1495,7 +1535,11 @@ int udf_rename (struct inode * old_dir, struct dentry * old_dentry,
 		if (!nfi)
 			goto end_rename;
 	}
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
 	new_dir->i_version = ++event;
+#else
+	new_dir->i_version = ++global_event;
+#endif
 
 	/*
 	 * ok, that's it
@@ -1507,7 +1551,11 @@ int udf_rename (struct inode * old_dir, struct dentry * old_dentry,
 
 	udf_delete_entry(ofi, &ofibh, &ocfi);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
 	old_dir->i_version = ++event;
+#else
+	old_dir->i_version = ++global_event;
+#endif
 	if (new_inode)
 	{
 		new_inode->i_nlink--;
@@ -1527,7 +1575,11 @@ int udf_rename (struct inode * old_dir, struct dentry * old_dentry,
 		if (UDF_I_ALLOCTYPE(old_inode) == ICB_FLAG_AD_IN_ICB)
 		{
 			mark_inode_dirty(old_inode);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
 			old_inode->i_version = ++event;
+#else
+			old_inode->i_version = ++global_event;
+#endif
 		}
 		else
 			mark_buffer_dirty(dir_bh, 1);
