@@ -161,6 +161,7 @@ static struct super_operations udf_sb_ops = {
 	.write_inode		= udf_write_inode,
 	.put_inode		= udf_put_inode,
 	.delete_inode		= udf_delete_inode,
+	.clear_inode		= udf_clear_inode,
 	.put_super		= udf_put_super,
 	.write_super		= udf_write_super,
 	.statfs			= udf_statfs,
