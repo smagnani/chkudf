@@ -74,7 +74,9 @@ static int udf_get_block(struct inode *, long, struct buffer_head *, int);
  */
 void udf_put_inode(struct inode * inode)
 {
+	lock_kernel();
 	udf_discard_prealloc(inode);
+	unlock_kernel();
 }
 
 /*
@@ -95,10 +97,14 @@ void udf_put_inode(struct inode * inode)
  */
 void udf_delete_inode(struct inode * inode)
 {
+	lock_kernel();
+
 	inode->i_size = 0;
 	if (inode->i_blocks)
 		udf_truncate(inode);
 	udf_free_inode(inode);
+
+	unlock_kernel();
 }
 
 void udf_discard_prealloc(struct inode * inode)
@@ -1198,7 +1204,9 @@ udf_convert_permissions(struct FileEntry *fe)
 
 void udf_write_inode(struct inode * inode)
 {
+	lock_kernel();
 	udf_update_inode(inode, 0);
+	unlock_kernel();
 }
 
 int udf_sync_inode(struct inode * inode)
