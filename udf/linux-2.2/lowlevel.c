@@ -184,8 +184,6 @@ udf_get_last_rti(kdev_t dev, struct inode *inode_fake)
 							{
 								lastsector = lastsector - freeblocks - 7;
 							}
-							blk_size[MAJOR(dev)][MINOR(dev)] =
-								(lastsector + 1) << 1;
 						}
 					}
 				}
