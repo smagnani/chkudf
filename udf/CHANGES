@@ -168,3 +168,9 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
 		added strict mount option
 		added iocharset= to allow using NLS (vs default of utf8)
 		rewrote sparing support - added udf_relocate_blocks
+
+06/13/01 blf	fix i_blocks off by one error when expanding AD_IN_ICB
+		handle redhat and -ac kernels (quota changes)
+		handle creation time for efe's and use ctime correctly
+		update objectSize on inode write for efe's
+		handle FILE_TYPE_REALTIME as normal file
