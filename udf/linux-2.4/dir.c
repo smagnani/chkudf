@@ -104,7 +104,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 	int block, iblock;
 	loff_t nf_pos = filp->f_pos - 1;
 	int flen;
-	char fname[255];
+	char fname[UDF_NAME_LEN];
 	char *nameptr;
 	uint16_t liu;
 	uint8_t lfi;
