@@ -1126,17 +1126,17 @@ int udf_symlink(struct inode * dir, struct dentry * dentry, const char * symname
 		pc->componentType = 5;
 		pc->lengthComponentIdent = 0;
 		pc->componentFileVersionNum = 0;
-		if (pc->componentIdent[0] == '.')
+		if (compstart[0] == '.')
 		{
-			if (pc->lengthComponentIdent == 1)
+			if ((symname-compstart) == 1)
 				pc->componentType = 4;
-			else if (pc->lengthComponentIdent == 2 && pc->componentIdent[1] == '.')
+			else if ((symname-compstart) == 2 && compstart[1] == '.')
 				pc->componentType = 3;
 		}
 
 		if (pc->componentType == 5)
 		{
-			if ( !(namelen = udf_put_filename(inode->i_sb, compstart, name, symname - compstart)))
+			if ( !(namelen = udf_put_filename(inode->i_sb, compstart, name, symname-compstart)))
 				goto out_no_entry;
 
 			if (elen + sizeof(struct pathComponent) + namelen > eoffset)
