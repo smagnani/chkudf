@@ -226,13 +226,13 @@ udf_find_entry(struct inode *dir, struct dentry *dentry,
 
 		if ( (cfi->fileCharacteristics & FILE_DELETED) != 0 )
 		{
-			if ( !IS_UNDELETE(dir->i_sb) )
+			if ( !UDF_QUERY_FLAG(dir->i_sb, UDF_FLAG_UNDELETE) )
 				continue;
 		}
 	    
 		if ( (cfi->fileCharacteristics & FILE_HIDDEN) != 0 )
 		{
-			if ( !IS_UNHIDE(dir->i_sb) )
+			if ( !UDF_QUERY_FLAG(dir->i_sb, UDF_FLAG_UNHIDE) )
 				continue;
 		}
 
@@ -640,7 +640,11 @@ int udf_create(struct inode *dir, struct dentry *dentry, int mode)
 	if (!inode)
 		return err;
 
-	inode->i_op = &udf_file_inode_operations_adinicb;
+	if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
+		inode->i_data.a_ops = &udf_adinicb_aops;
+	else
+		inode->i_data.a_ops = &udf_aops;
+	inode->i_op = &udf_file_inode_operations;
 	inode->i_mode = mode;
 	mark_inode_dirty(inode);
 
@@ -970,7 +974,8 @@ int udf_symlink(struct inode * dir, struct dentry * dentry, const char * symname
 		goto out;
 
 	inode->i_mode = S_IFLNK | S_IRWXUGO;
-	inode->i_op = &udf_symlink_inode_operations;
+	inode->i_data.a_ops = &udf_symlink_aops;
+	inode->i_op = &page_symlink_inode_operations;
 
 	bh = udf_tread(inode->i_sb, inode->i_ino, inode->i_sb->s_blocksize);
 	ea = bh->b_data + udf_file_entry_alloc_offset(inode);
