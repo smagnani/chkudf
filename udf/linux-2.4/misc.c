@@ -26,6 +26,8 @@
 
 #include "udfdecl.h"
 
+#include <linux/locks.h>
+#include <linux/smp_lock.h>
 #include <linux/fs.h>
 #include <linux/string.h>
 #include <linux/udf_fs.h>
@@ -359,4 +361,62 @@ void udf_new_tag(char *data, uint16_t ident, uint16_t version, uint16_t snum,
 	tptr->tagSerialNum = le16_to_cpu(snum);
 	tptr->tagLocation = le32_to_cpu(loc);
 	udf_update_tag(data, length);
+}
+
+void udf_adj_dirs(struct super_block *sb, int count)
+{
+	struct buffer_head *bh;
+
+	lock_kernel();
+	lock_buffer(UDF_SB_LVIDBH(sb));
+#if 0
+	if (!buffer_dirty(UDF_SB_LVIDBH(sb)))
+	{
+		bh = udf_tgetblk(sb, UDF_SB_LVIDBH(sb)->b_blocknr + 1, sb->s_blocksize);
+		lock_buffer(bh);
+		memset(bh->b_data, 0x00, sb->s_blocksize);
+		mark_buffer_uptodate(bh, 1);
+		unlock_buffer(bh);
+		memcpy(bh->b_data, UDF_SB_LVIDBH(sb)->b_data, sb->s_blocksize);
+		udf_release_data(UDF_SB_LVIDBH(sb));
+		unlock_buffer(UDF_SB_LVIDBH(sb));
+
+		lock_buffer(bh);
+		UDF_SB_LVIDBH(sb) = bh;
+	}
+#endif
+	UDF_SB_LVIDIU(sb)->numDirs =
+		cpu_to_le32(le32_to_cpu(UDF_SB_LVIDIU(sb)->numDirs) + count);
+	mark_buffer_dirty(UDF_SB_LVIDBH(sb));
+	unlock_buffer(UDF_SB_LVIDBH(sb));
+	unlock_kernel();
+}
+
+void udf_adj_files(struct super_block *sb, int count)
+{
+	struct buffer_head *bh;
+
+	lock_kernel();
+	lock_buffer(UDF_SB_LVIDBH(sb));
+#if 0
+	if (!buffer_dirty(UDF_SB_LVIDBH(sb)))
+	{
+		bh = udf_tgetblk(sb, UDF_SB_LVIDBH(sb)->b_blocknr + 1, sb->s_blocksize);
+		lock_buffer(bh);
+		memset(bh->b_data, 0x00, sb->s_blocksize);
+		mark_buffer_uptodate(bh, 1);
+		unlock_buffer(bh);
+		memcpy(bh->b_data, UDF_SB_LVIDBH(sb)->b_data, sb->s_blocksize);
+		udf_release_data(UDF_SB_LVIDBH(sb));
+		unlock_buffer(UDF_SB_LVIDBH(sb));
+
+		lock_buffer(bh);
+		UDF_SB_LVIDBH(sb) = bh;
+	}
+#endif
+	UDF_SB_LVIDIU(sb)->numFiles =
+		cpu_to_le32(le32_to_cpu(UDF_SB_LVIDIU(sb)->numFiles) + count);
+	mark_buffer_dirty(UDF_SB_LVIDBH(sb));
+	unlock_buffer(UDF_SB_LVIDBH(sb));
+	unlock_kernel();
 }
