@@ -138,54 +138,62 @@ udf_get_last_rti(kdev_t dev, struct inode *inode_fake)
 	ip = (int *)(buffer + 8);
 	memset(cdb, 0, 10);
 	cdb[0] = 0x51;
-	cdb[8] = 32;
-	result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, 32);
+	cdb[8] = 2;
+	result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, cdb[8]);
 	if (!result)
 	{
-		track_no = buffer[14];
-		udf_debug("Generic Read Disc Info worked; last track is %d. status=0x%x\n",
-			track_no, buffer[10] & 0x3);
-		memset(buffer, 0, 128);
-		cdb[0] = 0x52;
-		cdb[1] = 1;
-		cdb[4] = (track_no & 0xFF00) >> 8;
-		cdb[5] = track_no & 0xFF;
-		cdb[8] = 8;
-		result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, 8);
+		cdb[8] = ((buffer[8] << 8) | buffer[9]) + 2;
+		result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, cdb[8]);
+
 		if (!result)
 		{
-			len = cdb[8] = ((buffer[8] << 8) | (buffer[9] & 0xFF)) + 2;
-			result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, len);
+			track_no = (buffer[19] << 8) | buffer[14];
+			udf_debug("Generic Read Disc Info worked; last track is %d. status=0x%x\n",
+				track_no, buffer[10] & 0x3);
+			memset(buffer, 0, 128);
+			cdb[0] = 0x52;
+			cdb[1] = 1;
+			cdb[4] = (track_no & 0xFF00) >> 8;
+			cdb[5] = track_no & 0xFF;
+			cdb[8] = 8;
+			result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, 8);
 			if (!result)
 			{
-				if (buffer[14] & 0x40)
-				{
-					cdb[4] = ((track_no - 1) & 0xFF00) >> 8;
-					cdb[5] = (track_no - 1) & 0xFF;
-					result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, len);
-				}
+				len = cdb[8] = ((buffer[8] << 8) | (buffer[9] & 0xFF)) + 2;
+				result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, len);
 				if (!result)
 				{
-					trackstart = be32_to_cpu(ip[2]);
-					tracklength = be32_to_cpu(ip[6]);
-					freeblocks = be32_to_cpu(ip[4]);
-					udf_debug("Start %d, length %d, freeblocks %d.\n", trackstart, tracklength, freeblocks);
-					if (buffer[14] & 0x20)
+					if (buffer[14] & 0x40)
 					{
-						if (buffer[14] & 0x10)
+						cdb[4] = ((track_no - 1) & 0xFF00) >> 8;
+						cdb[5] = (track_no - 1) & 0xFF;
+						result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, len);
+					}
+					if (!result)
+					{
+						trackstart = be32_to_cpu(ip[2]);
+						tracklength = be32_to_cpu(ip[6]);
+						freeblocks = be32_to_cpu(ip[4]);
+						udf_debug("Start %d, length %d, freeblocks %d.\n", trackstart, tracklength, freeblocks);
+						if (buffer[14] & 0x20)
 						{
-							udf_debug("Packet size is %d.\n", be32_to_cpu(ip[5]));
-							lastsector = trackstart + tracklength - 1;
-						}
-						else
-						{
-							udf_debug("Variable packet written track.\n");
-							lastsector = trackstart + tracklength - 1;
-							if (freeblocks)
+							if (buffer[14] & 0x10)
 							{
-								lastsector = lastsector - freeblocks - 7;
+								udf_debug("Packet size is %d.\n", be32_to_cpu(ip[5]));
+								lastsector = trackstart + tracklength - 1;
+							}
+							else
+							{
+								udf_debug("Variable packet written track.\n");
+								lastsector = trackstart + tracklength - 1;
+								if (freeblocks)
+								{
+									lastsector = lastsector - freeblocks - 7;
+								}
 							}
 						}
+						else
+							lastsector = trackstart + tracklength - 1;
 					}
 				}
 			}
