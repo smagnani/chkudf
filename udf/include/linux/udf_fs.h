@@ -24,7 +24,7 @@
  *		ftp://prep.ai.mit.edu/pub/gnu/GPL
  *	Each contributing author retains all rights to their own work.
  *
- *  (C) 1999-2000 Ben Fennema
+ *  (C) 1999-2004 Ben Fennema
  *  (C) 1999-2000 Stelias Computing Inc
  *
  * HISTORY
@@ -37,8 +37,8 @@
 #define UDF_PREALLOCATE
 #define UDF_DEFAULT_PREALLOC_BLOCKS	8
 
-#define UDFFS_DATE			"2003/10/01"
-#define UDFFS_VERSION			"0.9.8-cvs"
+#define UDFFS_DATE			"2004/02/09"
+#define UDFFS_VERSION			"0.9.8"
 
 #define UDFFS_DEBUG
 
