@@ -96,7 +96,7 @@ static int udf_adinicb_prepare_write(struct page *page, unsigned offset, unsigne
 
 static int udf_adinicb_commit_write(struct file *file, struct page *page, unsigned offset, unsigned to)
 {
-	struct inode *inode = file->f_dentry->d_inode;
+	struct inode *inode = (struct inode *)page->mapping->host;
 
 	struct buffer_head *bh;
 	int block;
@@ -137,7 +137,7 @@ static ssize_t udf_file_write(struct file * file, const char * buf,
 		if (inode->i_sb->s_blocksize < (udf_file_entry_alloc_offset(inode) +
 			pos + count))
 		{
-			udf_expand_file_adinicb(file, pos + count, &err);
+			udf_expand_file_adinicb(inode, pos + count, &err);
 			if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
 			{
 				udf_debug("udf_expand_adinicb: err=%d\n", err);
