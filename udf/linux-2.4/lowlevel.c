@@ -68,7 +68,7 @@ udf_get_last_session(struct super_block *sb)
 }
 
 unsigned int
-udf_get_last_block(struct super_block *sb, int *flags)
+udf_get_last_block(struct super_block *sb)
 {
 	extern int *blksize_size[];
 	kdev_t dev = sb->s_dev;
@@ -81,17 +81,17 @@ udf_get_last_block(struct super_block *sb, int *flags)
 	if (ret) /* Hard Disk */
 	{
 		unsigned int hbsize = get_hardblocksize(dev);
-		unsigned int secsize = 512;
+		unsigned int blocksize = sb->s_blocksize;
 		unsigned int mult = 0;
 		unsigned int div = 0;
 
 		if (!hbsize)
 			hbsize = blksize_size[MAJOR(dev)][MINOR(dev)];
 
-		if (secsize > hbsize)
-			mult = secsize / hbsize;
-		else if (hbsize > secsize)
-			div = hbsize / secsize;
+		if (hbsize > blocksize)
+			mult = hbsize / blocksize;
+		else if (blocksize > hbsize)
+			div = blocksize / hbsize;
 
 		ret = ioctl_by_bdev(bdev, BLKGETSIZE, (unsigned long) &lblock);
 

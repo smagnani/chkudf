@@ -38,10 +38,11 @@ typedef struct scsi_cmnd   Scsi_Cmnd;
 #include "udf_sb.h"
 
 unsigned int 
-udf_get_last_session(kdev_t dev)
+udf_get_last_session(struct super_block *sb)
 {
 	struct cdrom_multisession ms_info;
 	unsigned int vol_desc_start;
+	kdev_t dev = sb->s_dev;
 	struct inode inode_fake;
 	extern struct file_operations * get_blkfops(unsigned int);
 	int i;
@@ -323,15 +324,16 @@ is_mmc(kdev_t dev, struct inode *inode_fake)
 #endif
 
 unsigned int
-udf_get_last_block(kdev_t dev, int *flags)
+udf_get_last_block(struct super_block *sb)
 {
 	extern int *blksize_size[];
+	kdev_t dev = sb->s_dev;
 	struct inode inode_fake;
 	extern struct file_operations * get_blkfops(unsigned int);
 	int ret;
 	unsigned long lblock;
 	unsigned int hbsize = get_hardblocksize(dev);
-	unsigned int secsize = 512;
+	unsigned int blocksize = sb->s_blocksize;
 	unsigned int mult = 0;
 	unsigned int div = 0;
 	int accurate = 0;
@@ -339,10 +341,10 @@ udf_get_last_block(kdev_t dev, int *flags)
 	if (!hbsize)
 		hbsize = blksize_size[MAJOR(dev)][MINOR(dev)];
 
-	if (secsize > hbsize)
-		mult = secsize / hbsize;
-	else if (hbsize > secsize)
-		div = hbsize / secsize;
+	if (hbsize > blocksize)
+		mult = hbsize / blocksize;
+	else if (blocksize > hbsize)
+		div = blocksize / hbsize;
 
 	if (get_blkfops(MAJOR(dev))->ioctl!=NULL)
 	{
