@@ -1,10 +1,11 @@
-#if !defined(_LINUX_UDF_FMT_H)
-#define _LINUX_UDF_FMT_H
+#if !defined(_LINUX_UDF_167_H)
+#define _LINUX_UDF_167_H
 /*
  * udf_fmt.h
  *
  * DESCRIPTION
- *	UDF (Universal Disk Format) definitions.
+ *	Definitions from the ECMA 167 standard.
+ *	http://www.ecma.ch/
  *
  *	These abbreviations are used to keep the symbols short:
  *		Alloc	Allocation
@@ -27,24 +28,31 @@
  *	The symbols are otherwise identical to the standard, and the
  *	sections of the standard to refer to are indicated.
  *
+ * CONTACTS
+ *	E-mail regarding any portion of the Linux UDF file system should be
+ *	directed to the development team mailing list (run by majordomo):
+ *		linux_udf@hootie.lvld.hp.com
+ *
+ * COPYRIGHT
+ *	This file is distributed under the terms of the GNU General Public
+ *	License (GPL). Copies of the GPL can be obtained from:
+ *		ftp://prep.ai.mit.edu/pub/gnu/GPL
+ *	Each contributing author retains all rights to their own work.
+ *
  * HISTORY
  *	July 12, 1997 - Andrew E. Mileski
- *	Adapted from the OSTA-UDF(tm) 1.50, and ECMA-167 (ISO 13346) standards.
+ *	Adapted from the ECMA-167 standard.
  */
 
 #include <linux/udf_fs.h>
 
-/* CS0 Charspec (ISO 13346 1/7.2.1) */
+/* CS0 Charspec (ECMA 167 1/7.2.1) */
 typedef struct {
 	__u8 charSetType;
 	__u8 charSetInfo[63];
 } charspec;
 
-/* UDF character set (UDF 1.50 2.1.2) */
-#define UDF_CHAR_SET_TYPE	0
-#define UDF_CHAR_SET_INFO	"OSTA Compressed Unicode"
-
-/* Timestamp (ISO 13346 1/7.3) */
+/* Timestamp (ECMA 167 1/7.3) */
 typedef struct {
 	__u16 typeAndTimezone;
 	__u16 year;
@@ -58,64 +66,23 @@ typedef struct {
 	__u8 microseconds;
 } timestamp;
 
-/* Timestamp types (ISO 13346 1/7.3.1) */
+/* Timestamp types (ECMA 167 1/7.3.1) */
 #define TIMESTAMP_TYPE_CUT		0x0000U
 #define TIMESTAMP_TYPE_LOCAL		0x0001U
 #define TIMESTAMP_TYPE_AGREEMENT	0x0002U
 
-/* Entity Identifier (ISO 13346 1/7.4) */
+/* Entity Identifier (ECMA 167 1/7.4) */
 typedef struct {
 	__u8 flags;
 	__u8 ident[23];
 	__u8 identSuffix[8];
 } regid;
 
-/* Entity identifier flags (ISO 13346 1/7.4.1) */
+/* Entity identifier flags (ECMA 167 1/7.4.1) */
 #define REGID_FLAGS_DIRTY	0x01U
 #define REGID_FLAGS_PROTECTED	0x02U
 
-/* Entity Identifiers (UDF 1.50 6.1) */
-#define UDF_ID_DEVELOPER	"*Linux OSTA UDF 1.0"
-#define	UDF_ID_COMPLIANT	"*OSTA UDF Compliant"
-#define UDF_ID_LV_INFO		"*UDF LV Info"
-#define UDF_ID_FREE_EA		"*UDF FreeEASpace"
-#define UDF_ID_FREE_APP_EA	"*UDF FreeAppEASpace"
-#define UDF_ID_DVD_CGMS		"*UDF DVD CGMS Info"
-#define UDF_ID_OS2_EA		"*UDF OS/2 EA"
-#define UDF_ID_OS2_EA_LENGTH	"*UDF OS/2 EALength"
-#define UDF_ID_MAC_VOLUME	"*UDF Mac VolumeInfo"
-#define UDF_ID_MAC_FINDER	"*UDF Mac FinderInfo"
-#define UDF_ID_MAC_UNIQUE	"*UDF Mac UniqueIDTable"
-#define UDF_ID_MAC_RESOURCE	"*UDF Mac ResourceFork"
-#define UDF_ID_PARTITION	"*UDF Virtual Partition"
-#define UDF_ID_SPARABLE		"*UDF Sparable Partition"
-#define UDF_ID_ALLOC		"*UDF Virtual Alloc Tbl"
-#define UDF_ID_SPARING		"*UDF Sparing Table"
-
-/* Operating System Identifiers (UDF 1.50 6.3) */
-#define UDF_OS_CLASS_UNDEF	0x00U
-#define UDF_OS_CLASS_DOS	0x01U
-#define UDF_OS_CLASS_OS2	0x02U
-#define UDF_OS_CLASS_MAC	0x03U
-#define UDF_OS_CLASS_UNIX	0x04U
-#define UDF_OS_CLASS_WIN95	0x05U
-#define UDF_OS_CLASS_WINNT	0x06U
-#define UDF_OS_ID_UNDEF		0x00U
-#define UDF_OS_ID_DOS		0x00U
-#define UDF_OS_ID_OS2		0x00U
-#define UDF_OS_ID_MAC		0x00U
-#define UDF_OS_ID_UNIX		0x00U
-#define UDF_OS_ID_WIN95		0x00U
-#define UDF_OS_ID_WINNT		0x00U
-#define UDF_OS_ID_AIX		0x01U
-#define UDF_OS_ID_SOLARIS	0x02U
-#define UDF_OS_ID_HPUX		0x03U
-#define UDF_OS_ID_IRIX		0x04U
-#define UDF_OS_ID_LINUX		0x05U
-#define UDF_OS_ID_MKLINUX	0x06U
-#define UDF_OS_ID_FREEBSD	0x07U
-
-/* Volume Structure Descriptor (ISO 13346 2/9.1) */
+/* Volume Structure Descriptor (ECMA 167 2/9.1) */
 struct VolStructDesc {
 	__u8 structType;
 	__u8 stdIdent[5];
@@ -123,7 +90,7 @@ struct VolStructDesc {
 	__u8 structData[2041];
 };
 
-/* Std structure identifiers (ISO 13346 2/9.1.2) */
+/* Std structure identifiers (ECMA 167 2/9.1.2) */
 #define STD_ID_LEN	5
 #define STD_ID_BEA01	"BEA01"
 #define STD_ID_BOOT2	"BOOT2"
@@ -132,7 +99,7 @@ struct VolStructDesc {
 #define STD_ID_NSR02	"NSR02"
 #define STD_ID_TEA01	"TEA01"
 
-/* Beginning Extended Area Descriptor (ISO 13346 2/9.2) */
+/* Beginning Extended Area Descriptor (ECMA 167 2/9.2) */
 struct BeginningExtendedAreaDesc {
 	__u8 structType;
 	__u8 stdIdent;
@@ -140,7 +107,7 @@ struct BeginningExtendedAreaDesc {
 	__u8 structData[2041];
 };
 
-/* Terminating Extended Area Descriptor (ISO 13346 2/9.3) */
+/* Terminating Extended Area Descriptor (ECMA 167 2/9.3) */
 struct TerminatingExtendedAreaDesc {
 	__u8 structType;
 	__u8 stdIdent;
@@ -148,7 +115,7 @@ struct TerminatingExtendedAreaDesc {
 	__u8 structData[2041];
 };
 
-/* Boot Descriptor (ISO 13346 2/9.4) */
+/* Boot Descriptor (ECMA 167 2/9.4) */
 struct BootDesc {
 	__u8 structType;
 	__u8 stdIdent;
@@ -166,16 +133,16 @@ struct BootDesc {
 	__u8 bootUse[1906];
 };
 
-/* Boot flags (ISO 13346 2/9.4.12) */
+/* Boot flags (ECMA 167 2/9.4.12) */
 #define BOOT_FLAGS_ERASE	1
 
-/* Extent Descriptor (ISO 13346 3/7.1) */
+/* Extent Descriptor (ECMA 167 3/7.1) */
 typedef struct {
 	__u32 extLength;
 	__u32 extLocation;
 } extent_ad;
 
-/* Descriptor Tag (ISO 13346 3/7.2) */
+/* Descriptor Tag (ECMA 167 3/7.2) */
 typedef struct {
 	__u16 tagIdent;
 	__u16 descVersion;
@@ -187,7 +154,8 @@ typedef struct {
 	__u32 tagLocation;
 } tag;
 
-/* Tag Identifiers (ISO 13346 3/7.2.1) */
+/* Tag Identifiers (ECMA 167 3/7.2.1) */
+#define UNUSED_DESC			0x0000U
 #define PRIMARY_VOL_DESC		0x0001U
 #define ANCHOR_VOL_DESC_PTR		0x0002U
 #define VOL_DESC_PTR			0x0003U
@@ -198,7 +166,7 @@ typedef struct {
 #define TERMINATING_DESC		0x0008U
 #define LOGICAL_VOL_INTEGRITY_DESC	0x0009U
 
-/* Tag Identifiers (ISO 13346 4/7.2.1) */
+/* Tag Identifiers (ECMA 167 4/7.2.1) */
 #define FILE_SET_DESC			0x0100U
 #define FILE_IDENT_DESC			0x0101U
 #define ALLOC_EXTENT_DESC		0x0102U
@@ -210,7 +178,7 @@ typedef struct {
 #define SPACE_BITMAP_DESC		0x0108U
 #define PARTITION_INTEGRITY_ENTRY	0x0109U
 
-/* NSR Descriptor (ISO 13346 3/9.1) */
+/* NSR Descriptor (ECMA 167 3/9.1) */
 struct NSRDesc {
 	__u8 structType;
 	__u8 stdIdent;
@@ -219,7 +187,7 @@ struct NSRDesc {
 	__u8 structData[2040];
 };
 	
-/* Primary Volume Descriptor (ISO 13346 3/10.1) */
+/* Primary Volume Descriptor (ECMA 167 3/10.1) */
 struct PrimaryVolDesc {
 	tag descTag;
 	__u32 volDescSeqNum;
@@ -245,10 +213,10 @@ struct PrimaryVolDesc {
 	__u8 reserved[22];
 };
 
-/* Primary volume descriptor flags (ISO 13346 3/10.1.21) */
+/* Primary volume descriptor flags (ECMA 167 3/10.1.21) */
 #define VOL_SET_IDENT	1
 
-/* Anchor Volume Descriptor Pointer (ISO 13346 3/10.2) */
+/* Anchor Volume Descriptor Pointer (ECMA 167 3/10.2) */
 struct AnchorVolDescPtr {
 	tag descTag;
 	extent_ad mainVolDescSeqExt;
@@ -256,7 +224,7 @@ struct AnchorVolDescPtr {
 	__u8 reserved[480];
 };
 
-/* Volume Descriptor Pointer (ISO 13346 3/10.3) */
+/* Volume Descriptor Pointer (ECMA 167 3/10.3) */
 struct VolDescPtr {
 	tag descTag;
 	__u32 volDescSeqNum;
@@ -264,7 +232,7 @@ struct VolDescPtr {
 	__u8 reserved[484];
 };
 
-/* Implementation Use Volume Descriptor (ISO 13346 3/10.4) */
+/* Implementation Use Volume Descriptor (ECMA 167 3/10.4) */
 struct ImpUseVolDesc {
 	tag descTag;
 	__u32 volDescSeqNum;
@@ -272,7 +240,7 @@ struct ImpUseVolDesc {
 	__u8 impUse[460];
 };
 
-/* Partition Descriptor (ISO 13346 3/10.5) */
+/* Partition Descriptor (ECMA 167 3/10.5) */
 struct PartitionDesc {
 	tag descTag;
 	__u32 volDescSeqNum;
@@ -288,23 +256,23 @@ struct PartitionDesc {
 	__u8 reserved[156];
 };
 
-/* Partition Flags (ISO 13346 3/10.5.3) */
+/* Partition Flags (ECMA 167 3/10.5.3) */
 #define PARTITION_FLAGS_ALLOC	1
 
-/* Partition Contents (ISO 13346 3/10.5.5) */
+/* Partition Contents (ECMA 167 3/10.5.5) */
 #define PARTITION_CONTENTS_FDC01	"+FDC01"
 #define PARTITION_CONTENTS_CD001	"+CD001"
 #define PARTITION_CONTENTS_CDW02	"+CDW02"
 #define PARTITION_CONTENTS_NSR02	"+NSR02"
 
-/* Partition Access Types (ISO 13346 3/10.5.7) */
+/* Partition Access Types (ECMA 167 3/10.5.7) */
 #define PARTITION_ACCESS_NONE	0
 #define PARTITION_ACCESS_R	1
 #define PARTITION_ACCESS_WO	2
 #define PARTITION_ACCESS_RW	3
 #define PARTITION_ACCESS_OW	4
 
-/* Logical Volume Descriptor (ISO 13346 3/10.6) */
+/* Logical Volume Descriptor (ECMA 167 3/10.6) */
 struct LogicalVolDesc {
 	tag descTag;
 	__u32 volDescSeqNum;
@@ -321,19 +289,19 @@ struct LogicalVolDesc {
 	__u8 partitionMaps[0];
 };
 
-/* Generic Partition Map (ISO 13346 3/10.7.1) */
+/* Generic Partition Map (ECMA 167 3/10.7.1) */
 struct GenericPartitionMap {
 	__u8 partitionMapType;
 	__u8 partitionMapLength;
 	__u8 partitionMapping[0];
 };
 
-/* Partition Map Type (ISO 13346 3/10.7.1.1) */
+/* Partition Map Type (ECMA 167 3/10.7.1.1) */
 #define PARTITION_MAP_TYPE_NONE		0
 #define PARTITION_MAP_TYPE_1		1
 #define PARTITION_MAP_TYPE_2		2
 
-/* Type 1 Partition Map (ISO 13346 3/10.7.2) */
+/* Type 1 Partition Map (ECMA 167 3/10.7.2) */
 struct GenericPartitionMap1 {
 	__u8 partitionMapType;
 	__u8 partitionMapLength;
@@ -341,14 +309,14 @@ struct GenericPartitionMap1 {
 	__u16 partitionNum;
 };
 
-/* Type 2 Partition Map (ISO 13346 3/10.7.3) */
+/* Type 2 Partition Map (ECMA 167 3/10.7.3) */
 struct GenericPartitionMap2 {
 	__u8 partitionMapType;
 	__u8 partitionMapLength;
 	__u8 partitionIdent[62];
 };
 
-/* Unallocated Space Descriptor (ISO 13346 3/10.8) */
+/* Unallocated Space Descriptor (ECMA 167 3/10.8) */
 struct UnallocatedSpaceDesc {
 	tag descTag;
 	__u32 volDescSeqNum;
@@ -356,13 +324,13 @@ struct UnallocatedSpaceDesc {
 	extent_ad allocDescs[0];
 };
 
-/* Terminating Descriptor (ISO13346 3/10.9) */
+/* Terminating Descriptor (ECMA 3/10.9) */
 struct TerminatingDesc {
 	tag descTag;
 	__u8 reserved[4096];
 };
 
-/* Logical Volume Integrity Descriptor (ISO 13346 3/10.10) */
+/* Logical Volume Integrity Descriptor (ECMA 167 3/10.10) */
 struct LogicalVolIntegrityDesc {
 	tag descTag;
 	timestamp recordingDateAndTime;
@@ -376,24 +344,24 @@ struct LogicalVolIntegrityDesc {
 	__u8 impUse[0];
 };
 
-/* Integrity Types (ISO 13346 3/10.10.3) */
+/* Integrity Types (ECMA 167 3/10.10.3) */
 #define INTEGRITY_TYPE_OPEN	0
 #define INTEGRITY_TYPE_CLOSE	1
 
-/* Recorded Address (ISO 13346 4/7.1) */
+/* Recorded Address (ECMA 167 4/7.1) */
 typedef struct {
 	__u32 logicalBlockNum;
 	__u16 partitionReferenceNum;
 } lb_addr;
 
-/* Long Allocation Descriptor (ISO 13346 4/14.14.2) */
+/* Long Allocation Descriptor (ECMA 167 4/14.14.2) */
 typedef struct {
 	__u32 extLength;
 	lb_addr extLocation;
 	__u8 impUse[6];
 } long_ad;
 
-/* File Set Descriptor (ISO 13346 4/14.1) */
+/* File Set Descriptor (ECMA 167 4/14.1) */
 struct FileSetDesc {
 	tag descTag;
 	timestamp recordingDateandTime;
@@ -415,13 +383,13 @@ struct FileSetDesc {
 	__u8 reserved[48];
 };
 
-/* Short Allocation Descriptor (ISO 13346 4/14.14.1) */
+/* Short Allocation Descriptor (ECMA 167 4/14.14.1) */
 typedef struct {
 	__u32 extLength;
 	__u32 extPosition;
 } short_ad;
 
-/* Partition Header Descriptor (ISO 13346 4/14.3) */
+/* Partition Header Descriptor (ECMA 167 4/14.3) */
 struct PartitionHeaderDesc {
 	short_ad unallocatedSpaceTable;
 	short_ad unallocatedSpaceBitmap;
@@ -431,10 +399,7 @@ struct PartitionHeaderDesc {
 	__u8 reserved[88];
 };
 
-#define UDF_NAME_LEN	255
-#define UDF_PATH_LEN	1023
-
-/* File Identifier Descriptor (ISO 13346 4/14.4) */
+/* File Identifier Descriptor (ECMA 167 4/14.4) */
 struct FileIdentDesc {
 	tag descTag;
 	__u16 fileVersionNum;
@@ -447,20 +412,20 @@ struct FileIdentDesc {
 	__u8 padding[0];
 };
 
-/* File Characteristics (ISO 13346 4/14.4.3) */
+/* File Characteristics (ECMA 167 4/14.4.3) */
 #define FILE_EXISTENCE	1
 #define FILE_DIRECTORY	2
 #define FILE_DELETED	4
 #define FILE_PARENT	8
 
-/* Allocation Ext Descriptor (ISO 13346 4/14.5) */
+/* Allocation Ext Descriptor (ECMA 167 4/14.5) */
 struct AllocExtDesc {
 	tag descTag;
 	__u32 previousAllocExtLocation;
 	__u32 lengthAllocDescription;
 };
 
-/* ICB Tag (ISO 13346 4/14.6) */
+/* ICB Tag (ECMA 167 4/14.6) */
 typedef struct {
 	__u32 priorRecordedNumDirectEntries;
 	__u16 strategyType;
@@ -472,7 +437,7 @@ typedef struct {
 	__u16 flags;
 } icbtag;
 
-/* ICB File Type (ISO 13346 4/14.6.6) */
+/* ICB File Type (ECMA 167 4/14.6.6) */
 #define FILE_TYPE_NONE		0x00U
 #define FILE_TYPE_UNALLOC	0x01U
 #define FILE_TYPE_INTEGRITY	0x02U
@@ -487,7 +452,7 @@ typedef struct {
 #define FILE_TYPE_TERMINAL	0x0bU
 #define FILE_TYPE_SYMLINK	0x0cU
 
-/* ICB Flags (ISO 13346 4/14.6.8) */
+/* ICB Flags (ECMA 167 4/14.6.8) */
 #define ICB_FLAG_ALLOC_MASK	0x0007U
 #define ICB_FLAG_SORTED		0x0008U
 #define ICB_FLAG_NONRELOCATABLE	0x0010U
@@ -500,20 +465,20 @@ typedef struct {
 #define ICB_FLAG_TRANSFORMED	0x0800U
 #define ICB_FLAG_MULTIVERSIONS	0x1000U
 
-/* Indirect Entry (ISO 13346 4/14.7) */
+/* Indirect Entry (ECMA 167 4/14.7) */
 struct IndirectEntry {
 	tag descTag;
 	icbtag icbTag;
 	long_ad indirectICB;
 };
 
-/* Terminal Entry (ISO 13346 4/14.8) */
+/* Terminal Entry (ECMA 167 4/14.8) */
 struct TerminalEntry {
 	tag descTag;
 	icbtag icbTag;
 };
 
-/* File Entry (ISO 13346 4/14.9) */
+/* File Entry (ECMA 167 4/14.9) */
 struct FileEntry {
 	tag descTag;
 	icbtag icbTag;
@@ -539,7 +504,7 @@ struct FileEntry {
 	__u8 allocDescs[0];
 };
 
-/* File Permissions (ISO 13346 4/14.9.5) */
+/* File Permissions (ECMA 167 4/14.9.5) */
 #define PERM_O_EXEC	0x00000001U
 #define PERM_O_WRITE	0x00000002U
 #define PERM_O_READ	0x00000004U
@@ -556,7 +521,7 @@ struct FileEntry {
 #define PERM_U_CHATTR	0x00002000U
 #define PERM_U_DELETE	0x00004000U
 
-/* File Record Format (ISO 13346 4/14.9.7) */
+/* File Record Format (ECMA 167 4/14.9.7) */
 #define RECORD_FMT_NONE			0
 #define RECORD_FMT_FIXED_PAD		1
 #define RECORD_FMT_FIXED		2
@@ -570,14 +535,14 @@ struct FileEntry {
 #define RECORD_FMT_CRLF			10
 #define RECORD_FMT_LFCR			10
 
-/* Extended Attribute Header Descriptor (ISO 13346 4/14.10.1) */
+/* Extended Attribute Header Descriptor (ECMA 167 4/14.10.1) */
 struct ExtendedAttrHeaderDesc {
 	tag descTag;
 	__u32 impAttrLocation;
 	__u32 appAttrLocation;
 };
 
-/* Generic Attribute Format (ISO9660 4/14.10.2) */
+/* Generic Attribute Format (ECMA 4/14.10.2) */
 struct GenericAttrFormat {
 	__u32 attrType;
 	__u8 attrSubtype;
@@ -586,7 +551,7 @@ struct GenericAttrFormat {
 	__u8 attrData[0];
 };
 
-/* Character Set Attribute Format (ISO9660 4/14.10.3) */
+/* Character Set Attribute Format (ECMA 4/14.10.3) */
 struct CharSetAttrFormat {
 	__u32 attrType;
 	__u8 attrSubtype;
@@ -597,7 +562,7 @@ struct CharSetAttrFormat {
 	__u8 escapeSeq[0];
 };
 
-/* Alternate Permissions (ISO 13346 4/14.10.4) */
+/* Alternate Permissions (ECMA 167 4/14.10.4) */
 struct AlternatePermissionsExtendedAttr {
 	__u32 attrType;
 	__u8 attrSubtype;
@@ -608,7 +573,7 @@ struct AlternatePermissionsExtendedAttr {
 	__u16 permission;
 };
 
-/* File Times Extended Attribute (ISO 13346 4/14.10.5) */
+/* File Times Extended Attribute (ECMA 167 4/14.10.5) */
 struct FileTimesExtendedAttr {
 	__u32 attrType;
 	__u8 attrSubtype;
@@ -619,13 +584,13 @@ struct FileTimesExtendedAttr {
 	__u8 fileTimes;
 };
 
-/* FileTimeExistence (ISO 13346 4/14.10.5.6) */
+/* FileTimeExistence (ECMA 167 4/14.10.5.6) */
 #define FTE_CREATION	0
 #define FTE_DELETION	2
 #define FTE_EFFECTIVE	3
 #define FTE_BACKUP	5
 
-/* Information Times Extended Attribute (ISO 13346 4/14.10.6) */
+/* Information Times Extended Attribute (ECMA 167 4/14.10.6) */
 struct InfoTimesExtendedAttr {
 	__u32 attrType;
 	__u8 attrSubtype;
@@ -636,7 +601,7 @@ struct InfoTimesExtendedAttr {
 	__u8 infoTimes[0];
 };
 
-/* Device Specification Extended Attribute (ISO 13346 4/14.10.7) */
+/* Device Specification Extended Attribute (ECMA 167 4/14.10.7) */
 struct DeviceSpecificationExtendedAttr {
 	__u32 attrType;
 	__u8 attrSubtype;
@@ -648,7 +613,7 @@ struct DeviceSpecificationExtendedAttr {
 	__u8 impUse[0];
 };
 
-/* Implementation Use Extended Attr (ISO 13346 4/14.10.8) */
+/* Implementation Use Extended Attr (ECMA 167 4/14.10.8) */
 struct ImpUseExtendedAttr {
 	__u32 attrType;
 	__u8 attrSubtype;
@@ -659,8 +624,7 @@ struct ImpUseExtendedAttr {
 	__u8 impUse[0];
 };
 
-
-/* Application Use Extended Attribute (ISO 13346 4/14.10.9) */
+/* Application Use Extended Attribute (ECMA 167 4/14.10.9) */
 struct AppUseExtendedAttr {
 	__u32 attrType;
 	__u8 attrSubtype;
@@ -671,7 +635,7 @@ struct AppUseExtendedAttr {
 	__u8 appUse[0];
 };
 
-/* Unallocated Space Entry (ISO 13346 4/14.11) */
+/* Unallocated Space Entry (ECMA 167 4/14.11) */
 struct UnallocatedSpaceEntry {
 	tag descTag;
 	icbtag icbTag;
@@ -679,7 +643,7 @@ struct UnallocatedSpaceEntry {
 	__u8 allocDescs[0];
 };
 
-/* Space Bitmap Descriptor (ISO 13346 4/14.12) */
+/* Space Bitmap Descriptor (ECMA 167 4/14.12) */
 struct SpaceBitmap {
 	tag descTag;
 	__u32 numOfBits;
@@ -687,7 +651,7 @@ struct SpaceBitmap {
 	__u8 bitmap[0];
 };
 
-/* Partition Integrity Entry (ISO 13346 4/14.13) */
+/* Partition Integrity Entry (ECMA 167 4/14.13) */
 struct PartitionIntegrityEntry {
 	tag descTag;
 	icbtag icbTag;
@@ -698,21 +662,21 @@ struct PartitionIntegrityEntry {
 	__u8 impUse[256];
 };
 
-/* Extended Allocation Descriptor (ISO 13346 4/14.14.3) */
-typedef struct { /* ISO 13346 4/14.14.3 */
+/* Extended Allocation Descriptor (ECMA 167 4/14.14.3) */
+typedef struct { /* ECMA 167 4/14.14.3 */
 	__u32 extLength;
 	__u32 recordedLength;
 	__u32 informationLength;
 	lb_addr extLocation;
 } ext_ad;
 
-/* Logical Volume Header Descriptor (ISO 13346 4/14.5) */
+/* Logical Volume Header Descriptor (ECMA 167 4/14.5) */
 struct LogicalVolHeaderDesc {
 	__u64 uniqueId;
 	__u8 reserved[24];
 };
 
-/* Path Component (ISO 13346 4/14.16.1) */
+/* Path Component (ECMA 167 4/14.16.1) */
 struct PathComponent {
 	__u8 componentType;
 	__u8 lengthComponentIdent;
@@ -720,4 +684,4 @@ struct PathComponent {
 	dstring componentIdent[0];
 };
 
-#endif /* !defined(_LINUX_UDF_FMT_H) */
+#endif /* !defined(_LINUX_UDF_167_H) */

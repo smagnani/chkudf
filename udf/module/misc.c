@@ -4,14 +4,21 @@
  * PURPOSE
  *	Miscellaneous routines for the OSTA-UDF(tm) filesystem.
  *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
+ * CONTACTS
+ *	E-mail regarding any portion of the Linux UDF file system should be
+ *	directed to the development team mailing list (run by majordomo):
+ *		linux_udf@hootie.lvld.hp.com
+ *
+ * COPYRIGHT
+ *	This file is distributed under the terms of the GNU General Public
+ *	License (GPL). Copies of the GPL can be obtained from:
+ *		ftp://prep.ai.mit.edu/pub/gnu/GPL
+ *	Each contributing author retains all rights to their own work.
  */
 
-#include <linux/config.h>
 #include <linux/fs.h>
-#include <linux/udf_fmt.h>
+#include <linux/udf_167.h>
+#include <linux/udf_udf.h>
 
 /*
  * udf_read_tagged
@@ -61,22 +68,4 @@ udf_read_tagged(struct super_block *sb, __u32 block)
 error_out:
 	brelse(bh);
 	return NULL;
-}
-
-/*
- * count_bits
- *
- * PURPOSE
- *	Count the bits number of bits in the number.
- *
- * HISTORY
- *	July 1, 1997 - Andrew E. Mileski
- *	Written, tested, and released.
- */
-extern int count_bits(unsigned c)
-{
-	int i;
-	for (i = 0; c; i++)
-		c >>= 1;
-	return --i;
 }

@@ -14,13 +14,19 @@
  *
  *	AT&T gives permission for the free use of the CRC source code.
  *
- * HISTORY
- *	July 21, 1997 - Andrew E. Mileski
- *	Adapted from OSTA-UDF(tm) 1.50 standard.
+ * CONTACTS
+ *	E-mail regarding any portion of the Linux UDF file system should be
+ *	directed to the development team mailing list (run by majordomo):
+ *		linux_udf@hootie.lvld.hp.com
+ *
+ * COPYRIGHT
+ *	This file is distributed under the terms of the GNU General Public
+ *	License (GPL). Copies of the GPL can be obtained from:
+ *		ftp://prep.ai.mit.edu/pub/gnu/GPL
+ *	Each contributing author retains all rights to their own work.
  */
 
 #include <linux/fs.h>
-#include <linux/config.h>
 
 static __u16 crc_table[256] = {
 	0x0000U, 0x1021U, 0x2042U, 0x3063U, 0x4084U, 0x50a5U, 0x60c6U, 0x70e7U,
@@ -101,13 +107,13 @@ udf_crc(__u8 *data, __u32 size)
  *	Adapted from OSTA-UDF(tm) 1.50 standard.
  */
 
-unsigned char Bytes[] = { 0x70U, 0x6AU, 0x77U };
+unsigned char bytes[] = { 0x70U, 0x6AU, 0x77U };
 
 int main(void)
 {
 	unsigned short x;
 
-	x = udf_crc16(Bytes, sizeof Bytes);
+	x = udf_crc16(bytes, sizeof bytes);
 	printf("udf_crc16: calculated = %4.4x, correct = %4.4x\n", x, 0x3299U);
 
 	return 0;
