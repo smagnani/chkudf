@@ -43,108 +43,6 @@
 #include "udf_i.h"
 #include "udf_sb.h"
 
-static loff_t udf_file_llseek(struct file *, loff_t, int);
-static ssize_t udf_file_read_adinicb (struct file *, char *, size_t, loff_t *);
-static ssize_t udf_file_write (struct file *, const char *, size_t, loff_t *);
-#if BITS_PER_LONG < 64
-static int udf_open_file(struct inode *, struct file *);
-#endif
-static int udf_release_file(struct inode *, struct file *);
-
-static struct file_operations udf_file_operations = {
-	udf_file_llseek,	/* llseek */
-	generic_file_read,	/* read */
-	udf_file_write,		/* write */
-	NULL,				/* readdir */
-	NULL,				/* poll */
-	udf_ioctl,			/* ioctl */
-	generic_file_mmap,	/* mmap */
-#if BITS_PER_LONG == 64
-	NULL, 				/* open */
-#else
-	udf_open_file,		/* open */
-#endif
-	NULL,				/* flush */
-	udf_release_file,	/* release */
-	udf_sync_file,		/* fsync */
-	NULL,				/* fasync */
-	NULL,				/* check_media_change */
-	NULL,				/* revalidate */
-	NULL				/* lock */
-};
-
-struct inode_operations udf_file_inode_operations = {
-	&udf_file_operations,
-	NULL,					/* create */
-	NULL,					/* lookup */
-	NULL,					/* link */
-	NULL,					/* unlink */
-	NULL,					/* symlink */
-	NULL,					/* mkdir */
-	NULL,					/* rmdir */
-	NULL,					/* mknod */
-	NULL,					/* rename */
-	NULL,					/* readlink */
-	NULL,					/* follow_link */
-	udf_get_block,			/* get_block */
-	block_read_full_page,	/* readpage */
-	block_write_full_page,	/* writepage */
-	block_flushpage,		/* flushpage */
-#ifdef CONFIG_UDF_RW
-	udf_truncate,			/* truncate */
-#else
-	NULL,					/* truncate */
-#endif
-	NULL,					/* permission */
-	NULL,					/* smap */
-	NULL					/* revalidate */
-};
-
-static struct file_operations udf_file_operations_adinicb = {
-	udf_file_llseek,	/* llseek */
-	udf_file_read_adinicb,/* read */
-	udf_file_write,		/* write */
-	NULL,				/* readdir */
-	NULL,				/* poll */
-	udf_ioctl,			/* ioctl */
-	NULL,				/* mmap */
-	NULL, 				/* open */
-	NULL,				/* flush */
-	udf_release_file,	/* release */
-	udf_sync_file,		/* fsync */
-	NULL,				/* fasync */
-	NULL,				/* check_media_change */
-	NULL,				/* revalidate */
-	NULL				/* lock */
-};
-
-struct inode_operations udf_file_inode_operations_adinicb = {
-	&udf_file_operations_adinicb,
-	NULL,					/* create */
-	NULL,					/* lookup */
-	NULL,					/* link */
-	NULL,					/* unlink */
-	NULL,					/* symlink */
-	NULL,					/* mkdir */
-	NULL,					/* rmdir */
-	NULL,					/* mknod */
-	NULL,					/* rename */
-	NULL,					/* readlink */
-	NULL,					/* follow_link */
-	udf_get_block,			/* get_block */
-	block_read_full_page,	/* readpage */
-	block_write_full_page,	/* writepage */
-	block_flushpage,		/* flushpage */
-#ifdef CONFIG_UDF_RW
-	udf_truncate,			/* truncate */
-#else
-	NULL,					/* truncate */
-#endif
-	NULL,					/* permission */
-	NULL,					/* smap */
-	NULL					/* revalidate */
-};
-
 /*
  * Make sure the offset never goes beyond the 32-bit mark..
  */
@@ -197,17 +95,6 @@ static ssize_t udf_file_write(struct file * file, const char * buf,
 	struct inode *inode = file->f_dentry->d_inode;
 	remove_suid(inode);
 
-	if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
-	{
-		int i, err;
-		struct buffer_head *bh;
-
-		if ((bh = udf_expand_adinicb(inode, &i, 0, &err)))
-			udf_release_data(bh);
-		else if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
-			return err;
-	}
-
 	retval = generic_file_write(file, buf, count, ppos, block_write_partial_page);
 
 	if (retval > 0)
@@ -216,6 +103,51 @@ static ssize_t udf_file_write(struct file * file, const char * buf,
 		UDF_I_UCTIME(inode) = UDF_I_UMTIME(inode) = CURRENT_UTIME;
 	}
 	mark_inode_dirty(inode);
+	return retval;
+}
+
+static ssize_t udf_file_write_adinicb(struct file * file, const char * buf,
+	size_t count, loff_t *ppos)
+{
+	ssize_t retval;
+	struct inode *inode = file->f_dentry->d_inode;
+	int err, pos;
+
+	if (file->f_flags & O_APPEND)
+		pos = inode->i_size;
+	else
+		pos = *ppos;
+
+	if (inode->i_sb->s_blocksize < (udf_file_entry_alloc_offset(inode) +
+		pos + count))
+	{
+		udf_expand_file_adinicb(inode, pos + count, &err);
+		if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
+		{
+			udf_debug("udf_expand_adinicb: err=%d\n", err);
+			return err;
+		}
+		else
+			return udf_file_write(file, buf, count, ppos);
+	}
+	else
+	{
+		*ppos += udf_file_entry_alloc_offset(inode);
+		inode->i_size += udf_file_entry_alloc_offset(inode);
+	}
+	
+	retval = generic_file_write(file, buf, count, ppos, block_write_partial_page);
+
+	*ppos -= udf_file_entry_alloc_offset(inode);
+	inode->i_size -= udf_file_entry_alloc_offset(inode);
+	UDF_I_LENALLOC(inode) = inode->i_size;
+	if (retval > 0)
+	{
+		remove_suid(inode);
+		inode->i_ctime = inode->i_mtime = CURRENT_TIME;
+		UDF_I_UCTIME(inode) = UDF_I_UMTIME(inode) = CURRENT_UTIME;
+		mark_inode_dirty(inode);
+	}
 	return retval;
 }
 
@@ -277,7 +209,7 @@ static ssize_t udf_file_read_adinicb(struct file * filp, char * buf,
 	if (left <= 0)
 		return 0;
 
-	pos = *loff + UDF_I_EXT0OFFS(inode);
+	pos = *loff + udf_ext0_offset(inode);
 	block = udf_block_map(inode, 0);
 	if (!(bh = udf_tread(inode->i_sb,
 		udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0),
@@ -430,7 +362,6 @@ static int udf_release_file(struct inode * inode, struct file * filp)
 	return 0;
 }
 
-#if BITS_PER_LONG < 64
 /*
  * udf_open_file
  *
@@ -439,6 +370,7 @@ static int udf_release_file(struct inode * inode, struct file * filp)
  *
  * DESCRIPTION
  *  Use this to disallow opening RW large files on 32 bit systems.
+ *  On 64 bit systems we force on O_LARGEFILE in sys_open.
  *
  * HISTORY
  *
@@ -449,4 +381,85 @@ static int udf_open_file(struct inode * inode, struct file * filp)
 		return -EFBIG;
 	return 0;
 }
+
+static struct file_operations udf_file_operations = {
+	udf_file_llseek,		/* llseek */
+	generic_file_read,		/* read */
+	udf_file_write,			/* write */
+	NULL,					/* readdir */
+	NULL,					/* poll */
+	udf_ioctl,				/* ioctl */
+	generic_file_mmap,		/* mmap */
+	udf_open_file,			/* open */
+	NULL,					/* flush */
+	udf_release_file,		/* release */
+	udf_sync_file,			/* fsync */
+	NULL,					/* fasync */
+	NULL					/* lock */
+};
+
+struct inode_operations udf_file_inode_operations = {
+	&udf_file_operations,
+	NULL,					/* create */
+	NULL,					/* lookup */
+	NULL,					/* link */
+	NULL,					/* unlink */
+	NULL,					/* symlink */
+	NULL,					/* mkdir */
+	NULL,					/* rmdir */
+	NULL,					/* mknod */
+	NULL,					/* rename */
+	NULL,					/* readlink */
+	NULL,					/* follow_link */
+	udf_get_block,			/* get_block */
+	block_read_full_page,	/* readpage */
+	block_write_full_page,	/* writepage */
+#if CONFIG_UDF_RW == 1
+	udf_truncate,			/* truncate */
+#else
+	NULL,					/* truncate */
 #endif
+	NULL,					/* permission */
+	NULL					/* revalidate */
+};
+
+static struct file_operations udf_file_operations_adinicb = {
+	udf_file_llseek,		/* llseek */
+	udf_file_read_adinicb,	/* read */
+	udf_file_write_adinicb,	/* write */
+	NULL,					/* readdir */
+	NULL,					/* poll */
+	udf_ioctl,				/* ioctl */
+	NULL,					/* mmap */
+	NULL, 					/* open */
+	NULL,					/* flush */
+	udf_release_file,		/* release */
+	udf_sync_file_adinicb,	/* fsync */
+	NULL,					/* fasync */
+	NULL					/* lock */
+};
+
+struct inode_operations udf_file_inode_operations_adinicb = {
+	&udf_file_operations_adinicb,
+	NULL,					/* create */
+	NULL,					/* lookup */
+	NULL,					/* link */
+	NULL,					/* unlink */
+	NULL,					/* symlink */
+	NULL,					/* mkdir */
+	NULL,					/* rmdir */
+	NULL,					/* mknod */
+	NULL,					/* rename */
+	NULL,					/* readlink */
+	NULL,					/* follow_link */
+	udf_get_block,			/* get_block */
+	udf_readpage_adinicb,	/* readpage */
+	udf_writepage_adinicb,	/* writepage */
+#if CONFIG_UDF_RW == 1
+	udf_truncate_adinicb,	/* truncate */
+#else
+	NULL,					/* truncate */
+#endif
+	NULL,					/* permission */
+	NULL					/* revalidate */
+};
