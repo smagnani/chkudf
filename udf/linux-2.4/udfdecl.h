@@ -166,7 +166,7 @@ extern Uint32 udf_get_pblock(struct super_block *, Uint32, Uint16, Uint32);
 extern Uint32 udf_get_pblock_virt15(struct super_block *, Uint32, Uint16, Uint32);
 extern Uint32 udf_get_pblock_virt20(struct super_block *, Uint32, Uint16, Uint32);
 extern Uint32 udf_get_pblock_spar15(struct super_block *, Uint32, Uint16, Uint32);
-extern void udf_fill_spartable(struct super_block *, struct udf_sparing_data *, int);
+extern int udf_relocate_blocks(struct super_block *, long, long *);
 
 /* unicode.c */
 extern int udf_get_filename(Uint8 *, Uint8 *, int);
