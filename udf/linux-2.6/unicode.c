@@ -329,8 +329,10 @@ try_again:
 	for (i = 0U; i < uni->u_len; i++)
 	{
 		len = nls->char2uni(&uni->u_name[i], uni->u_len-i, &uni_char);
+		if (len <= 0)
+			continue;
 
-		if (len == 2 && max_val == 0xff)
+		if (uni_char > max_val)
 		{
 			max_val = 0xffffU;
 			ocu[0] = (uint8_t)0x10U;
@@ -338,11 +340,9 @@ try_again:
 		}
 		
 		if (max_val == 0xffffU)
-		{
 			ocu[++u_len] = (uint8_t)(uni_char >> 8);
-			i++;
-		}
 		ocu[++u_len] = (uint8_t)(uni_char & 0xffU);
+		i += len - 1;
 	}
 
 	ocu[length - 1] = (uint8_t)u_len + 1;

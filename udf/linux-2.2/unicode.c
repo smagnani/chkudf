@@ -357,10 +357,7 @@ try_again:
 		}
 		
 		if (max_val == 0xffffU)
-		{
 			ocu[++u_len] = (uint8_t)(uni_char >> 8);
-			i++;
-		}
 		ocu[++u_len] = (uint8_t)(uni_char & 0xffU);
 	}
 
