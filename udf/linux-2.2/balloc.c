@@ -131,10 +131,7 @@ static inline int load_block_bitmap(struct super_block *sb,
 {
 	int slot;
 
-	if (bitmap->s_block_bitmap[block_group])
-		return 0;
-	else
-		slot = __load_block_bitmap(sb, bitmap, block_group);
+	slot = __load_block_bitmap(sb, bitmap, block_group);
 
 	if (slot < 0)
 		return slot;
@@ -361,7 +358,7 @@ repeat:
 			block_group = 0;
 		group_start = block_group ? 0 : sizeof(struct SpaceBitmapDesc);
 
-		bitmap_nr = load_block_bitmap(sb,bitmap,  block_group);
+		bitmap_nr = load_block_bitmap(sb, bitmap, block_group);
 		if (bitmap_nr < 0)
 			goto error_return;
 		bh = bitmap->s_block_bitmap[bitmap_nr];
