@@ -50,6 +50,7 @@
 #include <linux/slab.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/parser.h>
 #include <linux/stat.h>
 #include <linux/cdrom.h>
 #include <linux/nls.h>
