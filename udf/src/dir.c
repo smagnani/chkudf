@@ -27,6 +27,7 @@
  *                across blocks.
  *  12/12/98      Split out the lookup code to namei.c. bulk of directory
  *                code now in directory.c:udf_fileident_read.
+ *  08/02/99	  Updated for Linux 2.3
  */
 
 #include "udfdecl.h"
@@ -52,14 +53,14 @@ static struct file_operations udf_dir_operations = {
 	NULL,			/* lllseek */
 	NULL,			/* read */
 	NULL,			/* write */
-	udf_readdir,	/* readdir */
+	udf_readdir,		/* readdir */
 	NULL,			/* poll */
 	udf_ioctl,		/* ioctl */
 	NULL,			/* mmap */
 	NULL,			/* open */
 	NULL,			/* flush */
 	NULL,			/* release */
-	udf_sync_file,	/* fsync */
+	udf_sync_file,		/* fsync */
 	NULL,			/* fasync */
 	NULL,			/* check_media_change */
 	NULL,			/* revalidate */
@@ -69,7 +70,7 @@ static struct file_operations udf_dir_operations = {
 struct inode_operations udf_dir_inode_operations = {
 	&udf_dir_operations,
 #ifdef CONFIG_UDF_RW
-	udf_create, 	/* create */
+	udf_create, 		/* create */
 #else
 	NULL,			/* create */
 #endif
@@ -77,7 +78,7 @@ struct inode_operations udf_dir_inode_operations = {
 #ifdef CONFIG_UDF_RW
 	udf_link,		/* link */
 	udf_unlink,		/* unlink */
-	udf_symlink,	/* symlink */
+	udf_symlink,		/* symlink */
 	udf_mkdir,		/* mkdir */
 	udf_rmdir,		/* rmdir */
 	udf_mknod,		/* mknod */
@@ -93,9 +94,17 @@ struct inode_operations udf_dir_inode_operations = {
 #endif
 	NULL,			/* readlink */
 	NULL,			/* follow_link */
+#if LINUX_VERSION_CODE > 0x020306
+	/* these functions must do their own SMP locking */
+	NULL,			/* getblock */
+	NULL,			/* readpage */
+	NULL,			/* writepage */
+	NULL,			/* flushpage */
+#else
 	NULL,			/* readpage */
 	NULL,			/* writepage */
 	NULL,			/* bmap */
+#endif
 	NULL,			/* truncate */
 	NULL,			/* permission */
 	NULL,			/* smap */

@@ -48,7 +48,7 @@ static int sync_block (struct inode * inode, Uint32 * block, int wait)
 		return 0;
 	}
 	ll_rw_block (WRITE, 1, &bh);
-	bh->b_count--;
+	atomic_dec(&bh->b_count);
 	return 0;
 }
 

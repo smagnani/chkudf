@@ -21,6 +21,7 @@
  * HISTORY
  *
  *  04/16/99 blf  Created.
+ *  08/02/99 dgb  Updated for Linux 2.3
  *
  */
 
@@ -53,14 +54,22 @@ struct inode_operations udf_symlink_inode_operations = {
     NULL,			/* rmdir */
     NULL,			/* mknod */
     NULL,			/* rename */
-    udf_readlink,	/* readlink */
-    udf_follow_link,/* follow_link */
+    udf_readlink,		/* readlink */
+    udf_follow_link,		/* follow_link */
+#if LINUX_VERSION_CODE > 0x020306
+    NULL,			/* get_block */
+    NULL,			/* readpage */
+    NULL,			/* writepage */
+    NULL,			/* flushpage */
+#else
     NULL,			/* readpage */
     NULL,			/* writepage */
     NULL,			/* bmap */
+#endif
     NULL,			/* truncate */
     NULL,			/* permission */
-    NULL			/* smap */
+    NULL,			/* smap */
+    NULL			/* revalidate */
 };
 
 int udf_pc_to_char(char *from, int fromlen, char **to)

@@ -10,7 +10,8 @@ include ../config.mk
 MODDIR	= $(PREFIX)/lib/modules/$(UTS_RELEASE)
 
 ifndef CFLAGS
-KFLAGS	= -O2 -Wall -Wstrict-prototypes -Winline -pipe
+#KFLAGS	= -O2 -Wall -Wstrict-prototypes -Winline -pipe
+KFLAGS	= -O2 -Wall -Wstrict-prototypes -pipe
 endif
 
 CPPFLAGS= $(PCDEBUG) -D__KERNEL__ -DMODULE -I../include\

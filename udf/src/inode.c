@@ -336,13 +336,13 @@ static struct buffer_head * inode_getblk(struct inode * inode, long block,
 			if (!tbh && bh)
 			{
 				tbh = bh;
-				bh->b_count ++;
+				atomic_inc(&bh->b_count);
 			}
 			else if (tbh != bh)
 			{
 				udf_release_data(tbh);
 				tbh = bh;
-				bh->b_count ++;
+				atomic_inc(&bh->b_count);
 			}
 			tbloc = bloc;
 			textoffset = extoffset;
@@ -449,7 +449,7 @@ dont_create:
 		if (bh)
 		{
 			udf_release_data(tbh);
-			bh->b_count ++;
+			atomic_inc(&bh->b_count);
 			tbh = bh;
 		}
 		tbloc = bloc;
@@ -1639,7 +1639,9 @@ int udf_current_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 				udf_get_lb_pblock(inode->i_sb, *bloc, 0));
 			return -1;
 		}
-		udf_debug("new bh, count=%d\n", (*bh)->b_count);
+		/*
+		udf_debug("new bh, count=%d\n", ((*bh)->b_count) );
+		*/
 	}
 
 	if (!memcmp(&UDF_I_LOCATION(inode), bloc, sizeof(lb_addr)))
@@ -1729,7 +1731,7 @@ int udf_insert_aext(struct inode *inode, lb_addr bloc, int extoffset,
 			return -1;
 		}
 	}
-	bh->b_count ++;
+	atomic_inc(&bh->b_count);
 
 	while ((type = udf_next_aext(inode, &bloc, &extoffset, &oeloc, &oelen, &bh, 0)) != -1)
 	{
@@ -1781,10 +1783,10 @@ int udf_delete_aext(struct inode *inode, lb_addr nbloc, int nextoffset,
 				udf_get_lb_pblock(inode->i_sb, nbloc, 0));
 			return -1;
 		}
-		nbh->b_count ++;
+		atomic_inc(&nbh->b_count);
 	}
 	else
-		nbh->b_count += 2;
+		atomic_add(2, &nbh->b_count);
 
 	if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_SHORT)
 		adsize = sizeof(short_ad);

@@ -28,6 +28,7 @@
  *                ICB_FLAG_AD_IN_ICB.
  *  04/06/99      64 bit file handling on 32 bit systems taken from ext2 file.c
  *  05/12/99      Preliminary file write support
+ *  08/02/99	  Updated for Linux 2.3
  */
 
 #include "udfdecl.h"
@@ -61,15 +62,15 @@ static struct file_operations udf_file_operations = {
 	NULL,				/* readdir */
 	NULL,				/* poll */
 	udf_ioctl,			/* ioctl */
-	generic_file_mmap,	/* mmap */
+	generic_file_mmap,		/* mmap */
 #if BITS_PER_LONG == 64
 	NULL, 				/* open */
 #else
-	udf_open_file,		/* open */
+	udf_open_file,			/* open */
 #endif
 	NULL,				/* flush */
-	udf_release_file,	/* release */
-	udf_sync_file,		/* fsync */
+	udf_release_file,		/* release */
+	udf_sync_file,			/* fsync */
 	NULL,				/* fasync */
 	NULL,				/* check_media_change */
 	NULL,				/* revalidate */
@@ -89,32 +90,45 @@ struct inode_operations udf_file_inode_operations = {
 	NULL,				/* rename */
 	NULL,				/* readlink */
 	NULL,				/* follow_link */
-	generic_readpage,	/* readpage */
+#if LINUX_VERSION_CODE > 0x020306
+	NULL,				/* getblock */
+	block_read_full_page,		/* readpage */
+	NULL,				/* writepage */
+	NULL,				/* flushpage */
+#else
+	generic_readpage,		/* readpage */
 	NULL,				/* writepage */
 	udf_bmap,			/* bmap */
+#endif
 #ifdef CONFIG_UDF_RW
-	udf_truncate,		/* truncate */
+	udf_truncate,			/* truncate */
 #else
 	NULL,				/* truncate */
 #endif
 	NULL,				/* permission */
 	NULL,				/* smap */
+#if LINUX_VERSION_CODE < 0x020306
 	NULL,				/* updatepage */
+#endif
 	NULL				/* revalidate */
 };
 
 static struct file_operations udf_file_operations_adinicb = {
-	udf_file_llseek,	/* llseek */
-	udf_file_read_adinicb,/* read */
-	udf_file_write,		/* write */
+	udf_file_llseek,		/* llseek */
+	udf_file_read_adinicb,		/* read */
+#ifdef CONFIG_UDF_RW
+	udf_file_write,			/* write */
+#else
+	NULL,				/* write */
+#endif
 	NULL,				/* readdir */
 	NULL,				/* poll */
 	udf_ioctl,			/* ioctl */
 	NULL,				/* mmap */
 	NULL, 				/* open */
 	NULL,				/* flush */
-	udf_release_file,	/* release */
-	udf_sync_file,		/* fsync */
+	udf_release_file,		/* release */
+	udf_sync_file,			/* fsync */
 	NULL,				/* fasync */
 	NULL,				/* check_media_change */
 	NULL,				/* revalidate */
@@ -134,17 +148,26 @@ struct inode_operations udf_file_inode_operations_adinicb = {
 	NULL,				/* rename */
 	NULL,				/* readlink */
 	NULL,				/* follow_link */
+#if LINUX_VERSION_CODE > 0x020306
+	NULL,				/* get_block */
+	NULL,				/* readpage */
+	NULL,				/* writepage */
+	NULL,				/* flushpage */
+#else
 	NULL,				/* readpage */
 	NULL,				/* writepage */
 	NULL,				/* bmap */
+#endif
 #ifdef CONFIG_UDF_RW
-	udf_truncate_adinicb,/* truncate */
+	udf_truncate_adinicb,		/* truncate */
 #else
 	NULL,				/* truncate */
 #endif
 	NULL,				/* permission */
 	NULL,				/* smap */
+#if LINUX_VERSION_CODE < 0x020306
 	NULL,				/* updatepage */
+#endif
 	NULL				/* revalidate */
 };
 
@@ -313,7 +336,9 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 				written = -EFAULT;
 			break;
 		}
+#if LINUX_VERSION_CODE < 0x020306
 		update_vm_cache(inode, pos, bh->b_data + offset, c);
+#endif
 		pos += c;
 		written += c;
 		buf += c;

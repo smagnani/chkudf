@@ -7,9 +7,8 @@
 
 #else
 /* we're not compiled in, so we can't expect our stuff in <linux/fs.h> */
-#define UDF_I(X)	( (struct udf_inode_info *) &((X)->u.pipe_i))
+#define UDF_I(X)	( (struct udf_inode_info *) &((X)->u.ext2_i))
 	/* god, this is slimy. stealing another filesystem's union area. */
-	/* for the record, pipe_i is 9 ints long, we're using 9  	 */
 #endif
 
 #define UDF_I_EXT0LOC(X)	( UDF_I(X)->i_ext0Location )
