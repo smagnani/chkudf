@@ -1,7 +1,6 @@
 #ifndef __UDF_DECL_H
 #define __UDF_DECL_H
 
-
 extern struct file_operations udf_file_fops;
 extern struct file_operations udf_dir_fops;
 extern struct inode_operations udf_dir_inode_operations;

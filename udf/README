@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------
  * Linux(r) UDF Filesystem Driver
- * Version: 0.5
+ * Version: 0.7
  *
  * This is Andrew's second "patch" vs kernel 2.1.62, 
  * converted to a standalone package. Then many changes made. :-)
@@ -18,7 +18,7 @@ TESTING:
 		(assuming /dev/scd0 is your scsi cdrom)
 		(Substitute "scd0" and "/mnt" as appropriate for your system)
 
-I've tested this on my system with kernel 2.1.122, a Ricoh MP-6200S,
+I've tested this on my system with kernel 2.1.125, a Ricoh MP-6200S,
 a UDF 1.5 disc created by Adaptec DirectCD, and the cheap-o
 SCSI card (aha152x compatible) that came with the Ricoh.
 

@@ -154,13 +154,14 @@ int udf_CS0toUTF8(struct ustr *utf_o, struct ustr *ocu_i)
  *	November 12, 1997 - Andrew E. Mileski
  *	Written, tested, and released.
  */
-int udf_UTF8toCS0(struct ustr  *ocu, struct ustr *utf)
+int udf_UTF8toCS0(dstring *ocu, struct ustr *utf, int length)
 {
 	unsigned c, i, max_val, utf_char;
 	int utf_cnt;
+	int u_len = 0;
 
-	memset(ocu, 0, UDF_NAME_LEN);
-	ocu->u_cmpID = 8;
+	memset(ocu, 0, sizeof(dstring) * length);
+	ocu[0] = 8;
 	max_val = 0xffU;
 
 try_again:
@@ -205,15 +206,15 @@ try_again:
 		if (utf_char > max_val) {
 			if ( 0xffU == max_val ) {
 				max_val = 0xffffU;
-				ocu->u_cmpID = (__u8)0x10U;
+				ocu[0] = (Uint8)0x10U;
 				goto try_again;
 			}
 			goto error_out;
 		}
 
 		if (max_val == 0xffffU)
-			ocu->u_name[ocu->u_len++] = (__u8)(utf_char >> 8);
-		ocu->u_name[ocu->u_len++] = (__u8)(utf_char & 0xffU);
+			ocu[++u_len] = (Uint8)(utf_char >> 8);
+		ocu[++u_len] = (Uint8)(utf_char & 0xffU);
 	}
 
 	if (utf_cnt) {
@@ -224,6 +225,6 @@ error_out:
 		return -1;
 	}
 
-	ocu->u_name[UDF_NAME_LEN - 1] = (__u8)ocu->u_len;
+	ocu[length - 1] = (Uint8)u_len;
 	return 0;
 }

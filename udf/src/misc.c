@@ -98,6 +98,21 @@ gid_t udf_convert_gid(int gidin)
 }
 
 #if defined(__linux__) && defined(__KERNEL__)
+extern struct buffer_head *
+udf_read_untagged(struct super_block *sb, Uint32 block, Uint32 offset)
+{
+	struct buffer_head *bh;
+
+	/* Read the block */
+	bh = bread(sb->s_dev, block+offset, sb->s_blocksize);
+	if (!bh) {
+		printk(KERN_ERR "udf: udf_read_untagged(,%d) failed\n",
+			block);
+		return NULL;
+	}
+	return bh;
+}
+
 /*
  * udf_read_tagged
  *
@@ -109,11 +124,11 @@ gid_t udf_convert_gid(int gidin)
  *	Written, tested, and released.
  */
 extern struct buffer_head *
-udf_read_tagged(struct super_block *sb, __u32 block, __u32 offset)
+udf_read_tagged(struct super_block *sb, Uint32 block, Uint32 offset)
 {
 	tag *tag_p;
 	struct buffer_head *bh;
-	register __u8 checksum;
+	register Uint8 checksum;
 	register int i;
 
 	/* Read the block */
@@ -127,20 +142,26 @@ udf_read_tagged(struct super_block *sb, __u32 block, __u32 offset)
 	tag_p = (tag *)(bh->b_data);
 
 	/* Verify the tag location */
-	if ((block-offset) != tag_p->tagLocation) {
-		/* this is actually kind of normal, */
-		/* only tagged blocks will match, data blocks won't */ 
-		printk(KERN_DEBUG "udf: location mismatch block %d, tag %d\n",
-			block, tag_p->tagLocation);
+	if ( ((block-offset) != tag_p->tagLocation) &&
+	     (block != tag_p->tagLocation) ) {
+		static int seen_msg=0;
+
+		if (!seen_msg) {	
+			printk(KERN_DEBUG "udf: location mismatch block %d, offset %d, tag %d\n",
+				block, offset, tag_p->tagLocation);
+			seen_msg=1;
+		}
+		/*
 		goto error_out;
+		*/
 	}
 	
 	/* Verify the tag checksum */
 	checksum = 0U;
 	for (i = 0; i < 4; i++)
-		checksum += (__u8)(bh->b_data[i]);
+		checksum += (Uint8)(bh->b_data[i]);
 	for (i = 5; i < 16; i++)
-		checksum += (__u8)(bh->b_data[i]);
+		checksum += (Uint8)(bh->b_data[i]);
 	if (checksum != tag_p->tagChecksum) {
 		printk(KERN_ERR "udf: tag checksum failed\n");
 		goto error_out;
@@ -190,8 +211,9 @@ int
 udf_read_tagged_data(char *buffer, int size, int fd, int block, int offset)
 {
 	tag *tag_p;
-	register __u8 checksum;
+	register Uint8 checksum;
 	register int i;
+	unsigned long offs;
 
 	if (!buffer) {
 		udf_errno=1;
@@ -209,7 +231,8 @@ udf_read_tagged_data(char *buffer, int size, int fd, int block, int offset)
 	}
 	udf_errno=0;
 	
-	if ( lseek(fd, block*udf_blocksize, SEEK_SET) ) {
+	offs=(long)block * udf_blocksize;
+	if ( lseek(fd, offs, SEEK_SET) != offs ) {
 		udf_errno=4;
 		return -1;
 	}
@@ -236,9 +259,9 @@ udf_read_tagged_data(char *buffer, int size, int fd, int block, int offset)
 	/* Verify the tag checksum */
 	checksum = 0U;
 	for (i = 0; i < 4; i++)
-		checksum += (__u8)(buffer[i]);
+		checksum += (Uint8)(buffer[i]);
 	for (i = 5; i < 16; i++)
-		checksum += (__u8)(buffer[i]);
+		checksum += (Uint8)(buffer[i]);
 	if (checksum != tag_p->tagChecksum) {
 #ifdef __KERNEL__
 		printk(KERN_ERR "udf: tag checksum failed\n");

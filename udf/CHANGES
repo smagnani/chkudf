@@ -13,3 +13,8 @@
 10/18/98	Fixed some directory problems; still limited but
 		doesn't seem to crash or oops now.
 		Enhanced "df" output a little.  Generally much more stable.
+
+11/29/98	Added better support for 'extents', long directories are ok now.
+		Incorporated some changes from Ben Fennema, including mkudf.
+		Still can't handle the "Sequential.img" test case from Adaptec.
+		Improved taglist and added a new dumpfe tool.
