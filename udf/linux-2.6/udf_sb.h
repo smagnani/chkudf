@@ -35,7 +35,6 @@ static inline struct udf_sb_info *UDF_SB(struct super_block *sb)
 	return sb->s_fs_info;
 }
 
-
 #define UDF_SB_FREE(X)\
 {\
 	if (UDF_SB(X))\
