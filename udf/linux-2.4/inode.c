@@ -206,6 +206,7 @@ void udf_expand_file_adinicb(struct file * filp, int newsize, int * err)
 		UDF_I_LENALLOC(inode));
 		
 	mark_buffer_dirty(dbh, 1);
+	udf_release_data(dbh);
 
 	memset(sbh->b_data + udf_file_entry_alloc_offset(inode),
 		0, UDF_I_LENALLOC(inode));
