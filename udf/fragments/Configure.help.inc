@@ -1,8 +1,9 @@
 UDF Filesystem support (EXPERIMENTAL)
 CONFIG_UDF_FS
-  This is the new filesystem used by some CDROMS and DVD drivers. 
-  Say Y if you intend to mount DVD discs or CDRWs written in packet mode,
-  or if written to by other UDF utilities, such as DirectCD.
+  This is the new filesystem used by some CDROMS and DVD drivers. Say
+  Y if you intend to mount DVD discs or CDRWs written in packet mode,
+  or if written to by other UDF utilities, such as DirectCD. Please
+  read Documentation/filesystems/udf.txt
 
   This filesystem support is also available as a module ( = code which
   can be inserted in and removed from the running kernel whenever you

@@ -402,7 +402,7 @@ search_back:
 
 got_block:
 	newblock = bit + (block_group << (sb->s_blocksize_bits + 3)) -
-		(group_start << 3);
+		(sizeof(struct SpaceBitmapDesc) << 3);
 
 	tmp = udf_get_pblock(sb, newblock, partition, 0);
 	if (!udf_clear_bit(bit, bh->b_data))

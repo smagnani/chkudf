@@ -333,17 +333,18 @@ udf_get_last_block(kdev_t dev, int *flags)
 	int ret;
 	unsigned long lblock;
 	unsigned int hbsize = get_hardblocksize(dev);
+	unsigned int secsize = 512;
 	unsigned int mult = 0;
 	unsigned int div = 0;
 	int accurate = 0;
 
 	if (!hbsize)
-		hbsize = 512;
+		hbsize = blksize_size[MAJOR(dev)][MINOR(dev)];
 
-	if (hbsize > blksize_size[MAJOR(dev)][MINOR(dev)])
-		mult = hbsize / blksize_size[MAJOR(dev)][MINOR(dev)];
-	else if (blksize_size[MAJOR(dev)][MINOR(dev)] > hbsize)
-		div = blksize_size[MAJOR(dev)][MINOR(dev)] / hbsize;
+	if (secsize > hbsize)
+		mult = secsize / hbsize;
+	else if (hbsize > secsize)
+		div = hbsize / secsize;
 
 	if (get_blkfops(MAJOR(dev))->ioctl!=NULL)
 	{

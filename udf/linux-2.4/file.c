@@ -213,6 +213,8 @@ static ssize_t udf_file_write(struct file * file, const char * buf,
 
 		if ((bh = udf_expand_adinicb(inode, &i, 0, &err)))
 			udf_release_data(bh);
+		else if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
+			return err;
 	}
 
 	retval = generic_file_write(file, buf, count, ppos, block_write_partial_page);
@@ -294,7 +296,9 @@ static ssize_t udf_file_read_adinicb(struct file * filp, char * buf,
 	if (!copy_to_user(buf, bh->b_data + pos, left))
 		*loff += left;
 	else
-		return -EFAULT;
+		left = -EFAULT;
+
+	udf_release_data(bh);
 
 	return left;
 }

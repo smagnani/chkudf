@@ -238,6 +238,11 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 	{
 		if ((bh = udf_expand_adinicb(inode, &i, 0, &err)))
 			udf_release_data(bh);
+		else if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
+		{
+			udf_debug("udf_expand_adinicb: err=%d\n", err);
+			return err;
+		}
 	}
 
 	if (filp->f_flags & O_APPEND)
@@ -271,6 +276,7 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 		bh = udf_getblk(inode, block, 1, &err);
 		if (!bh)
 		{
+			udf_debug("udf_getblk failure, err=%d\n", err);
 			if (!written)
 				written = err;
 			break;
@@ -416,8 +422,9 @@ static ssize_t udf_file_read_adinicb(struct file * filp, char * buf,
 	if (!copy_to_user(buf, bh->b_data + pos, left))
 		*loff += left;
 	else
-		return -EFAULT;
-
+		left = -EFAULT;
+		
+	udf_release_data(bh);
 	return left;
 }
 

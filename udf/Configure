@@ -86,7 +86,7 @@ ask_bool () {
     if [ "$default" = "" ] ; then default=n ; fi
     answer=""
     while [ "$answer" != n -a "$answer" != y ] ; do
-	/bin/echo "$1 (y/n) [$default]: \c"
+	/bin/echo -e "$1 (y/n) [$default]: \c"
 	read answer
 	if [ -z "$answer" ] ; then answer="$default" ; fi
     done
@@ -97,7 +97,7 @@ ask_bool () {
 ask_str () {
     default=`eval echo '$'$2`
     answer=""
-    /bin/echo "$1 [$default]: \c"
+    /bin/echo -e "$1 [$default]: \c"
     read answer
     if [ -z "$answer" ] ; then answer="$default" ; fi
     eval "$2"=\"$answer\"
@@ -107,7 +107,7 @@ ask_str () {
 ask_num () {
     default=`eval echo '$'$2`
     answer=""
-    /bin/echo "$1 [$default]: \c"
+    /bin/echo -e "$1 [$default]: \c"
     read answer
     if [ -z "$answer" ] ; then answer="$default" ; fi
     eval "$2"=\"$answer\"
@@ -157,7 +157,7 @@ if [ $has_makefile -eq 1 ] ; then
 
 	src=""
 	while [ "$src" != 1 -a "$src" != 2  ] ; do
-	    /bin/echo "Enter option (1-2) [1]: \c"
+	    /bin/echo -e "Enter option (1-2) [1]: \c"
 	    read src
 	    if [ -z "$src" ] ; then src=1 ; fi
 	done
@@ -195,7 +195,7 @@ configcheck () {
 
 printflag() {
     value=`eval echo '$'$2`
-    /bin/echo "    $1 is \c"
+    /bin/echo -e "    $1 is \c"
     if [ "$value" = "y" ] ; then
 	echo "enabled."
     else
@@ -206,7 +206,7 @@ printflag() {
 
 printnum() {
     value=`eval echo '$'$2`
-    /bin/echo "    $1 is $value"
+    /bin/echo -e "    $1 is $value"
     write_num $2
 }
 
@@ -309,7 +309,8 @@ if [ $has_makefile -eq 1 ] ; then
 	VERSION=`sed -n -e 's/^VERSION = \(.*\)/\1/p' $LINUX/Makefile`
 	PATCHLEVEL=`sed -n -e 's/^PATCHLEVEL = \(.*\)/\1/p' $LINUX/Makefile`
 	SUBLEVEL=`sed -n -e 's/^SUBLEVEL = \(.*\)/\1/p' $LINUX/Makefile`
-	SRC_RELEASE=$VERSION.$PATCHLEVEL.$SUBLEVEL
+	EXTRAVERSION=`sed -n -e 's/^EXTRAVERSION = \(.*\)/\1/p' $LINUX/Makefile`
+	SRC_RELEASE=$VERSION.$PATCHLEVEL.$SUBLEVEL$EXTRAVERSION
 	VERSION_CODE=`expr $VERSION \* 65536 + $PATCHLEVEL \* 256 + $SUBLEVEL`
 	echo "The kernel source tree is version $SRC_RELEASE."
 	CUR_RELEASE=`uname -r`
@@ -368,6 +369,10 @@ case "$VERSION.$PATCHLEVEL" in
 esac
 
 UTS_RELEASE=`grep UTS_RELEASE $LINUX/include/linux/version.h | awk '{print $3}' | sed 's/"//g'`
+if [ ! $UTS_RELEASE ] ; then
+	echo "Cannot determine version from version.h. Using Makefile."
+	UTS_RELEASE=$CUR_RELEASE
+fi
 UTS_SHORT=`echo $UTS_RELEASE | sed 's/-.*//' | sed 's/.[0-9]*$//'`
 write_str UTS_RELEASE
 write_str UTS_SHORT
@@ -388,7 +393,7 @@ fi
 if [ -d linux-$UTS_SHORT ]; then
 	ln -s linux-$UTS_SHORT src
 else
-	echo Linux version $UTS_SHORT not supported.
+	echo "Linux version $UTS_SHORT not supported."
 fi
 
 if [ -L patch ]; then
@@ -430,7 +435,7 @@ case "$VERSION.$PATCHLEVEL" in
     ;;
 esac
 
-MIN=`/bin/echo "$MOD_RELEASE\n$NEED" | sort -t. +0n -1 +1n -2 +2n | head -1`
+MIN=`/bin/echo -e "$MOD_RELEASE\n$NEED" | sort -t. +0n -1 +1n -2 +2n | head -1`
 if [ "$MIN" != "$NEED" ] ; then
     echo "Your module utilities are too old for this kernel!"
     echo "    To fix, upgrade to at least version $NEED."

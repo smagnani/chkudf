@@ -126,3 +126,7 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
 09/27/99 blf	Fixed bug in long directories. Fixed time hour problems.
 				Coped ioctl changes from 2.2 to 2.3 tree. Added 2.3.18 changes
 				to 2.2 tree.
+
+10/29/99 blf	Some read fixes and lots of write fixes.
+				Fixed mkudf so it hopefully correctly detects the size of
+				media.

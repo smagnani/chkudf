@@ -180,7 +180,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 		&bloc, &extoffset, &eloc, &elen, &offset, &bh) == EXTENT_RECORDED_ALLOCATED)
 	{
 		block = udf_get_lb_pblock(dir->i_sb, eloc, offset);
-		if (++offset < (elen >> dir->i_sb->s_blocksize_bits))
+		if ((++offset << dir->i_sb->s_blocksize_bits) < elen)
 		{
 			if (UDF_I_ALLOCTYPE(dir) == ICB_FLAG_AD_SHORT)
 				extoffset -= sizeof(short_ad);
@@ -207,17 +207,23 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 		filp->f_pos = nf_pos;
 
 		fi = udf_fileident_read(dir, &nf_pos, &fibh, &cfi, &bloc, &extoffset, &offset, &bh);
-		liu = le16_to_cpu(cfi.lengthOfImpUse);
-		lfi = cfi.lengthFileIdent;
 
 		if (!fi)
 		{
+			udf_debug("udf_fileident_read, nf_pos=%d, bloc=%d,%d extoffset=%d offset=%d fibh->sbh=%ld (%d) fibh->ebh=%ld (%d) bh=%ld (%d)\n",
+				nf_pos, bloc.logicalBlockNum, bloc.partitionReferenceNum, extoffset, offset,
+				fibh.sbh ? fibh.sbh->b_blocknr : -1, fibh.sbh ? fibh.sbh->b_count : -1,
+				fibh.ebh ? fibh.ebh->b_blocknr : -1, fibh.ebh ? fibh.ebh->b_count : -1,
+				bh ? bh->b_blocknr : -1, bh ? bh->b_count : -1);
 			if (fibh.sbh != fibh.ebh)
 				udf_release_data(fibh.ebh);
 			udf_release_data(fibh.sbh);
 			udf_release_data(bh);
 			return 1;
 		}
+
+		liu = le16_to_cpu(cfi.lengthOfImpUse);
+		lfi = cfi.lengthFileIdent;
 
 		if (fibh.sbh == fibh.ebh)
 			nameptr = fi->fileIdent + liu;
@@ -266,7 +272,8 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 		{
 			if ((flen = udf_get_filename(nameptr, fname, lfi)))
 			{
-				if (filldir(dirent, fname, flen, filp->f_pos, iblock) < 0)
+				fname[flen] = '\0';
+				if (filldir(dirent, fname, flen, filp->f_pos, iblock))
 				{
 					if (fibh.sbh != fibh.ebh)
 						udf_release_data(fibh.ebh);

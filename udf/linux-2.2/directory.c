@@ -17,6 +17,7 @@
  */
 
 #include "udfdecl.h"
+#include "udf_sb.h"
 
 #if defined(__linux__) && defined(__KERNEL__)
 
@@ -131,9 +132,7 @@ udf_fileident_read(struct inode *dir, int *nf_pos,
 		&(fibh->eoffset));
 
 	if (!fi)
-	{
 		return NULL;
-	}
 
 	*nf_pos += ((fibh->eoffset - fibh->soffset) >> 2);
 
