@@ -985,11 +985,7 @@ int udf_rmdir(struct inode * dir, struct dentry * dentry)
 	else
 	{
 		retval = udf_delete_entry(fi, &fibh, &cfi);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
 		dir->i_version = ++event;
-#else
-		dir->i_version = ++global_event;
-#endif
 	}
 #else
 	retval = -ENOTEMPTY;
@@ -1361,11 +1357,7 @@ static int do_udf_rename(struct inode *old_dir, struct dentry *old_dentry,
 		if (!nfi)
 			goto end_rename;
 	}
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,14)
 	new_dir->i_version = ++event;
-#else
-	new_dir->i_version = ++global_event;
-#endif
 
 	/*
 	 * ok, that's it
