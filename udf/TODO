@@ -1,10 +1,13 @@
-support extended attributes (in their own blocks/udf 2.0 streams) -- blf
+FS:
+    support extended attributes (in their own blocks/udf 2.0 streams)
+    do delayed block assignments
+    make sure reading works on big endian and/or 64 bit machines
+    make sure block allocation failures (full disc) cannot mess up extents
+    make any changes to support UDF 2.01
+    handling bad block remapping (superblock data/metadata/data)
+    handling writing VAT/sequential write media (CDR)
+    add journaling support (?)
 
-support tables as well as bitmaps for block allocation
-do delayed block assignments
-
-make sure reading works on big endian and/or 64 bit machines -- blf
-
-support unallocatedSpaceTable, freedSpaceTable, and freedSpaceBitmap -- blf
-
-make sure block allocation failures (full disc) cannot mess up extents -- blf
+SUPPORT:
+    rewrite mkudf (or at least, rework it)
+    write a udffsck
