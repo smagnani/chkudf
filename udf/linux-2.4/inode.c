@@ -744,7 +744,7 @@ static void udf_prealloc_extents(struct inode *inode, int c, int lastblock,
 
 				if (elen > numalloc)
 				{
-					laarr[c].extLength -=
+					laarr[i].extLength -=
 						(numalloc << inode->i_sb->s_blocksize_bits);
 					numalloc = 0;
 				}
