@@ -113,11 +113,14 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 	struct buffer_head * bh, * bufferlist[NBUF];
 	struct super_block * sb;
 	int err;
-	int i, buffercount, write_error;
+	int i, buffercount, write_error, new_buffer;
+	unsigned long limit;
 
 	/* POSIX: mtime/ctime may not change for 0 count */
 	if (!count)
 		return 0;
+	/* This makes the bounds-checking arithmetic later on much more
+	 * sane. */
 	write_error = buffercount = 0;
 	if (!inode)
 	{
@@ -147,13 +150,37 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 	}
 
 #if BITS_PER_LONG < 64
-	if (pos > (Uint32)(pos + count))
+	/* If the fd's pos is already greater than or equal to the file
+	 * descriptor's offset maximum, then we need to return EFBIG for
+	 * any non-zero count (and we already tested for zero above). */
+	if (((off_t) pos) >= 0x7FFFFFFFUL)
+		return -EFBIG;
+
+	/* If we are about to overflow the maximum file size, we also
+	 * need to return the error, but only if no bytes can be written
+	 * successfully. */
+	if (((off_t) pos + count) > 0x7FFFFFFFUL)
 	{
-		count = ~pos; /* == 0xFFFFFFFF - pos */
-		if (!count)
+		count = 0x7FFFFFFFL - pos;
+		if (((ssize_t) count) < 0)
 			return -EFBIG;
 	}
 #endif
+
+	limit = current->rlim[RLIMIT_FSIZE].rlim_cur;
+	if (limit < RLIM_INFINITY)
+	{
+		if (((off_t) pos + count) >= limit)
+		{
+			count = limit - pos;
+			if (((ssize_t) count) <= 0)
+			{
+				send_sig(SIGXFSZ, current, 0);
+				return -EFBIG;
+			}
+		}
+	}
+
 
 	if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
 	{
@@ -185,29 +212,52 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 	written = 0;
 	do
 	{
-		if (c > count)
-			c = count;
 		bh = udf_getblk(inode, block, 1, &err);
 		if (!bh)
 		{
-			udf_debug("udf_getblk failure, err=%d\n", err);
 			if (!written)
 				written = err;
 			break;
 		}
-		if (c != sb->s_blocksize && !buffer_uptodate(bh))
+		if (c > count)
+			c = count;
+
+		new_buffer = (!buffer_uptodate(bh) && !buffer_locked(bh) &&
+			c == sb->s_blocksize);
+
+		if (new_buffer)
 		{
-			ll_rw_block (READ, 1, &bh);
-			wait_on_buffer(bh);
-			if (!buffer_uptodate(bh))
+
+			set_bit(BH_Lock, &bh->b_state);
+			c -= copy_from_user(bh->b_data + offset, buf, c);
+			if (c != sb->s_blocksize)
 			{
+				c = 0;
+				unlock_buffer(bh);
 				brelse(bh);
 				if (!written)
-					written = -EIO;
+					written = -EFAULT;
 				break;
 			}
+			mark_buffer_uptodate(bh, 1);
+			unlock_buffer(bh);
 		}
-		c -= copy_from_user(bh->b_data + offset, buf, c);
+		else
+		{
+			if (!buffer_uptodate(bh))
+			{
+				ll_rw_block(READ, 1, &bh);
+				wait_on_buffer(bh);
+				if (!buffer_uptodate(bh))
+				{
+					brelse(bh);
+					if (!written)
+						written = -EIO;
+					break;
+				}
+			}
+			c -= copy_from_user(bh->b_data + offset, buf, c);
+		}
 		if (!c)
 		{
 			brelse(bh);
@@ -215,13 +265,13 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 				written = -EFAULT;
 			break;
 		}
-		update_vm_cache(inode, pos, bh->b_data + offset, c);
+		mark_buffer_dirty(bh, 0);
+		update_vm_cache_conditional(inode, pos, bh->b_data + offset, c,
+			(unsigned long) buf);
 		pos += c;
 		written += c;
 		buf += c;
 		count -= c;
-		mark_buffer_uptodate(bh, 1);
-		mark_buffer_dirty(bh, 0);
 
 		if (filp->f_flags & O_SYNC)
 			bufferlist[buffercount++] = bh;
