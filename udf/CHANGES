@@ -151,7 +151,13 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
                 Redid flag system
                 Added udf versioning info
                 Fixed block size calculations
-		Quota should be set everywhere correctly
+                Quota should be set everywhere correctly
                 Sync'd changes with 2.3 development
                 Added cdrwtool and pktcdvd to tools
-		mkudf updates
+                mkudf updates
+
+04/26/00 blf    handle tables in addition to bitmaps
+                handle freed as well as unallocated bitmaps/tables
+                fixed bugs based on udf plugfest
+                Configure handling for SMP
+                mkudf updates
