@@ -879,7 +879,10 @@ static int empty_dir(struct inode *dir)
 	}
 
 	if (!(fibh.sbh = fibh.ebh = udf_tread(dir->i_sb, block, dir->i_sb->s_blocksize)))
+	{
+		udf_release_data(bh);
 		return 0;
+	}
 
 	while ( (f_pos < size) )
 	{
@@ -896,6 +899,9 @@ static int empty_dir(struct inode *dir)
 
 		if (cfi.lengthFileIdent && (cfi.fileCharacteristics & FID_FILE_CHAR_DELETED) == 0)
 		{
+			if (fibh.sbh != fibh.ebh)
+				udf_release_data(fibh.ebh);
+			udf_release_data(fibh.sbh)
 			udf_release_data(bh);
 			return 0;
 		}
