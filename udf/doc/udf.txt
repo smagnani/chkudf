@@ -1,7 +1,7 @@
 *
 * ./Documentation/filesystems/udf.txt
 *
-UDF Filesystem version 0.8.9
+UDF Filesystem version 0.8.9.4
 
 If you encounter problems with reading UDF discs using this driver,
 please report them to linux_udf@hootie.lvld.hp.com, which is the

@@ -38,8 +38,7 @@ static void extent_trunc(struct inode * inode, lb_addr bloc, int *extoffset,
 	lb_addr neloc = { 0, 0 };
 	int nelen = 0;
 	int blocks = inode->i_sb->s_blocksize / 512;
-	int last_block = (elen + inode->i_sb->s_blocksize - 1) / inode->i_sb->s_blocksize;
-
+	int last_block = (elen + inode->i_sb->s_blocksize - 1) >> inode->i_sb->s_blocksize_bits;
 
 	if (offset)
 	{
@@ -64,7 +63,7 @@ static void trunc(struct inode * inode)
 	lb_addr bloc, eloc, neloc = { 0, 0 };
 	Uint32 extoffset, elen, offset, nelen = 0, lelen = 0, lenalloc;
 	int etype;
-	int first_block = (inode->i_size + inode->i_sb->s_blocksize - 1) / inode->i_sb->s_blocksize;
+	int first_block = (inode->i_size + inode->i_sb->s_blocksize - 1) >> inode->i_sb->s_blocksize_bits;
 	struct buffer_head *bh = NULL;
 	int adsize;
 

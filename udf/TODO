@@ -1,27 +1,14 @@
-remount support
-  -- some things function, needs more work -- DGB
-
-support all the accepted options -- blf
-
-support extended attributes -- blf
+support extended attributes (in their own blocks/udf 2.0 streams) -- blf
 
 full write support -- blf
-  rename
-  write
-
   block/inode allocation algorithm
-
-  find out what functions need to be change from their defaults
-    due to the possibility of data in the inode - at least everything
-    that uses udf_bmap to get a block to read
-
   support tables as well as bitmaps for block allocation
+  do delayed block assignments
+
+how to handle mmaping files embedded in the inode -- blf
 
 make sure reading works on big endian and/or 64 bit machines -- blf
 
-find out whats causing mount failure on discs created with DirectCD 2.5c
-  (there has to be a specific chunk of data that its creating that we can't
-   handle for some situation, because I can read discs I created under
-   DCD 2.5c) -- blf
-
 support unallocatedSpaceTable, freedSpaceTable, and freedSpaceBitmap -- blf
+
+make sure block allocation failures (full disc) cannot mess up extents -- blf

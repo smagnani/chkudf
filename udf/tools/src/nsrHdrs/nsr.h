@@ -36,9 +36,9 @@
 /********************************************************************/
 /*
  $Source: /home/steve/src/linux-udf/udf/tools/src/nsrHdrs/nsr.h,v $
- $Revision: 1.24 $      $Author: bfennema $
+ $Revision: 1.25 $      $Author: bfennema $
  $State: Exp $          $Locker:  $
- $Date: 1999-11-23 07:40:59 $
+ $Date: 1999-11-23 07:48:00 $
  ********************************************************************/
 
 #include "nsr_sys.h"

@@ -25,6 +25,8 @@
  *
  */
 
+#include "udfdecl.h"
+
 #if defined(__linux__) && defined(__KERNEL__)
 #include <linux/version.h>
 #include "udf_i.h"
@@ -35,8 +37,6 @@
 #include <linux/malloc.h>
 #include <linux/udf_fs.h>
 #endif
-
-#include "udfdecl.h"
 
 static inline int udf_match(int len, const char * const name, struct qstr *qs)
 {
@@ -583,8 +583,8 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 		else
 		{
 			elen = ((elen + sb->s_blocksize - 1) & ~(sb->s_blocksize - 1));
-			block = eloc.logicalBlockNum + ((elen - 1) >>
-				dir->i_sb->s_blocksize_bits);
+			block = eloc.logicalBlockNum +
+				((elen - 1) >> dir->i_sb->s_blocksize_bits);
 			elen = (EXTENT_RECORDED_ALLOCATED << 30) | elen;
 			udf_write_aext(dir, bloc, &lextoffset, eloc, elen, &bh, 0);
 		}
@@ -602,11 +602,30 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 			if (udf_next_aext(dir, &bloc, &lextoffset, &eloc, &elen, &bh, 1) ==
 				EXTENT_RECORDED_ALLOCATED)
 			{
-				block = eloc.logicalBlockNum + ((elen - 1) >>
-					dir->i_sb->s_blocksize_bits);
+				if (block == (eloc.logicalBlockNum +
+					((elen - 1) >> dir->i_sb->s_blocksize_bits)))
+				{
+					if (udf_next_aext(dir, &bloc, &lextoffset, &eloc, &elen, &bh, 1) !=
+						EXTENT_RECORDED_ALLOCATED)
+					{
+						udf_release_data(bh);
+						udf_release_data(fibh->sbh);
+						udf_release_data(fibh->ebh);
+						udf_debug("next extent not recorded and allocated\n");
+						return NULL;
+					}
+				}
 			}
 			else
-				block ++;
+			{
+				udf_release_data(bh);
+				udf_release_data(fibh->sbh);
+				udf_release_data(fibh->ebh);
+				udf_debug("next extent not recorded and allocated\n");
+				return NULL;
+			}
+			block = eloc.logicalBlockNum + ((elen - 1) >>
+				dir->i_sb->s_blocksize_bits);
 		}
 
 		fi = (struct FileIdentDesc *)(fibh->sbh->b_data + sb->s_blocksize + fibh->soffset);

@@ -362,7 +362,7 @@ udf_get_last_block(kdev_t dev, int *flags)
 				BLKGETSIZE,
 				(unsigned long) &lblock);
 
-		if (!ret) /* Hard Disk */
+		if (!ret && lblock != 0x7FFFFFFF) /* Hard Disk */
 		{
 			udf_debug("BLKGETSIZE lblock=%ld\n", lblock);
 			if (mult)

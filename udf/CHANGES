@@ -130,3 +130,8 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
 10/29/99 blf	Some read fixes and lots of write fixes.
 				Fixed mkudf so it hopefully correctly detects the size of
 				media.
+
+11/18/99 blf	Re-orgranized udfdecl.h
+				Fixed extent generation for continuous files > 2^30 - blocksize
+				Fixed FileIdent location for FileIdents starting on a block boundary.
+				mkudf updates
