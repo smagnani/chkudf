@@ -1025,7 +1025,7 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 	struct extendedFileEntry *efe;
 	time_t convtime;
 	long convtime_usec;
-	int offset, alen;
+	int offset;
 
 	inode->i_version = ++event;
 
@@ -1126,7 +1126,6 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 		UDF_I_LENEATTR(inode) = le32_to_cpu(fe->lengthExtendedAttr);
 		UDF_I_LENALLOC(inode) = le32_to_cpu(fe->lengthAllocDescs);
 		offset = sizeof(struct fileEntry) + UDF_I_LENEATTR(inode);
-		alen = offset + UDF_I_LENALLOC(inode);
 	}
 	else
 	{
@@ -1183,7 +1182,6 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 		UDF_I_LENEATTR(inode) = le32_to_cpu(efe->lengthExtendedAttr);
 		UDF_I_LENALLOC(inode) = le32_to_cpu(efe->lengthAllocDescs);
 		offset = sizeof(struct extendedFileEntry) + UDF_I_LENEATTR(inode);
-		alen = offset + UDF_I_LENALLOC(inode);
 	}
 
 	switch (fe->icbTag.fileType)
