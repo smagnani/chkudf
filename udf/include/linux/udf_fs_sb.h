@@ -97,7 +97,11 @@ struct udf_sb_info
 	uid_t			s_uid;
 
 	/* Root Info */
+#if LINUX_KERNEL_VERSION >= KERNEL_VERSION(2,5,0)
+	struct timespec		s_recordtime;
+#else
 	time_t			s_recordtime;
+#endif
 
 	/* Fileset Info */
 	__u16			s_serialnum;

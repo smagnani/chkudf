@@ -43,10 +43,14 @@ typedef struct
 
 struct udf_inode_info
 {
+#if LINUX_KERNEL_VERSION >= KERNEL_VERSION(2,5,0)
+	struct timespec		i_crtime;
+#else
 	long			i_umtime;
 	long			i_uctime;
 	long			i_crtime;
 	long			i_ucrtime;
+#endif
 	/* Physical address of inode */
 	lb_addr			i_location;
 	__u64			i_unique;
