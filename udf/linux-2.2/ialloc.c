@@ -27,6 +27,7 @@
 #include <linux/fs.h>
 #include <linux/locks.h>
 #include <linux/quotaops.h>
+#include <linux/malloc.h>
 #include <linux/udf_fs.h>
 
 #include "udf_i.h"
