@@ -132,15 +132,18 @@ static ssize_t udf_file_write_adinicb(struct file * file, const char * buf,
 	}
 	else
 	{
+		if (pos + count > inode->i_size)
+			UDF_I_LENALLOC(inode) = pos + count;
+		else
+			UDF_I_LENALLOC(inode) = inode->i_size;
 		*ppos += udf_file_entry_alloc_offset(inode);
 		inode->i_size += udf_file_entry_alloc_offset(inode);
 	}
-	
+
 	retval = generic_file_write(file, buf, count, ppos, block_write_partial_page);
 
 	*ppos -= udf_file_entry_alloc_offset(inode);
 	inode->i_size -= udf_file_entry_alloc_offset(inode);
-	UDF_I_LENALLOC(inode) = inode->i_size;
 	if (retval > 0)
 	{
 		remove_suid(inode);

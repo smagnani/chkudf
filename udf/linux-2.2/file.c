@@ -313,7 +313,10 @@ static ssize_t udf_file_write_adinicb(struct file * filp, const char * buf,
 	}
 	else
 	{
-		UDF_I_LENALLOC(inode) = pos + count;
+		if (pos + count > inode->i_size)
+			UDF_I_LENALLOC(inode) = pos + count;
+		else
+			UDF_I_LENALLOC(inode) = inode->i_size;
 		pos += udf_file_entry_alloc_offset(inode);
 	}
 
