@@ -33,7 +33,6 @@
  */
 
 #include <linux/types.h>
-#include <linux/kernel.h>
 #include "udfdecl.h"
 
 #define EPOCH_YEAR 1970
