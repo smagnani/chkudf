@@ -124,6 +124,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 	Uint32 ino;
 	int error = 0;
 	int size = (UDF_I_EXT0OFFS(dir) + dir->i_size) >> 2;
+	lb_addr loc;
 
 #ifdef VDEBUG
 	printk(KERN_DEBUG "do_udf_readdir(%p,%p,%p,%p)\n",
@@ -170,7 +171,9 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 				continue;
 		}
 
-		ino = udf_get_lb_pblock(dir->i_sb, fi->icb.extLocation, 0);
+		loc.logicalBlockNum = __le32_to_cpu(fi->icb.extLength.logicalBlockNum);
+		loc.partitionReferenceNum = __le16_to_cpu(fi->icb.extLength.partitionRefernceNum);
+		ino = udf_get_lb_pblock(dir->i_sb, loc, 0);
  
  		if (fi->lengthFileIdent == 0) /* parent directory */
  		{
