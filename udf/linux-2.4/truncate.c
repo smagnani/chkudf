@@ -126,7 +126,7 @@ void udf_truncate_extents(struct inode * inode)
 								sizeof(struct AllocExtDesc));
 						else
 							udf_update_tag(bh->b_data, sizeof(struct AllocExtDesc));
-						mark_buffer_dirty(bh);
+						mark_buffer_dirty_inode(bh, inode);
 					}
 				}
 
@@ -171,7 +171,7 @@ void udf_truncate_extents(struct inode * inode)
 						sizeof(struct AllocExtDesc));
 				else
 					udf_update_tag(bh->b_data, sizeof(struct AllocExtDesc));
-				mark_buffer_dirty(bh);
+				mark_buffer_dirty_inode(bh, inode);
 			}
 		}
 	}
