@@ -20,7 +20,7 @@
 
 #ifdef __KERNEL__
 
-#ifndef _ECMA_167R3_H
+#ifndef _ECMA_167_H
 typedef struct
 {
 	__u32 logicalBlockNum;
@@ -30,6 +30,27 @@ typedef struct
 
 struct udf_inode_info
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,3)
+	struct inode vfs_inode;
+	struct buffer_head *i_bh;
+	long i_umtime;
+	long i_uctime;
+	long i_crtime;
+	long i_ucrtime;
+	/* Physical address of inode */
+	lb_addr i_location;
+	__u64 i_unique;
+	__u32 i_lenEAttr;
+	__u32 i_lenAlloc;
+	__u64 i_lenExtents;
+	__u32 i_next_alloc_block;
+	__u32 i_next_alloc_goal;
+	unsigned i_alloc_type : 3;
+	unsigned i_extended_fe : 1;
+	unsigned i_strat_4096 : 1;
+	unsigned i_dirty : 1;
+	unsigned reserved : 26;
+#else
 	long i_umtime;
 	long i_uctime;
 	long i_crtime;
@@ -47,9 +68,6 @@ struct udf_inode_info
 	unsigned i_strat_4096 : 1;
 	unsigned i_new_inode : 1;
 	unsigned reserved : 26;
-	struct buffer_head *i_bh;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,3)
-	struct inode vfs_inode;
 #endif
 };
 
