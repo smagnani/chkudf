@@ -171,7 +171,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 	{
 		filp->f_pos = nf_pos;
 
-		fi = udf_fileident_read(dir, &nf_pos, &fibh, &cfi, &bloc, &extoffset, &offset, &bh);
+		fi = udf_fileident_read(dir, &nf_pos, &fibh, &cfi, &bloc, &extoffset, &eloc, &elen, &offset, &bh);
 
 		if (!fi)
 		{

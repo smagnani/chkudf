@@ -193,15 +193,10 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 	{
 		filp->f_pos = nf_pos;
 
-		fi = udf_fileident_read(dir, &nf_pos, &fibh, &cfi, &bloc, &extoffset, &offset, &bh);
+		fi = udf_fileident_read(dir, &nf_pos, &fibh, &cfi, &bloc, &extoffset, &eloc, &elen, &offset, &bh);
 
 		if (!fi)
 		{
-			udf_debug("udf_fileident_read, nf_pos=%d, bloc=%d,%d extoffset=%d offset=%d fibh->sbh=%ld (%d) fibh->ebh=%ld (%d) bh=%ld (%d)\n",
-				nf_pos, bloc.logicalBlockNum, bloc.partitionReferenceNum, extoffset, offset,
-				fibh.sbh ? fibh.sbh->b_blocknr : -1, fibh.sbh ? fibh.sbh->b_count : -1,
-				fibh.ebh ? fibh.ebh->b_blocknr : -1, fibh.ebh ? fibh.ebh->b_count : -1,
-				bh ? bh->b_blocknr : -1, bh ? bh->b_count : -1);
 			if (fibh.sbh != fibh.ebh)
 				udf_release_data(fibh.ebh);
 			udf_release_data(fibh.sbh);

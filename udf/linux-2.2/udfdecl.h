@@ -197,7 +197,7 @@ extern int udf_sync_file_adinicb(struct file *, struct dentry *);
 
 /* directory.c */
 extern Uint8 * udf_filead_read(struct inode *, Uint8 *, Uint8, lb_addr, int *, int *, struct buffer_head **, int *);
-extern struct FileIdentDesc * udf_fileident_read(struct inode *, int *, struct udf_fileident_bh *, struct FileIdentDesc *, lb_addr *, Uint32 *, Uint32 *, struct buffer_head **);
+extern struct FileIdentDesc * udf_fileident_read(struct inode *, int *, struct udf_fileident_bh *, struct FileIdentDesc *, lb_addr *, Uint32 *, lb_addr *, Uint32 *, Uint32 *, struct buffer_head **);
 
 #endif /* __KERNEL__ */
 
