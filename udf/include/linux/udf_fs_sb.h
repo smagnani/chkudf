@@ -50,11 +50,12 @@ struct udf_virtual_data
 
 struct udf_part_map
 {
-	__u16	  s_partition_type;
-	__u32	  s_partition_root;
-	__u32	  s_partition_len;
-	__u16	  s_volumeseqnum;
-	__u16	  s_partition_num;
+	__u16	s_partition_type;
+	__u32	s_partition_root;
+	__u32	s_partition_len;
+	__u32	s_uspace_bitmap;
+	__u16	s_volumeseqnum;
+	__u16	s_partition_num;
 	union
 	{
 		struct udf_sparing_data s_sparing;
@@ -69,7 +70,7 @@ struct udf_sb_info
 	__u64 s_nextid;
 
 	/* Default permissions */
-	mode_t s_mode;
+	mode_t s_umask;
 	gid_t s_gid;
 	uid_t s_uid;
 

@@ -48,39 +48,33 @@ udf_setblocksize(int size)
 Uint32
 udf64_low32(Uint64 indat)
 {
-	Uint32 * uptr;
-	uptr=(Uint32 *)&indat;
-	return uptr[0];
+	return indat & 0x00000000FFFFFFFFULL;
 }
 
 Uint32
 udf64_high32(Uint64 indat)
 {
-	Uint32 * uptr;
-	uptr=(Uint32 *)&indat;
-	return uptr[1];
+	return indat >> 32;
 }
 
 /*
  * udf_stamp_to_time
  */
 time_t * 
-udf_stamp_to_time(time_t *dest, void * srcp)
+udf_stamp_to_time(time_t *dest, timestamp src)
 {
-	timestamp *src;
 	struct ktm tm;
 
-	if ((!dest) || (!srcp) )
+	if ((!dest))
 	    return NULL;
-	src=(timestamp *)srcp;
 
 	/* this is very rough. need to find source to mktime() */
-	tm.tm_year=(src->year) - 1900;	
-	tm.tm_mon=(src->month);
-	tm.tm_mday=(src->day);
-	tm.tm_hour=src->hour;
-	tm.tm_min=src->minute;
-	tm.tm_sec=src->second;
+	tm.tm_year=(src.year) - 1900;	
+	tm.tm_mon=(src.month);
+	tm.tm_mday=(src.day);
+	tm.tm_hour=src.hour;
+	tm.tm_min=src.minute;
+	tm.tm_sec=src.second;
 	*dest = udf_converttime(&tm);
 	return dest;
 }
@@ -156,17 +150,19 @@ udf_read_tagged(struct super_block *sb, Uint32 block, Uint32 location, Uint32 id
 
 	tag_p = (tag *)(bh->b_data);
 
-	if ( ident != TID_UNUSED_DESC && ident != tag_p->tagIdent )
+	if ( ident != TID_UNUSED_DESC && ident != le16_to_cpu(tag_p->tagIdent) )
 	{
+#ifdef DEBUG
 		printk(KERN_DEBUG "udf: ident mismatch block %d, ident %d != %d\n",
-			block, tag_p->tagIdent, ident);
+			block, le16_to_cpu(tag_p->tagIdent), ident);
+#endif
 		goto error_out;
 	}
 
-	if ( location != tag_p->tagLocation )
+	if ( location != le32_to_cpu(tag_p->tagLocation) )
 	{
 		printk(KERN_DEBUG "udf: location mismatch block %d, tag %d != %d\n",
-			block, tag_p->tagLocation, location);
+			block, le32_to_cpu(tag_p->tagLocation), location);
 		goto error_out;
 	}
 	
@@ -182,15 +178,17 @@ udf_read_tagged(struct super_block *sb, Uint32 block, Uint32 location, Uint32 id
 	}
 
 	/* Verify the tag version */
-	if (tag_p->descVersion != 0x0002U && tag_p->descVersion != 0x0003U)
+	if (le16_to_cpu(tag_p->descVersion) != 0x0002U &&
+		le16_to_cpu(tag_p->descVersion) != 0x0003U)
 	{
 		printk(KERN_ERR "udf: tag version 0x%04x != 0x0002 || 0x0003 block %d\n",
-			tag_p->descVersion, block);
+			le16_to_cpu(tag_p->descVersion), block);
 		goto error_out;
 	}
 
 	/* Verify the descriptor CRC */
-	if (tag_p->descCRC == udf_crc(bh->b_data + 16, tag_p->descCRCLength)) {
+	if (le16_to_cpu(tag_p->descCRC) == udf_crc(bh->b_data + 16, le16_to_cpu(tag_p->descCRCLength)))
+	{
 		return bh;
 	}
 	printk(KERN_ERR "udf: crc failure in udf_read_tagged block %d\n", block);
@@ -201,15 +199,15 @@ error_out:
 }
 
 extern struct buffer_head *
-udf_read_ptagged(struct super_block *sb, lb_addr loc, Uint32 ident)
+udf_read_ptagged(struct super_block *sb, lb_addr loc, Uint32 offset, Uint32 ident)
 {
 #ifdef VDEBUG
 	printk(KERN_DEBUG "udf: udf_read_ptagged(%p,%d,%d,%d) block=%d\n",
 		sb, loc.logicalBlockNum, loc.partitionReferenceNum, ident,
-		udf_get_lb_pblock(sb, loc, 0));
+		udf_get_lb_pblock(sb, loc, offset));
 #endif
-	return udf_read_tagged(sb, udf_get_lb_pblock(sb, loc, 0),
-		loc.logicalBlockNum, ident);
+	return udf_read_tagged(sb, udf_get_lb_pblock(sb, loc, offset),
+		loc.logicalBlockNum + offset, ident);
 }
 
 void udf_release_data(struct buffer_head *bh)

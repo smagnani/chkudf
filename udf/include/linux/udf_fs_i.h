@@ -26,8 +26,7 @@ struct udf_inode_info {
 	__u32 i_ext0Offset;	/* for short directories */
 	lb_addr i_location;
 	__u32 i_partref;
-	__u32 i_fileLengthHigh;
-	__u32 i_fileLengthLow;
+	__u64 i_fileLength;
 	__u64 i_unique;
 };
 

@@ -1,4 +1,4 @@
-dgb: David Boyd       (dave@trylinux.com)
+dgb: David Boynton    (dave@trylinux.com)
 blf: Ben Fennema      (bfennema@falcon.csc.calpoly.edu)
 rl:  Reinoud Lamberts (Reinoud@BitWizard.nl)
 rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
@@ -42,3 +42,16 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
 
 12/14/98 blf    Full partition support. Code cleanups. No warnings! :)
                 UDF1.02.img, SparedBlks.img, and Sequential.img all work.
+
+12/15/98 rl     Fixed udf/tools gcc warnings (except, on purpose, the mkudf
+                write_fileentry4 and dumpfe partstart ones).  Updated TODO.
+
+12/19/98 dgb    Added semaphore and reorganized udf_iget. 
+                Worked on byte order (incomplete). Implemented umask.
+                Fixed block size reporting, and count_free error.
+
+12/20/98 blf    Completed byte ordering (perhaps).
+                Support for strategy 4096
+                Really basic support for finding the unallocated space bitmap
+                (we really need support for unallocated space tables +
+                freed space tables/bitmaps...)

@@ -17,8 +17,7 @@
 #define UDF_I_EXT0LEN(X)	( UDF_I(X)->i_ext0Length )
 #define UDF_I_EXT0OFFS(X)	( UDF_I(X)->i_ext0Offset )
 #define UDF_I_PARTREF(X)	( UDF_I(X)->i_partref )
-#define UDF_I_FILELENHIGH(X)	( UDF_I(X)->i_fileLengthHigh )
-#define UDF_I_FILELENLOW(X)	( UDF_I(X)->i_fileLengthLow )
+#define UDF_I_FILELEN(X)	( UDF_I(X)->i_fileLength )
 #define UDF_I_LOCATION(X)	( UDF_I(X)->i_location )
 
 #endif /* !defined(_LINUX_UDF_I_H) */

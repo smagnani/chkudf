@@ -94,7 +94,7 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 				return 0xFFFFFFFF;
 			}
 
-			loc = __cpu_to_le32(((Uint32 *)bh->b_data)[index]);
+			loc = le32_to_cpu(((Uint32 *)bh->b_data)[index]);
 
 			udf_release_data(bh);
 
@@ -126,11 +126,11 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 			}
 
 			st = (struct SparingTable *)bh->b_data;
-			if (__cpu_to_le16(st->descTag.tagIdent) == 0)
+			if (le16_to_cpu(st->descTag.tagIdent) == 0)
 			{
 				if (!strncmp(st->sparingIdent.ident, UDF_ID_SPARING, strlen(UDF_ID_SPARING)))
 				{
-					Uint16 rtl = __cpu_to_le16(st->reallocationTableLen);
+					Uint16 rtl = le16_to_cpu(st->reallocationTableLen);
 					Uint16 index;
 
 					/* If the sparing table span multiple blocks, find out which block we are on */
@@ -140,12 +140,12 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 					if (rtl * sizeof(SparingEntry) + sizeof(struct SparingTable) > sb->s_blocksize)
 					{
 						index = (sb->s_blocksize - sizeof(struct SparingTable)) / sizeof(SparingEntry);
-						if (__cpu_to_le32(se[index-1].origLocation) == packet)
+						if (le32_to_cpu(se[index-1].origLocation) == packet)
 						{
 							udf_release_data(bh);
-							return __cpu_to_le32(se[index].mappedLocation) | (newblock & (plength-1));
+							return le32_to_cpu(se[index].mappedLocation) | (newblock & (plength-1));
 						}
-						else if (__cpu_to_le32(se[index-1].origLocation) < packet)
+						else if (le32_to_cpu(se[index-1].origLocation) < packet)
 						{
 							do
 							{
@@ -158,24 +158,24 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 								rtl -= index;
 								index = sb->s_blocksize / sizeof(SparingEntry);
 
-								if (__cpu_to_le32(se[index].origLocation) == packet)
+								if (le32_to_cpu(se[index].origLocation) == packet)
 								{
 									udf_release_data(bh);
-									return __cpu_to_le32(se[index].mappedLocation) | (newblock & (plength-1));
+									return le32_to_cpu(se[index].mappedLocation) | (newblock & (plength-1));
 								}
 							} while (rtl * sizeof(SparingEntry) > sb->s_blocksize && 
-								__cpu_to_le32(se[index-1].origLocation) < packet);
+								le32_to_cpu(se[index-1].origLocation) < packet);
 						}
 					}
 			
 					for (index=0; index<rtl; index++)
 					{
-						if (__cpu_to_le32(se[index].origLocation) == packet)
+						if (le32_to_cpu(se[index].origLocation) == packet)
 						{
 							udf_release_data(bh);
-							return __cpu_to_le32(se[index].mappedLocation) | (newblock & (plength-1));
+							return le32_to_cpu(se[index].mappedLocation) | (newblock & (plength-1));
 						}
-						else if (__cpu_to_le32(se[index].origLocation) > packet)
+						else if (le32_to_cpu(se[index].origLocation) > packet)
 						{
 							udf_release_data(bh);
 							return newblock;

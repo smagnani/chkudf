@@ -1,50 +1,23 @@
 
 udf 1.02:
 
-chk img descr
-	-> Reinoud: what do you mean by this? -- REW
-
-
-  permissions ok?
-    -- OK! Thomas wrote "all ones", the DVD Demystified disk shows
-           the "expected" values. 
-
-  wrong link cnt
-    -- Only in Root dir. Probably root-dir-entries incorrectly inherit
-       the link count from the actual root directory. 
-        -- Seems to be a bug in the image -- BLF (Sequential.img has correct link counts)
-
-  extended attr.
-	-> Reinoud: what do you mean by this? -- REW
-
-  files in "folder 1" wrong contents
-    -- Fixed. (Name comparisons were done erroneously)
-
-kmsg, busy inodes
-  -- Fixed? (Bens work?) -- fixed BLF
+wrong link cnt
+  -- Only in Root dir. Probably root-dir-entries incorrectly inherit
+     the link count from the actual root directory. 
+      -- Seems to be a bug in the image -- BLF (Sequential.img has correct link counts)
 
 gcc warns  (will fix these on tuesday (dec 15 1998). -- REW)
-  -- integer constant out of range: Has to do with "long long" type. 
-	Something is wrong. I don't expect mkudf to work in this state.... 
-           -- I run egcs, which doesn't seem to warn.. gcc seems to work ok
-              (it complains about 64 bit constants... all I know is, on the sparc
-               it generates the same code as on the PC, so the 64 bit endian swap seems
-               to work ok) -- BLF
-  -- Wrong arguments to a callback function. (or something like that)
-	-> Fix declarations.
   -- chkudf is compiled with -ggdb which implies -lg which doesn't
 	work on my system.
   -- Some "unused variables". 
 
-- Reduce debugging output a bit.... Hmm. Ok Seems it is not on by default.
-  -> Ask reinoud how he turns on debugging. :-)
-        -- if you want to really spam yourself, turn on -DVDEBUG
-           I tend to change the #defines from DEBUG to VDEBUG when I don't need
-           them thrashing my log. -- BLF
+mount ro -> -w- perms?
+  -- umask implemented -- DGB
 
+remount support
+  -- stuff function, needs more work -- DGB
 
-
-Check if other images work.
+Check if other images work:
 
 - Sequential.img:
 
@@ -61,4 +34,23 @@ Check if other images work.
 	- "Wrong instance of "File 1". resp 2.
 	- I guess our implementation falls for the pitfall.
 
+----
+
+link count:
+    \_silly*Name?.#0DCE/.#25E9 has link count 4, must be 2
+    . doesn't reflect no. of subdirs
+
+    Sequential.img seems OK!
+
+'df' errors:
+    [UDF1.02.img]
+    <7>udf: ident mismatch block 292, ident 8 != 256
+    <3>udf: udf_count_free failed
+	-- Fixed, possibly. Should read SpaceBitmap not FileSet -- DGB
+
+    [SparedBlks.img]
+    <7>udf: ident mismatch block 2497, ident 0 != 256
+    <3>udf: udf_count_free failed
+
+Strategy4096 aint no good.  It picks te first entry, should be the last.
 

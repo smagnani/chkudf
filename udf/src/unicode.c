@@ -258,7 +258,7 @@ int udf_get_filename(struct FileIdentDesc *fi, char *name, struct inode *inode)
 	struct ustr unifilename;
 	int len;
 
-	if (udf_build_ustr_exact(&unifilename, fi->fileIdent + fi->lengthOfImpUse,
+	if (udf_build_ustr_exact(&unifilename, fi->fileIdent + le16_to_cpu(fi->lengthOfImpUse),
 		fi->lengthFileIdent) )
 	{
 		return 0;

@@ -97,7 +97,7 @@ udf_find_entry(struct inode *dir, struct dentry *dentry, lb_addr *ino)
 		{
 			if (udf_match(flen, fname, &(dentry->d_name)))
 			{
-				*ino = fi->icb.extLocation;
+				*ino = lelb_to_cpu(fi->icb.extLocation);
 				free_page((unsigned long) tmpfi);
 				return bh;
 			}

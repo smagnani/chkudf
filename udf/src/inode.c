@@ -23,6 +23,7 @@
  * 12/06/98 blf  partition support in udf_iget, udf_bmap and udf_read_inode
  * 12/12/98      rewrote udf_bmap to handle next extents and descs across
  *               block boundaries (which is not actually allowed)
+ * 12/20/98      added support for strategy 4096
  *
  */
 
@@ -33,6 +34,9 @@
 #include "udf_i.h"
 #include "udf_sb.h"
 
+static mode_t udf_convert_permissions(struct FileEntry *fe);
+static struct semaphore read_semaphore = MUTEX;
+
 /*
  * udf_read_inode
  *
@@ -40,12 +44,15 @@
  *	Read an inode.
  *
  * DESCRIPTION
- *	This routine is called by iget() [replaced by udf_iget()]
+ *	This routine is called by iget() [which is called by udf_iget()]
+ *      (clean_inode() will have been called first)
  *	when an inode is first read into memory.
  *
  * HISTORY
  *	July 1, 1997 - Andrew E. Mileski
  *	Written, tested, and released.
+ *
+ * 12/19/98 dgb  Updated to fix size problems.
  */
 void
 udf_read_inode(struct inode *inode)
@@ -59,13 +66,30 @@ udf_read_inode(struct inode *inode)
 	printk(KERN_DEBUG "udf_read_inode: inode=0x%lx\n", (unsigned long)inode);
 #endif
 
-	UDF_I_FILELENHIGH(inode)=0;
-	UDF_I_FILELENLOW(inode)=0;
+	/*
+	 * Set defaults, but the inode is still incomplete!
+	 * Note: get_new_inode() sets the following on a new inode:
+	 *      i_sb = sb
+	 *      i_dev = sb->s_dev;
+	 *      i_no = ino
+	 *      i_flags = sb->s_flags
+	 *      i_state = 0
+	 * clean_inode(): zero fills and sets
+	 *      i_count = 1
+	 *      i_nlink = 1
+	 *      i_op = NULL;
+	 */
+
+	inode->i_blksize = inode->i_sb->s_blocksize;
+	inode->i_version = 1;
+
+	UDF_I_FILELEN(inode) = 0x00000000FFFFFFFFULL;
 	UDF_I_EXT0LEN(inode)=0;
 	UDF_I_EXT0LOC(inode).logicalBlockNum = 0xFFFFFFFF;
 	UDF_I_EXT0LOC(inode).partitionReferenceNum = 0xFFFF;
 	UDF_I_EXT0OFFS(inode)=0;
 	UDF_I_ALLOCTYPE(inode)=0;
+
 	memcpy(&UDF_I_LOCATION(inode), &UDF_SB_LOCATION(inode->i_sb), sizeof(lb_addr));
 
 #ifdef VDEBUG
@@ -73,22 +97,64 @@ udf_read_inode(struct inode *inode)
                 UDF_I_LOCATION(inode).logicalBlockNum),
                 UDF_I_LOCATION(inode).partitionReferenceNum);
 #endif
-	bh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode), TID_FILE_ENTRY);
+	bh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode), 0, TID_FILE_ENTRY);
 
 	if (!bh)
 	{
 		printk(KERN_ERR "udf: udf_read_inode(ino %ld) failed !bh\n",
 			inode->i_ino);
+		make_bad_inode(inode);
 		return;
 	}
 
 	fe = (struct FileEntry *)bh->b_data;
 
-	UDF_I_FILELEN(inode) = __le64_to_cpu(fe->informationLength);
-#if 0
-	UDF_I_FILELENHIGH(inode)=udf64_high32(fe->informationLength);
-	UDF_I_FILELENLOW(inode)=udf64_low32(fe->informationLength);
-#endif
+	if (fe->icbTag.strategyType == 4096)
+	{
+		struct buffer_head *ibh;
+		struct buffer_head *nbh;
+		struct IndirectEntry *ie;
+
+		ibh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode), 1,
+			TID_INDIRECT_ENTRY);
+		if (ibh)
+		{
+			lb_addr loc;
+			ie = (struct IndirectEntry *)ibh->b_data;
+
+			loc = lelb_to_cpu(ie->indirectICB.extLocation);
+
+			if (ie->indirectICB.extLength && 
+				(nbh = udf_read_ptagged(inode->i_sb, loc, 0, TID_FILE_ENTRY)))
+			{
+				memcpy(&UDF_SB_LOCATION(inode->i_sb), &loc, sizeof(lb_addr));
+				udf_release_data(bh);
+				udf_release_data(ibh);
+				udf_release_data(nbh);
+				udf_read_inode(inode);
+				return;
+			}
+			else
+				udf_release_data(ibh);
+		}
+	}
+	else if (fe->icbTag.strategyType != 4)
+	{
+		printk(KERN_ERR "udf: unsupported strategy type: %d\n",
+			fe->icbTag.strategyType);
+		udf_release_data(bh);
+		make_bad_inode(inode);
+		return;
+	}
+
+	UDF_I_FILELEN(inode) = le64_to_cpu(fe->informationLength);
+
+	if (UDF_I_FILELEN(inode) > 0x00000000FFFFFFFFULL)
+	{
+		printk(KERN_DEBUG "udf: inode %lu is larger than 4G (%llx)!\n",
+			inode->i_ino, UDF_I_FILELEN(inode) );
+		UDF_I_FILELEN(inode) = 0x00000000FFFFFFFFULL;
+	}
 
 #ifdef VDEBUG
 	printk(KERN_DEBUG
@@ -98,42 +164,49 @@ udf_read_inode(struct inode *inode)
 		UDF_I_LOCATION(inode).partitionReferenceNum,
 		inode->i_ino, 
 		UDF_I_FILELEN(inode),
-		__le64_to_cpu(fe->logicalBlocksRecorded), /* may be zero! */
-		fe->permissions, 
-		fe->fileLinkCount, 
-		fe->icbTag.fileType, fe->icbTag.flags);
+		le64_to_cpu(fe->logicalBlocksRecorded), /* may be zero! */
+		le32_to_cpu(fe->permissions),
+		le16_to_cpu(fe->fileLinkCount), 
+		fe->icbTag.fileType, le16_to_cpu(fe->icbTag.flags));
 #endif
 
-	inode->i_uid = udf_convert_uid(__le32_to_cpu(fe->uid));
+	inode->i_uid = udf_convert_uid(le32_to_cpu(fe->uid));
 	if ( !inode->i_uid ) inode->i_uid = UDF_SB(inode->i_sb)->s_uid;
 
-	inode->i_gid = udf_convert_gid(fe->gid);
+	inode->i_gid = udf_convert_gid(le32_to_cpu(fe->gid));
 	if ( !inode->i_gid ) inode->i_gid = UDF_SB(inode->i_sb)->s_gid;
 
-	inode->i_nlink = __le16_to_cpu(fe->fileLinkCount);
-	inode->i_size = UDF_I_FILELENLOW(inode);
-	if (UDF_I_FILELENHIGH(inode))
-	{
-		printk(KERN_DEBUG "udf: > 32 bit inode size! (data over 4 gig unaccessible\n");
-		UDF_I_FILELENLOW(inode) = 0xFFFFFFFF;
-	}
-	inode->i_size = UDF_I_FILELENLOW(inode);
+	inode->i_nlink = le16_to_cpu(fe->fileLinkCount);
+	inode->i_size = UDF_I_FILELEN(inode) & 0x00000000FFFFFFFFULL;
 
-	if ( udf_stamp_to_time(&modtime, &fe->modificationTime) )
+	if (inode->i_size)
+	{
+		inode->i_blocks = ( (inode->i_size - 1) /  512 ) + 1;
+		/* blocksize for i_blocks is always 512 */
+	}
+	else
+		inode->i_blocks = 0;
+
+	inode->i_mode = udf_convert_permissions(fe);
+	inode->i_mode &= ~UDF_SB(inode->i_sb)->s_umask;
+
+	if ( udf_stamp_to_time(&modtime, lets_to_cpu(fe->modificationTime)) )
 	{
 		inode->i_mtime = modtime;
 		inode->i_ctime = modtime;
-	} else {
+	}
+	else
+	{
 		inode->i_mtime = UDF_SB_RECORDTIME(inode->i_sb);
 		inode->i_ctime = UDF_SB_RECORDTIME(inode->i_sb);
 	}
 
-	if ( udf_stamp_to_time(&acctime, &fe->accessTime) ) 
+	if ( udf_stamp_to_time(&acctime, lets_to_cpu(fe->accessTime)) ) 
 		inode->i_atime = acctime;
 	else
 		inode->i_atime = UDF_SB_RECORDTIME(inode->i_sb);
 
-	UDF_I_ALLOCTYPE(inode) = __le16_to_cpu(fe->icbTag.flags) & ICB_FLAG_ALLOC_MASK;
+	UDF_I_ALLOCTYPE(inode) = le16_to_cpu(fe->icbTag.flags) & ICB_FLAG_ALLOC_MASK;
 
 	switch (UDF_I_ALLOCTYPE(inode))
 	{
@@ -145,10 +218,9 @@ udf_read_inode(struct inode *inode)
 			sa = udf_get_fileshortad(fe, inode->i_sb->s_blocksize, &offset);
 			if ( (sa) && (sa->extLength) )
 			{
-				UDF_I_EXT0LEN(inode) = __le32_to_cpu(sa->extLength) & UDF_EXTENT_LENGTH_MASK;
- 				UDF_I_EXT0LOC(inode).logicalBlockNum = __le32_to_cpu(sa->extPosition);
+				UDF_I_EXT0LEN(inode) = le32_to_cpu(sa->extLength) & UDF_EXTENT_LENGTH_MASK;
+ 				UDF_I_EXT0LOC(inode).logicalBlockNum = le32_to_cpu(sa->extPosition);
 				UDF_I_EXT0LOC(inode).partitionReferenceNum = UDF_I_LOCATION(inode).partitionReferenceNum;
-
 			}
 			break;
  		}
@@ -160,9 +232,9 @@ udf_read_inode(struct inode *inode)
 		    la = udf_get_filelongad(fe, inode->i_sb->s_blocksize, &offset);
 		    if ( (la) && (la->extLength) )
 			{
-				UDF_I_EXT0LEN(inode) = __le32_to_cpu(la->extLength) & UDF_EXTENT_LENGTH_MASK;
-				UDF_I_EXT0LOC(inode).logicalBlockNum = __le32_to_cpu(la->extLocation.logicalBlockNum);
-				UDF_I_EXT0LOC(inode).partitionReferenceNum = __le16_to_cpu(la->extLocation.partitionReferenceNum);
+				UDF_I_EXT0LEN(inode) = le32_to_cpu(la->extLength) & UDF_EXTENT_LENGTH_MASK;
+				UDF_I_EXT0LOC(inode).logicalBlockNum = le32_to_cpu(la->extLocation.logicalBlockNum);
+				UDF_I_EXT0LOC(inode).partitionReferenceNum = le16_to_cpu(la->extLocation.partitionReferenceNum);
 		    }
 			break;
 		}
@@ -174,7 +246,7 @@ udf_read_inode(struct inode *inode)
 		    ext = udf_get_fileextent(fe, inode->i_sb->s_blocksize, &offset);
 		    if ( (ext) && (ext->extLength) )
 			{
-				UDF_I_EXT0LEN(inode) = __le32_to_cpu(ext->extLength) & UDF_EXTENT_LENGTH_MASK;
+				UDF_I_EXT0LEN(inode) = le32_to_cpu(ext->extLength) & UDF_EXTENT_LENGTH_MASK;
 #if 0
 				UDF_I_EXT0LOC(inode) = ext->extLocation;
 #endif
@@ -183,10 +255,10 @@ udf_read_inode(struct inode *inode)
 		}
 		case ICB_FLAG_AD_IN_ICB: /* short directories */
 		{
-			UDF_I_EXT0LEN(inode) = __le32_to_cpu(fe->lengthAllocDescs);
+			UDF_I_EXT0LEN(inode) = le32_to_cpu(fe->lengthAllocDescs);
 			UDF_I_EXT0LOC(inode) = UDF_I_LOCATION(inode);
 			UDF_I_EXT0OFFS(inode) = sizeof(struct FileEntry) +
-				__le32_to_cpu(fe->lengthExtendedAttr);
+				le32_to_cpu(fe->lengthExtendedAttr);
 			break;
 		}
 	} /* end switch ad_type */
@@ -202,14 +274,7 @@ udf_read_inode(struct inode *inode)
 			UDF_I_EXT0LOC(inode), UDF_I_EXT0OFFS(inode));
 #endif
 			inode->i_op = &udf_dir_inode_operations;
-			inode->i_mode = S_IFDIR |
-				((__le32_to_cpu(fe->permissions)     ) & S_IRWXO) |
-				((__le32_to_cpu(fe->permissions) >> 2) & S_IRWXG) |
-				((__le32_to_cpu(fe->permissions) >> 4) & S_IRWXU) |
-				((fe->icbTag.flags & ICB_FLAG_SETUID) ? S_ISUID : 0) |
-				((fe->icbTag.flags & ICB_FLAG_SETGID) ? S_ISGID : 0) |
-				((fe->icbTag.flags & ICB_FLAG_STICKY) ? S_ISVTX : 0);
-
+			inode->i_mode |= S_IFDIR;
 			inode->i_nlink ++;
 			break;
 		}
@@ -217,13 +282,7 @@ udf_read_inode(struct inode *inode)
 		case FILE_TYPE_NONE:
 		{
 			inode->i_op = &udf_file_inode_operations;
-			inode->i_mode = S_IFREG |
-				((__le32_to_cpu(fe->permissions)     ) & S_IRWXO) |
-				((__le32_to_cpu(fe->permissions) >> 2) & S_IRWXG) |
-				((__le32_to_cpu(fe->permissions) >> 4) & S_IRWXU) |
-				((fe->icbTag.flags & ICB_FLAG_SETUID) ? S_ISUID : 0) |
-				((fe->icbTag.flags & ICB_FLAG_SETGID) ? S_ISGID : 0) |
-				((fe->icbTag.flags & ICB_FLAG_STICKY) ? S_ISVTX : 0);
+			inode->i_mode |= S_IFREG;
 			break;
 		}
 		case FILE_TYPE_SYMLINK:
@@ -247,6 +306,26 @@ udf_read_inode(struct inode *inode)
 		UDF_I_EXT0OFFS(inode));
 #endif
 	udf_release_data(bh);
+}
+
+static mode_t
+udf_convert_permissions(struct FileEntry *fe)
+{
+	mode_t mode;
+	Uint32 permissions;
+	Uint32 flags;
+
+	permissions = le32_to_cpu(fe->permissions);
+	flags = le16_to_cpu(fe->icbTag.flags);
+
+	mode =	(( permissions      ) & S_IRWXO) |
+			(( permissions >> 2 ) & S_IRWXG) |
+			(( permissions >> 4 ) & S_IRWXU) |
+			(( flags & ICB_FLAG_SETUID) ? S_ISUID : 0) |
+			(( flags & ICB_FLAG_SETGID) ? S_ISGID : 0) |
+			(( flags & ICB_FLAG_STICKY) ? S_ISVTX : 0);
+
+	return mode;
 }
 
 /*
@@ -326,6 +405,8 @@ udf_delete_inode(struct inode *inode)
  * HISTORY
  *	October 3, 1997 - Andrew E. Mileski
  *	Written, tested, and released.
+ *
+ * 12/19/98 dgb  Added semaphore and changed to be a wrapper of iget
  */
 struct inode *
 udf_iget(struct super_block *sb, lb_addr ino)
@@ -336,11 +417,20 @@ udf_iget(struct super_block *sb, lb_addr ino)
 	printk(KERN_DEBUG "udf_iget: ino=%d,%d==%d\n", ino.logicalBlockNum, ino.partitionReferenceNum,
 		udf_get_lb_pblock(sb, ino, 0));
 #endif
-	/* Get the inode */
+	down(&read_semaphore); /* serialize access to UDF_SB_LOCATION() */
+
+	/* put the location where udf_read_inode can find it */
 	memcpy(&UDF_SB_LOCATION(sb), &ino, sizeof(lb_addr));
 
+	/* Get the inode */
+
 	inode = iget(sb, udf_get_lb_pblock(sb, ino, 0));
-	if (!inode) {
+		/* calls udf_read_inode() ! */
+
+	up(&read_semaphore);
+
+	if (!inode)
+	{
 		printk(KERN_ERR "udf: iget() failed\n");
 		return NULL;
 	}
@@ -352,57 +442,10 @@ udf_iget(struct super_block *sb, lb_addr ino)
 		return NULL;
  	}
 
-	/* Cached inode - nothing to do */
-	if (inode->i_op && inode->i_nlink)
-		return inode;
-
-#if 0
-	/* Sanity check */
-	if (inode->i_op) {
-		printk(KERN_WARNING "udf: i_op != NULL\n");
-		inode->i_op = NULL;
-	}
-#endif
-#ifdef VDEBUG	
-	if (inode->i_nlink)
-		printk(KERN_DEBUG "udf: i_nlink != 0, %d\n",
-			inode->i_nlink);
-#endif
-
-	/*
-	 * Set defaults, but the inode is still incomplete!
-	 * Note: iget() sets the following on a new inode:
-	 *	i_sb = sb
-	 *	i_dev = sb->s_dev;
-	 *	i_no = ino
-	 *	i_flags = sb->s_flags
-	 *	i_count = 1
-	 *	i_state = 0
-	 * and udf_read_inode() sets these:
-	 *	(!)i_op = NULL
-	 *	i_nlink = 0
-	 */
-	inode->i_blksize = sb->s_blocksize;
-	inode->i_version = 1;
-#if 0
-	inode->i_mode = UDF_SB(sb)->s_mode;
-	inode->i_gid = UDF_SB(sb)->s_gid;
-	inode->i_uid = UDF_SB(sb)->s_uid;
-
-	/* Mark the inode as empty */
-	inode->i_op = NULL; 
-	inode->i_nlink = 0; 
-
-	memcpy(&UDF_SB_LOCATION(inode), &ino, sizeof(lb_addr));
-#endif
 #ifdef VDEBUG
 	printk(KERN_DEBUG "udf: udf_iget(%d,%d)\n",
 		UDF_I_LOCATION(inode).logicalBlockNum,
 		UDF_I_LOCATION(inode).partitionReferenceNum);
-#endif
-
-#if 0
-	udf_read_inode(inode);
 #endif
 
 	return inode;
@@ -491,7 +534,7 @@ udf_bmap(struct inode *inode, int block)
 		}
 
 
-		bh = udf_read_ptagged(inode->i_sb, loc, TID_FILE_ENTRY);
+		bh = udf_read_ptagged(inode->i_sb, loc, 0, TID_FILE_ENTRY);
 
 		if ( !bh )
 		{
@@ -504,8 +547,8 @@ udf_bmap(struct inode *inode, int block)
 		}
 
 		fe = (struct FileEntry *)bh->b_data;
-		offset = sizeof(struct FileEntry) + fe->lengthExtendedAttr + adsize;
-		adesclen = fe->lengthAllocDescs;
+		offset = sizeof(struct FileEntry) + le32_to_cpu(fe->lengthExtendedAttr) + adsize;
+		adesclen = le32_to_cpu(fe->lengthAllocDescs);
 
 		do
 		{
@@ -519,9 +562,9 @@ udf_bmap(struct inode *inode, int block)
 				return error;
 			}
 
-			size = __le32_to_cpup(ad) & 0x3FFFFFFF;
+			size = le32_to_cpup(ad) & 0x3FFFFFFF;
 
-			switch (__le32_to_cpup(ad) >> 30)
+			switch (le32_to_cpup(ad) >> 30)
 			{
 				case EXTENT_RECORDED_ALLOCATED:
 				{
@@ -533,7 +576,7 @@ udf_bmap(struct inode *inode, int block)
 				case EXTENT_NOT_RECORDED_NOT_ALLOCATED:
 				{
 					printk(KERN_DEBUG "udf: Unhandled ELEN type (%d) @ (%d,%d) [%d] block %d (ignoring)\n",
-						__le32_to_cpup(ad) >> 30, loc.logicalBlockNum,
+						le32_to_cpup(ad) >> 30, loc.logicalBlockNum,
 						loc.partitionReferenceNum, udf_get_lb_pblock(inode->i_sb, loc, pos),
 						block);
 					break;
@@ -548,20 +591,20 @@ udf_bmap(struct inode *inode, int block)
 						case ICB_FLAG_AD_SHORT:
 						{
 							short_ad *sa = (short_ad *)ad;
-							loc.logicalBlockNum = __le32_to_cpu(sa->extPosition);
+							loc.logicalBlockNum = le32_to_cpu(sa->extPosition);
 							break;
 						}
 						case ICB_FLAG_AD_LONG:
 						{
 							long_ad *la = (long_ad *)ad;
-							loc.logicalBlockNum = __le32_to_cpu(la->extLength.logicalBlockNum);
-							loc.partitionReferenceNum = __le16_to_cpu(la->extLength.partitionReferenceNum);
+							loc.logicalBlockNum = le32_to_cpu(la->extLocation.logicalBlockNum);
+							loc.partitionReferenceNum = le16_to_cpu(la->extLocation.partitionReferenceNum);
 							break;
 						}
 					}
 
 					udf_release_data(bh);
-					bh = udf_read_ptagged(inode->i_sb, loc, TID_ALLOC_EXTENT_DESC);
+					bh = udf_read_ptagged(inode->i_sb, loc, 0, TID_ALLOC_EXTENT_DESC);
 					if (!bh)
 					{
 						printk(KERN_ERR 
@@ -573,7 +616,7 @@ udf_bmap(struct inode *inode, int block)
 					}
 					aed = (struct AllocExtDesc *)bh->b_data;
 					offset = sizeof(struct AllocExtDesc);
-					adesclen = __le32_to_cpu(aed->lengthAllocDescs) + adsize;
+					adesclen = le32_to_cpu(aed->lengthAllocDescs) + adsize;
 					break;
 				}
 			}
@@ -592,15 +635,15 @@ udf_bmap(struct inode *inode, int block)
 			case ICB_FLAG_AD_SHORT:
 			{
 				short_ad *sa = (short_ad *)ad;
-				currblk = __le32_to_cpu(sa->extPosition);
+				currblk = le32_to_cpu(sa->extPosition);
 				currpart = loc.partitionReferenceNum;
 				break;
 			}
 			case ICB_FLAG_AD_LONG:
 			{
 				long_ad *la = (long_ad *)ad;
-				currblk = __le32_to_cpu(la->extLocation.logicalBlockNum);
-				currpart = __le16_to_cpu(la->extLocation.partitionReferenceNum);
+				currblk = le32_to_cpu(la->extLocation.logicalBlockNum);
+				currpart = le16_to_cpu(la->extLocation.partitionReferenceNum);
 				break;
 			}
 		}

@@ -146,21 +146,21 @@ udf_fileident_read(struct inode *dir, struct FileIdentDesc *tmpfi,
 		{
 			memcpy((char *)fi + remainder, (*bh)->b_data, sizeof(struct FileIdentDesc) - remainder);
 
-			if (__le16_to_cpu(fi->descTag.tagIdent) != TID_FILE_IDENT_DESC)
+			if (le16_to_cpu(fi->descTag.tagIdent) != TID_FILE_IDENT_DESC)
 			{
 				printk(KERN_DEBUG "udf: (udf_enum_directory) - 0x%x != TID_FILE_IDENT_DESC\n",
-					__le16_to_cpu(fi->descTag.tagIdent));
+					le16_to_cpu(fi->descTag.tagIdent));
 				udf_release_data(*bh);
 				*error = 1;
 				return NULL;
 			}
-			fi_len = sizeof(struct FileIdentDesc) + fi->lengthFileIdent + __le16_to_cpu(fi->lengthOfImpUse);
+			fi_len = sizeof(struct FileIdentDesc) + fi->lengthFileIdent + le16_to_cpu(fi->lengthOfImpUse);
 			fi_len += (4 - (fi_len % 4)) % 4;
 			*nf_pos += ((fi_len - (*offset - loffset)) >> 2);
 		}
 		else
 		{
-			fi_len = sizeof(struct FileIdentDesc) + fi->lengthFileIdent + __le16_to_cpu(fi->lengthOfImpUse);
+			fi_len = sizeof(struct FileIdentDesc) + fi->lengthFileIdent + le16_to_cpu(fi->lengthOfImpUse);
 			fi_len += (4 - (fi_len % 4)) % 4;
 		}
 
@@ -204,11 +204,11 @@ udf_get_fileident(void * buffer, int bufsize, int * offset)
 		ptr += *offset;
 	}
 	fi=(struct FileIdentDesc *)ptr;
-	if (__le16_to_cpu(fi->descTag.tagIdent) != TID_FILE_IDENT_DESC)
+	if (le16_to_cpu(fi->descTag.tagIdent) != TID_FILE_IDENT_DESC)
 	{
 #ifdef __KERNEL__
 		printk(KERN_DEBUG "udf: _fileident - 0x%x != TID_FILE_IDENT_DESC\n",
-			__le16_to_cpu(fi->descTag.tagIdent));
+			le16_to_cpu(fi->descTag.tagIdent));
 		printk(KERN_DEBUG "udf: offset: %u sizeof: %u bufsize: %u\n",
 			*offset, sizeof(struct FileIdentDesc), bufsize);
 		return NULL;
@@ -220,7 +220,7 @@ udf_get_fileident(void * buffer, int bufsize, int * offset)
 	}
 	else
 		lengthThisIdent = sizeof(struct FileIdentDesc) +
-			fi->lengthFileIdent + __le16_to_cpu(fi->lengthOfImpUse);
+			fi->lengthFileIdent + le16_to_cpu(fi->lengthOfImpUse);
 
 	/* we need to figure padding, too! */
 	padlen = lengthThisIdent % UDF_NAME_PAD;
@@ -248,18 +248,18 @@ udf_get_fileextent(void * buffer, int bufsize, int * offset)
 
 	fe = (struct FileEntry *)buffer;
 
-	if ( __le16_to_cpu(fe->descTag.tagIdent) != TID_FILE_ENTRY )
+	if ( le16_to_cpu(fe->descTag.tagIdent) != TID_FILE_ENTRY )
 	{
 #ifdef __KERNEL__
 		printk(KERN_DEBUG "udf: _fileextent - 0x%x != TID_FILE_ENTRY\n",
-			__cpu_to_lel6(fe->descTag.tagIdent));
+			le16_to_cpu(fe->descTag.tagIdent));
 #endif
 		return NULL;
 	}
 
-	ptr=(Uint8 *)(fe->extendedAttr) + __le32_to_cpu(fe->lengthExtendedAttr);
+	ptr=(Uint8 *)(fe->extendedAttr) + le32_to_cpu(fe->lengthExtendedAttr);
 
-	if ( (*offset > 0) && (*offset < __le32_to_cpu(fe->lengthAllocDescs)) )
+	if ( (*offset > 0) && (*offset < le32_to_cpu(fe->lengthAllocDescs)) )
 	{
 		ptr += *offset;
 	}
@@ -287,18 +287,18 @@ udf_get_fileshortad(void * buffer, int bufsize, int * offset)
 
 	fe = (struct FileEntry *)buffer;
 
-	if ( __le16_to_cpu(fe->descTag.tagIdent) != TID_FILE_ENTRY )
+	if ( le16_to_cpu(fe->descTag.tagIdent) != TID_FILE_ENTRY )
 	{
 #ifdef __KERNEL__
 		printk(KERN_DEBUG "udf: _fileshortad - 0x%x != TID_FILE_ENTRY\n",
-			__le16_to_cpu(fe->descTag.tagIdent));
+			le16_to_cpu(fe->descTag.tagIdent));
 #endif
 		return NULL;
 	}
 
-	ptr = (Uint8 *)(fe->extendedAttr) + __le32_to_cpu(fe->lengthExtendedAttr);
+	ptr = (Uint8 *)(fe->extendedAttr) + le32_to_cpu(fe->lengthExtendedAttr);
 
-	if ( (*offset > 0) && (*offset < __le32_to_cpu(fe->lengthAllocDescs)) )
+	if ( (*offset > 0) && (*offset < le32_to_cpu(fe->lengthAllocDescs)) )
 	{
 		ptr += *offset;
 	}
@@ -323,19 +323,18 @@ udf_get_filelongad(void * buffer, int bufsize, int * offset)
 	}
 
 	fe = (struct FileEntry *)buffer;
-	if ( __le16_to_cpu(fe->descTag.tagIdent) != TID_FILE_ENTRY )
+	if ( le16_to_cpu(fe->descTag.tagIdent) != TID_FILE_ENTRY )
 	{
 #ifdef __KERNEL__
 		printk(KERN_DEBUG "udf: _filelongad - 0x%x != TID_FILE_ENTRY\n",
-			__le16_to_cpu(fe->descTag.tagIdent));
+			le16_to_cpu(fe->descTag.tagIdent));
 #endif
 		return NULL;
 	}
-	lengthLongAds = fe->lengthAllocDescs;
 
-	ptr=(Uint8 *)(fe->extendedAttr) + __le32_to_cpu(fe->lengthExtendedAttr);
+	ptr=(Uint8 *)(fe->extendedAttr) + le32_to_cpu(fe->lengthExtendedAttr);
 
-	if ( (*offset > 0) && (*offset < __le32_to_cpu(fe->lengthAllocDescs)) )
+	if ( (*offset > 0) && (*offset < le32_to_cpu(fe->lengthAllocDescs)) )
 	{
 		ptr += *offset;
 	}

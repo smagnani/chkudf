@@ -1,7 +1,7 @@
 #ifndef __UDF_DECL_H
 #define __UDF_DECL_H
 
-#define UDF_VERSION_NOTICE "v0.7.1b"
+#define UDF_VERSION_NOTICE "v0.7.6.1"
 
 #ifdef __linux__
 
@@ -13,6 +13,7 @@
 
 #ifdef __KERNEL__
 #include <linux/types.h>
+#include <linux/fs.h>
 
 #include <linux/udf_udf.h>
 #include <linux/udf_fs_i.h>
@@ -54,15 +55,12 @@ extern struct inode_operations udf_inode_operations;
 extern void udf_debug_dump(struct buffer_head *);
 extern struct buffer_head *udf_read_sector(struct super_block *, unsigned long sec);
 extern struct buffer_head *udf_read_tagged(struct super_block *, Uint32, Uint32, Uint32);
-extern struct buffer_head *udf_read_ptagged(struct super_block *, lb_addr, Uint32);
+extern struct buffer_head *udf_read_ptagged(struct super_block *, lb_addr, Uint32, Uint32);
 extern struct buffer_head *udf_read_untagged(struct super_block *, Uint32, Uint32);
 extern void udf_release_data(struct buffer_head *);
 
 extern Uint32 udf_get_pblock(struct super_block *, Uint32, Uint16, Uint32);
 extern Uint32 udf_get_lb_pblock(struct super_block *, lb_addr, Uint32);
-#define UDF_INODE_BLOCK_MASK	0x3FFFFFFFU
-#define UDF_INODE_PART_MASK	0xC0000000U
-#define UDF_INODE_PART_BITS	30
 extern long udf_block_from_inode(struct inode *);
 extern long udf_block_from_bmap(struct inode *, int block, int part);
 extern long udf_inode_from_block(struct super_block *, long block, int part);
@@ -91,38 +89,26 @@ extern int udf_get_filename(struct FileIdentDesc *, char *, struct inode *);
 
 #endif /* __linux__ */
 
-#if __BYTE_ORDER == __BIG_ENDIAN
-#define htofss(x) \
-	((Uint16)((((Uint16)(x) & 0x00FFU) << 8) | \
-		  (((Uint16)(x) & 0xFF00U) >> 8)))
- 
-#define htofsl(x) \
-	((Uint32)((((Uint32)(x) & 0x000000FFU) << 24) | \
-		  (((Uint32)(x) & 0x0000FF00U) <<  8) | \
-		  (((Uint32)(x) & 0x00FF0000U) >>  8) | \
-		  (((Uint32)(x) & 0xFF000000U) >> 24)))
-
-#define htofsll(x) \
-	((Uint64)((((Uint64)(x) & 0x00000000000000FFU) << 56) | \
-		  (((Uint64)(x) & 0x000000000000FF00U) << 40) | \
-		  (((Uint64)(x) & 0x0000000000FF0000U) << 24) | \
-		  (((Uint64)(x) & 0x00000000FF000000U) <<  8) | \
-		  (((Uint64)(x) & 0x000000FF00000000U) >>  8) | \
-		  (((Uint64)(x) & 0x0000FF0000000000U) >> 24) | \
-		  (((Uint64)(x) & 0x00FF000000000000U) >> 40) | \
-		  (((Uint64)(x) & 0xFF00000000000000U) >> 56)))		
-
-#define fstohs(x) (htofss(x))
-#define fstohl(x) (htofsl(x))
-#define fstohll(x) (htofsll(x))
-#else /* __BYTE_ORDER == __LITTLE_ENDIAN */
-#define htofss(x) (x)
-#define htofsl(x) (x)
-#define htofsll(x) (x)
-#define fstohs(x) (x)
-#define fstohl(x) (x)
-#define fstohll(x) (x)
+#ifndef __KERNEL__
+#include "udfend.h"
 #endif
+
+static inline lb_addr lelb_to_cpu(lb_addr in)
+{
+	lb_addr out;
+	out.logicalBlockNum = le32_to_cpu(in.logicalBlockNum);
+	out.partitionReferenceNum = le16_to_cpu(in.partitionReferenceNum);
+	return out;
+}
+
+static inline timestamp lets_to_cpu(timestamp in)
+{
+	timestamp out;
+	memcpy(&out, &in, sizeof(timestamp));
+	out.typeAndTimezone = le16_to_cpu(in.typeAndTimezone);
+	out.year = le16_to_cpu(in.year);
+	return out;
+}
 
 /* structures */
 struct udf_directory_record
@@ -182,7 +168,7 @@ extern Uint32 udf64_low32(Uint64);
 extern Uint32 udf64_high32(Uint64);
 
 
-extern time_t *udf_stamp_to_time(time_t *, void *);
+extern time_t *udf_stamp_to_time(time_t *, timestamp);
 extern time_t udf_converttime (struct ktm *);
 
 /* --------------------------
