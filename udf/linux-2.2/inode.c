@@ -975,11 +975,11 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 
 	UDF_I_ALLOCTYPE(inode) = le16_to_cpu(fe->icbTag.flags) & ICBTAG_FLAG_AD_MASK;
 
-	if (fe->descTag.tagIdent == TAG_IDENT_EFE)
+	if (le16_to_cpu(fe->descTag.tagIdent) == TAG_IDENT_EFE)
 		UDF_I_EXTENDED_FE(inode) = 1;
-	else if (fe->descTag.tagIdent == TAG_IDENT_FE)
+	else if (le16_to_cpu(fe->descTag.tagIdent) == TAG_IDENT_FE)
 		UDF_I_EXTENDED_FE(inode) = 0;
-	else if (fe->descTag.tagIdent == TAG_IDENT_USE)
+	else if (le16_to_cpu(fe->descTag.tagIdent) == TAG_IDENT_USE)
 	{
 		UDF_I_LENALLOC(inode) =
 			le32_to_cpu(
@@ -1270,7 +1270,7 @@ udf_update_inode(struct inode *inode, int do_sync)
 		UDF_I_NEW_INODE(inode) = 0;
 	}
 
-	if (fe->descTag.tagIdent == TAG_IDENT_USE)
+	if (le16_to_cpu(fe->descTag.tagIdent) == TAG_IDENT_USE)
 	{
 		struct unallocSpaceEntry *use =
 			(struct unallocSpaceEntry *)bh->b_data;
@@ -1755,7 +1755,7 @@ int8_t udf_next_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 		}
 	}
 
-	tagIdent = ((tag *)(*bh)->b_data)->tagIdent;
+	tagIdent = le16_to_cpu(((tag *)(*bh)->b_data)->tagIdent);
 
 	if (!memcmp(&UDF_I_LOCATION(inode), bloc, sizeof(lb_addr)))
 	{
