@@ -49,6 +49,7 @@
 #include <linux/version.h>
 #include <linux/blkdev.h>
 #include <linux/malloc.h>
+#include <linux/vmalloc.h>
 #include <linux/kernel.h>
 #include <linux/locks.h>
 #include <linux/module.h>
@@ -110,13 +111,12 @@ static struct super_operations udf_sb_ops =
 	udf_write_inode,	/* write_inode */
 	udf_put_inode,		/* put_inode */
 	udf_delete_inode,	/* delete_inode */
-	udf_clear_inode,	/* clear_inode */
 	NULL,			/* notify_change */
 	udf_put_super,		/* put_super */
 	udf_write_super,	/* write_super */
 	udf_statfs,		/* statfs */
 	udf_remount_fs,		/* remount_fs */
-	NULL,			/* clear_inode */
+	udf_clear_inode,	/* clear_inode */
 	NULL,			/* umount_begin */
 };
 
@@ -457,7 +457,7 @@ udf_vrs(struct super_block *sb, int silent)
 	for (;!nsr02 && !nsr03; sector += sectorsize)
 	{
 		/* Read a block */
-		bh = udf_tread(sb, sector >> sb->s_blocksize_bits, sb->s_blocksize);
+		bh = udf_tread(sb, sector >> sb->s_blocksize_bits);
 		if (!bh)
 			break;
 
@@ -1576,23 +1576,9 @@ error_out:
 		if (UDF_SB_PARTFLAGS(sb, UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_FREED_TABLE)
 			iput(UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_fspace.s_table);
 		if (UDF_SB_PARTFLAGS(sb, UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_UNALLOC_BITMAP)
-		{
-			for (i=0; i<UDF_SB_BITMAP_NR_GROUPS(sb,UDF_SB_PARTITION(sb),s_uspace); i++)
-			{
-				if (UDF_SB_BITMAP(sb,UDF_SB_PARTITION(sb),s_uspace,i))
-					udf_release_data(UDF_SB_BITMAP(sb,UDF_SB_PARTITION(sb),s_uspace,i));
-			}
-			kfree(UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_uspace.s_bitmap);
-		}
+			UDF_SB_FREE_BITMAP(sb,UDF_SB_PARTITION(sb),s_uspace);
 		if (UDF_SB_PARTFLAGS(sb, UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_FREED_BITMAP)
-		{
-			for (i=0; i<UDF_SB_BITMAP_NR_GROUPS(sb,UDF_SB_PARTITION(sb),s_fspace); i++)
-			{
-				if (UDF_SB_BITMAP(sb,UDF_SB_PARTITION(sb),s_fspace,i))
-					udf_release_data(UDF_SB_BITMAP(sb,UDF_SB_PARTITION(sb),s_fspace,i));
-			}
-			kfree(UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_fspace.s_bitmap);
-		}
+			UDF_SB_FREE_BITMAP(sb,UDF_SB_PARTITION(sb),s_fspace);
 		if (UDF_SB_PARTTYPE(sb, UDF_SB_PARTITION(sb)) == UDF_SPARABLE_MAP15)
 		{
 			for (i=0; i<4; i++)
@@ -1668,23 +1654,9 @@ udf_put_super(struct super_block *sb)
 		if (UDF_SB_PARTFLAGS(sb, UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_FREED_TABLE)
 			iput(UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_fspace.s_table);
 		if (UDF_SB_PARTFLAGS(sb, UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_UNALLOC_BITMAP)
-		{
-			for (i=0; i<UDF_SB_BITMAP_NR_GROUPS(sb,UDF_SB_PARTITION(sb),s_uspace); i++)
-			{
-				if (UDF_SB_BITMAP(sb,UDF_SB_PARTITION(sb),s_uspace,i))
-					udf_release_data(UDF_SB_BITMAP(sb,UDF_SB_PARTITION(sb),s_uspace,i));
-			}
-			kfree(UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_uspace.s_bitmap);
-		}
+			UDF_SB_FREE_BITMAP(sb,UDF_SB_PARTITION(sb),s_uspace);
 		if (UDF_SB_PARTFLAGS(sb, UDF_SB_PARTITION(sb)) & UDF_PART_FLAG_FREED_BITMAP)
-		{
-			for (i=0; i<UDF_SB_BITMAP_NR_GROUPS(sb,UDF_SB_PARTITION(sb),s_fspace); i++)
-			{
-				if (UDF_SB_BITMAP(sb,UDF_SB_PARTITION(sb),s_fspace,i))
-					udf_release_data(UDF_SB_BITMAP(sb,UDF_SB_PARTITION(sb),s_fspace,i));
-			}
-			kfree(UDF_SB_PARTMAPS(sb)[UDF_SB_PARTITION(sb)].s_fspace.s_bitmap);
-		}
+			UDF_SB_FREE_BITMAP(sb,UDF_SB_PARTITION(sb),s_fspace);
 		if (UDF_SB_PARTTYPE(sb, UDF_SB_PARTITION(sb)) == UDF_SPARABLE_MAP15)
 		{
 			for (i=0; i<4; i++)

@@ -82,13 +82,14 @@
 {\
 	int nr_groups = ((UDF_SB_PARTLEN((X),(Y)) + (sizeof(struct spaceBitmapDesc) << 3) +\
 		((X)->s_blocksize * 8) - 1) / ((X)->s_blocksize * 8));\
-	UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap = kmalloc(sizeof(struct udf_bitmap) +\
-		sizeof(struct buffer_head *) * nr_groups,\
-		GFP_KERNEL);\
+	int size = sizeof(struct udf_bitmap) + (sizeof(struct buffer_head *) * nr_groups);\
+	if (size <= PAGE_SIZE)\
+		UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap = kmalloc(size, GFP_KERNEL);\
+	else\
+		UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap = vmalloc(size);\
 	if (UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap != NULL)\
 	{\
-		memset(UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap, 0x00,\
-			sizeof(struct udf_bitmap) + sizeof(struct buffer_head *) * nr_groups);\
+		memset(UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap, 0x00, size);\
 		UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap->s_block_bitmap =\
 			(struct buffer_head **)(UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap + 1);\
 		UDF_SB_PARTMAPS(X)[(Y)].Z.s_bitmap->s_nr_groups = nr_groups;\
@@ -99,6 +100,21 @@
 	}\
 }
 
+#define UDF_SB_FREE_BITMAP(X,Y,Z)\
+{\
+	int i;\
+	int nr_groups = UDF_SB_BITMAP_NR_GROUPS(X,Y,Z);\
+	int size = sizeof(struct udf_bitmap) + (sizeof(struct buffer_head *) * nr_groups);\
+	for (i=0; i<nr_groups; i++)\
+	{\
+		if (UDF_SB_BITMAP(X,Y,Z,i))\
+			udf_release_data(UDF_SB_BITMAP(X,Y,Z,i));\
+	}\
+	if (size <= PAGE_SIZE)\
+		kfree(UDF_SB_PARTMAPS(X)[Y].Z.s_bitmap);\
+	else\
+		vfree(UDF_SB_PARTMAPS(X)[Y].Z.s_bitmap);\
+}
 
 #define UDF_QUERY_FLAG(X,Y)			( UDF_SB(X)->s_flags & ( 1 << (Y) ) )
 #define UDF_SET_FLAG(X,Y)			( UDF_SB(X)->s_flags |= ( 1 << (Y) ) )
