@@ -16,6 +16,7 @@
  *	Each contributing author retains all rights to their own work.
  *
  *  (C) 1999 Ben Fennema
+ *  (C) 1999 Stelias Computing Inc
  *
  * HISTORY
  *
@@ -58,8 +59,8 @@ static int load__block_bitmap(struct super_block * sb, unsigned int block_group)
 	int i, j, retval = 0;
 	unsigned long block_bitmap_number;
 	struct buffer_head * block_bitmap = NULL;
-    int nr_groups = (UDF_SB_PARTLEN(sb, UDF_SB_PARTITION(sb)) +
-        (sizeof(struct SpaceBitmapDesc) << 3) + (sb->s_blocksize * 8) - 1) / (sb->s_blocksize * 8);
+	int nr_groups = (UDF_SB_PARTLEN(sb, UDF_SB_PARTITION(sb)) +
+		(sizeof(struct SpaceBitmapDesc) << 3) + (sb->s_blocksize * 8) - 1) / (sb->s_blocksize * 8);
 
 	if (block_group >= nr_groups)
 	{

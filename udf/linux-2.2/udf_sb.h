@@ -7,11 +7,6 @@
 /* Since UDF 1.50 is ISO 13346 based... */
 #define UDF_SUPER_MAGIC	0x15013346
 
-/* Default block size - bigger is better */
-#define UDF_BLOCK_SIZE	2048
-
-#define UDF_NAME_PAD 4
-
 #define UDF_FLAG_STRICT		0x00000001U
 #define UDF_FLAG_UNDELETE	0x00000002U
 #define UDF_FLAG_UNHIDE		0x00000004U
@@ -56,7 +51,7 @@
 	UDF_SB_PARTMAPS(X) = kmalloc(sizeof(struct udf_part_map) * Y, GFP_KERNEL);\
 }
 
-#if LINUX_VERSION_CODE < 0x020206
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,6)
 #define UDF_SB_RENAME_LOCK(X)	( UDF_SB(X)->s_rename_lock )
 #define UDF_SB_RENAME_WAIT(X)	( UDF_SB(X)->s_rename_wait )
 #endif

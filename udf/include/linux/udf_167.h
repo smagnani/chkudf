@@ -57,13 +57,13 @@
 #define Uint16	__u16
 #define Uint32	__u32
 #define Uint64	__u64
-typedef __u8	dstring;
+typedef Uint8	dstring;
 #else
 #define Uint8	unsigned char
 #define Uint16	unsigned short
 #define Uint32	unsigned int
 #define Uint64	unsigned long long
-typedef char	dstring;
+typedef Uint8	dstring;
 #endif
 
 /* make sure all structures are packed! */
@@ -450,7 +450,7 @@ struct FileIdentDesc
 	long_ad icb;
 	Uint16 lengthOfImpUse;
 	Uint8 impUse[0];
-	char fileIdent[0];
+	Uint8 fileIdent[0];
 	Uint8 padding[0];
 };
 

@@ -132,6 +132,7 @@ udf_get_last_rti(kdev_t dev, struct inode *inode_fake)
 	Uint32 trackstart, tracklength, freeblocks;
 	Uint8 cdb[10];
 	unsigned long lastsector = 0;
+	int len;
 
 	ip = (int *)(buffer + 8);
 	memset(cdb, 0, 10);
@@ -146,37 +147,47 @@ udf_get_last_rti(kdev_t dev, struct inode *inode_fake)
 		memset(buffer, 0, 128);
 		cdb[0] = 0x52;
 		cdb[1] = 1;
-		cdb[5] = track_no;
-		cdb[8] = 36;
-		result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, 36);
+		cdb[4] = (track_no & 0xFF00) >> 8;
+		cdb[5] = track_no & 0xFF;
+		cdb[8] = 8;
+		result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, 8);
 		if (!result)
 		{
-			if (buffer[14] & 0x40)
-			{
-				cdb[5] = track_no - 1;
-				result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, 36);
-			}
+			len = cdb[8] = ((buffer[8] << 8) | (buffer[9] & 0xFF)) + 2;
+			result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, len);
 			if (!result)
 			{
-				trackstart = be32_to_cpu(ip[2]);
-				tracklength = be32_to_cpu(ip[6]);
-				freeblocks = be32_to_cpu(ip[4]);
-				udf_debug("Start %d, length %d, freeblocks %d.\n", trackstart, tracklength, freeblocks);
-				if (buffer[14] & 0x10)
+				if (buffer[14] & 0x40)
 				{
-					udf_debug("Packet size is %d.\n", be32_to_cpu(ip[5]));
-					lastsector = trackstart + tracklength - 1;
+					cdb[4] = ((track_no - 1) & 0xFF00) >> 8;
+					cdb[5] = (track_no - 1) & 0xFF;
+					result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, len);
 				}
-				else
+				if (!result)
 				{
-					udf_debug("Variable packet written track.\n");
-					lastsector = trackstart + tracklength - 1;
-					if (freeblocks)
+					trackstart = be32_to_cpu(ip[2]);
+					tracklength = be32_to_cpu(ip[6]);
+					freeblocks = be32_to_cpu(ip[4]);
+					udf_debug("Start %d, length %d, freeblocks %d.\n", trackstart, tracklength, freeblocks);
+					if (buffer[14] & 0x20)
 					{
-						lastsector = lastsector - freeblocks - 7;
+						if (buffer[14] & 0x10)
+						{
+							udf_debug("Packet size is %d.\n", be32_to_cpu(ip[5]));
+							lastsector = trackstart + tracklength - 1;
+						}
+						else
+						{
+							udf_debug("Variable packet written track.\n");
+							lastsector = trackstart + tracklength - 1;
+							if (freeblocks)
+							{
+								lastsector = lastsector - freeblocks - 7;
+							}
+							blk_size[MAJOR(dev)][MINOR(dev)] =
+								(lastsector + 1) << 1;
+						}
 					}
-					blk_size[MAJOR(dev)][MINOR(dev)] =
-						(lastsector + 1) << 1;
 				}
 			}
 		}
@@ -228,86 +239,90 @@ udf_get_capacity(kdev_t dev, struct inode *inode_fake)
 static int
 is_mmc(kdev_t dev, struct inode *inode_fake)
 {
-    char buffer[142];
-    int result = 0, n;
-    Uint8 cdb[6];
+	Uint8 buffer[142];
+	int result = 0, n;
+	Uint8 cdb[6];
+	Uint8 *data = &buffer[8];
+	int len = 4;
 
 	cdb[0] = MODE_SENSE;
 	cdb[2] = 0x2A;
-	cdb[4] = 128;
+	cdb[4] = len;
 	cdb[1] = cdb[3] = cdb[5] = 0;
 
-	result = do_scsi(dev, inode_fake, cdb, 6, buffer, 0, 128);
+	memset(buffer, 0, 142);
+	result = do_scsi(dev, inode_fake, cdb, 6, buffer, 0, len);
 	if (!result)
 	{
-		n = 8 + buffer[8+3] + 4;
-		udf_debug("DVD-RAM R/W(%c/%c)  DVD-R R/W(%c/%c)  DVD-ROM R(%c)\n",
-			buffer[n+2] & 0x20 ? 'Y' : 'N', buffer[n+3] & 0x20 ? 'Y' : 'N',
-			buffer[n+2] & 0x10 ? 'Y' : 'N', buffer[n+3] & 0x10 ? 'Y' : 'N',
-			buffer[n+2] & 0x08 ? 'Y' : 'N');
-		udf_debug("CD-RW   R/W(%c/%c)  CD-R  R/W(%c/%c)  Fixed Packet (%c)\n",
-			buffer[n+2] & 0x02 ? 'Y' : 'N', buffer[n+3] & 0x02 ? 'Y' : 'N',
-			buffer[n+2] & 0x01 ? 'Y' : 'N', buffer[n+3] & 0x01 ? 'Y' : 'N',
-			buffer[n+2] & 0x04 ? 'Y' : 'N');
+		len = cdb[4] = data[3] + 4 + 2;
+		result = do_scsi(dev, inode_fake, cdb, 6, buffer, 0, len);
+		if (!result)
+		{
+			n = data[3] + 4;
+			len = cdb[4] = n + 2 + data[n+1];
+			result = do_scsi(dev, inode_fake, cdb, 6, buffer, 0, len);
+			if (!result && ((data[n] & 0x3F) == 0x2A))
+			{
+				udf_debug("Page Code=0x%02x  PS=0x%1x  Page Length=0x%02x\n",
+					data[n] & 0x3F, (data[n] >> 7) & 0x01, data[n+1]);
+				udf_debug("DVD-RAM R/W(%c/%c)  DVD-R R/W(%c/%c)  DVD-ROM R(%c)\n",
+					data[n+2] & 0x20 ? 'Y' : 'N', data[n+3] & 0x20 ? 'Y' : 'N',
+					data[n+2] & 0x10 ? 'Y' : 'N', data[n+3] & 0x10 ? 'Y' : 'N',
+					data[n+2] & 0x08 ? 'Y' : 'N');
+				udf_debug("CD-RW   R/W(%c/%c)  CD-R  R/W(%c/%c)  Fixed Packet (%c)\n",
+					data[n+2] & 0x02 ? 'Y' : 'N', data[n+3] & 0x02 ? 'Y' : 'N',
+					data[n+2] & 0x01 ? 'Y' : 'N', data[n+3] & 0x01 ? 'Y' : 'N',
+					data[n+2] & 0x04 ? 'Y' : 'N');
+				udf_debug("Multi Session (%c)  Mode 2 Form 2/1 (%c/%c) Digital Port (2)/(1) (%c/%c)\n",
+					data[n+4] & 0x40 ? 'Y' : 'N', data[n+4] & 0x20 ? 'Y' : 'N',
+					data[n+4] & 0x10 ? 'Y' : 'N', data[n+4] & 0x08 ? 'Y' : 'N',
+					data[n+4] & 0x04 ? 'Y' : 'N');
+				udf_debug("Composite (%c)  Audio Play (%c)  Read Bar Code (%c)  UPC (%c)  ISRC (%c)\n",
+					data[n+4] & 0x02 ? 'Y' : 'N', data[n+4] & 0x01 ? 'Y' : 'N',
+					data[n+5] & 0x80 ? 'Y' : 'N', data[n+5] & 0x40 ? 'Y' : 'N',
+					data[n+5] & 0x20 ? 'Y' : 'N');
+				udf_debug("C2 Pointers are supported (%c)  R-W De-interleved & corrected (%c)\n",
+					data[n+5] & 0x10 ? 'Y' : 'N', data[n+5] & 0x80 ? 'Y' : 'N');
+				udf_debug("R-W Supported (%c)  CD-DA Stream is Accurate (%c)  CD-DA Commands Supported (%c)\n",
+					data[n+5] & 0x04 ? 'Y' : 'N', data[n+5] & 0x02 ? 'Y' : 'N',
+					data[n+5] & 0x01 ? 'Y' : 'N');
+				udf_debug("Loading Mechanism Type=0x%03x  Eject (%c)  Prevent Jumper (%c)\n",
+					(data[n+6] >> 5) & 0x07, data[n+6] & 0x08 ? 'Y' : 'N',
+					data[n+6] & 0x04 ? 'Y' : 'N');
+				udf_debug("Lock State (%c)  Lock(%c)\n",
+					data[n+6] & 0x02 ? 'Y' : 'N', data[n+6] & 0x01 ? 'Y' : 'N');
+				udf_debug("P through W in Lead-In (%c)  Side Change Capable (%c)  S/W Slot Selection (%c)\n",
+					data[n+7] & 0x20 ? 'Y' : 'N', data[n+7] & 0x10 ? 'Y' : 'N',
+					data[n+7] & 0x08 ? 'Y' : 'N');
+				udf_debug("Changer Supports Disc Present (%c)  Seperate Channel Mute (%c)  Seperate Volume Levels (%c)\n",
+					data[n+7] & 0x04 ? 'Y' : 'N', data[n+7] & 0x02 ? 'Y' : 'N',
+					data[n+7] & 0x01 ? 'Y' : 'N');
+				udf_debug("Maximum Read Speed Supported (in kBps)=0x%04x (Obsolete)\n",
+					(data[n+8] << 8) | (data[n+9] & 0xFF));
+				udf_debug("Number of Volume Levels Support=0x%04x\n",
+					(data[n+10] << 8) | (data[n+11] & 0xFF));
+				udf_debug("Buffer Size supported by Drive (in KBytes)=0x%04x\n",
+					(data[n+12] << 8) | (data[n+13] & 0xFF));
+				udf_debug("Current Read Speed Selected (in kBps)=0x%04x (Obsolete)\n",
+					(data[n+14] << 8) | (data[n+15] & 0xFF));
+				udf_debug("Digital Out: Length=0x%01x  LSBF (%c)  RCK (%c)  BCKF (%c)\n",
+					(data[n+17] >> 4) & 0x03, data[n+17] & 0x08 ? 'Y' : 'N',
+					data[n+17] & 0x04 ? 'Y' : 'N', data[n+17] & 0x02 ? 'Y' : 'N');
+				udf_debug("Maximum Write Speed Supported (in kBps)=0x%04x (Obsolete)\n",
+					(data[n+18] << 8) | (data[n+19] & 0xFF));
+				udf_debug("Current Write Speed Selected (in kBps)=0x%04x (Obsolete)\n",
+					(data[n+20] << 8) | (data[n+21] & 0xFF));
+				udf_debug("Copy Management Revision Supported=%04x\n",
+					(data[n+22] << 8) | (data[n+23] & 0xFF));
+			}
+			else 
+				return 0;
+		}
 	}
 	return !result;
 }
 
 #endif
-
-unsigned int
-verify_lastblock(kdev_t dev, int lastblock, int *flags)
-{
-	struct buffer_head *bh;
-	tag *tp;
-	int blocklist[10];
-	int i;
-
-	blocklist[0] = blocklist[1] = lastblock - 2;
-	blocklist[2] = blocklist[3] = lastblock;
-	blocklist[4] = blocklist[5] = lastblock - 150;
-	blocklist[6] = blocklist[7] = lastblock - 152;
-	blocklist[8] = blocklist[9] = 32 * ((lastblock + 37) / 39);
-
-	for (i=0; i<10; i+=2)
-	{
-		bh = bread(dev, blocklist[i], blksize_size[MAJOR(dev)][MINOR(dev)]);
-		if (bh)
-		{
-			tp = (tag *)bh->b_data;
-			if (tp->tagIdent == TID_ANCHOR_VOL_DESC_PTR)
-			{
-				if (tp->tagLocation == blocklist[i])
-					break;
-				else if (tp->tagLocation == udf_variable_to_fixed(blocklist[i]))
-				{
-					blocklist[i+1] = udf_variable_to_fixed(blocklist[i+1]);
-					*flags |= UDF_FLAG_VARCONV;
-					break;
-				}
-			}
-			else if (tp->tagIdent == TID_FILE_ENTRY ||
-				tp->tagIdent == TID_EXTENDED_FILE_ENTRY)
-			{
-				blocklist[i] = 512;
-				i -= 2;
-			}
-			brelse(bh);
-			bh = NULL;
-		}
-	}
-
-	if (!bh)
-	{
-		udf_debug("Unable to find Last Anchor @ ~%d\n", lastblock);
-		return 0;
-	}
-	else
-	{
-		brelse(bh);
-		return blocklist[i+1];
-	}
-}
 
 unsigned int
 udf_get_last_block(kdev_t dev, int *flags)
@@ -362,30 +377,25 @@ udf_get_last_block(kdev_t dev, int *flags)
 			if ((lblock = udf_get_last_written(dev, &inode_fake)))
 			{
 				udf_debug("last_written lblock=%ld\n", lblock);
-				accurate = 0;
+				accurate = 1;
 			}
 #else
 			if (is_mmc(dev, &inode_fake) &&
 				(lblock = udf_get_last_rti(dev, &inode_fake)))
 			{
 				udf_debug("LAST_RTI lblock=%ld\n", lblock);
-				accurate = 1;
 			}
 			else if ((lblock = udf_get_toc_entry(dev, &inode_fake)))
 			{
 				udf_debug("TOC_ENTRY lblock=%ld\n", lblock);
-				accurate = 0;
 			}
 			else if ((lblock = udf_get_capacity(dev, &inode_fake)))
 			{
 				udf_debug("READ_CAPACITY lblock=%ld\n", lblock);
-				accurate = 0;
 			}
 #endif
 		}
 		set_fs(old_fs);
-		if (!accurate)
-			lblock = verify_lastblock(dev, lblock, flags);
 		return lblock;
 	}
 	else

@@ -1,7 +1,7 @@
 diff -u --recursive --new-file linux.old/linux/MAINTAINERS linux/MAINTAINERS
 --- linux.old/linux/MAINTAINERS	Wed Aug 18 23:27:15 1999
 +++ linux/MAINTAINERS	Wed Aug 18 23:20:11 1999
-@@ -848,6 +848,13 @@
+@@ -809,6 +809,13 @@
  L:	linux-scsi@vger.rutgers.edu
  S:	Maintained
  

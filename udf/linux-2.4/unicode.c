@@ -34,7 +34,7 @@
 
 #include "udfdecl.h"
 
-int udf_ustr_to_dchars(char *dest, const struct ustr *src, int strlen)
+int udf_ustr_to_dchars(Uint8 *dest, const struct ustr *src, int strlen)
 {
 	if ( (!dest) || (!src) || (!strlen) || (src->u_len > strlen) )
 		return 0;
@@ -43,7 +43,7 @@ int udf_ustr_to_dchars(char *dest, const struct ustr *src, int strlen)
 	return src->u_len;
 }
 
-int udf_ustr_to_char(char *dest, const struct ustr *src, int strlen)
+int udf_ustr_to_char(Uint8 *dest, const struct ustr *src, int strlen)
 {
 	if ( (!dest) || (!src) || (!strlen) || (src->u_len >= strlen) )
 		return 0;
@@ -62,7 +62,7 @@ int udf_ustr_to_dstring(dstring *dest, const struct ustr *src, int dlength)
 		return 0;
 }
 
-int udf_dchars_to_ustr(struct ustr *dest, const char *src, int strlen)
+int udf_dchars_to_ustr(struct ustr *dest, const Uint8 *src, int strlen)
 {
 	if ( (!dest) || (!src) || (!strlen) || (strlen > UDF_NAME_LEN) )
 		return 0;
@@ -73,7 +73,7 @@ int udf_dchars_to_ustr(struct ustr *dest, const char *src, int strlen)
 	return strlen;
 }
 
-int udf_char_to_ustr(struct ustr *dest, const char *src, int strlen)
+int udf_char_to_ustr(struct ustr *dest, const Uint8 *src, int strlen)
 {
 	if ( (!dest) || (!src) || (!strlen) || (strlen >= UDF_NAME_LEN) )
 		return 0;
@@ -150,8 +150,9 @@ int udf_build_ustr_exact(struct ustr *dest, dstring *ptr, int exactsize)
  */
 int udf_CS0toUTF8(struct ustr *utf_o, struct ustr *ocu_i)
 {
-	char *ocu;
-	unsigned c, cmp_id, ocu_len;
+	Uint8 *ocu;
+	Uint32 c;
+	Uint8 cmp_id, ocu_len;
 	int i;
 
 	ocu = ocu_i->u_name;
@@ -192,10 +193,10 @@ int udf_CS0toUTF8(struct ustr *utf_o, struct ustr *ocu_i)
 
 		/* Compress Unicode to UTF-8 */
 		if (c < 0x80U)
-			utf_o->u_name[utf_o->u_len++] = (char)c;
+			utf_o->u_name[utf_o->u_len++] = (Uint8)c;
 		else if (c < 0x800U) {
-			utf_o->u_name[utf_o->u_len++] = (char)(0xc0 | (c >> 6));
-			utf_o->u_name[utf_o->u_len++] = (char)(0x80 | (c & 0x3f));
+			utf_o->u_name[utf_o->u_len++] = (Uint8)(0xc0 | (c >> 6));
+			utf_o->u_name[utf_o->u_len++] = (Uint8)(0x80 | (c & 0x3f));
 #ifdef __KERNEL__
 			udf_debug("(0x%2x%2x) -> (%2x) (%2x)\n",
 				((c >> 8) & 0xFF), (c & 0xFF),
@@ -203,9 +204,9 @@ int udf_CS0toUTF8(struct ustr *utf_o, struct ustr *ocu_i)
 				utf_o->u_name[utf_o->u_len-1]);
 #endif
 		} else {
-			utf_o->u_name[utf_o->u_len++] = (char)(0xe0 | (c >> 12));
-			utf_o->u_name[utf_o->u_len++] = (char)(0x80 | ((c >> 6) & 0x3f));
-			utf_o->u_name[utf_o->u_len++] = (char)(0x80 | (c & 0x3f));
+			utf_o->u_name[utf_o->u_len++] = (Uint8)(0xe0 | (c >> 12));
+			utf_o->u_name[utf_o->u_len++] = (Uint8)(0x80 | ((c >> 6) & 0x3f));
+			utf_o->u_name[utf_o->u_len++] = (Uint8)(0x80 | (c & 0x3f));
 #ifdef __KERNEL__
 			udf_debug("(0x%2x%2x) -> (%2x) (%2x) (%2x)\n",
 				((c >> 8) & 0xFF), (c & 0xFF),
@@ -321,7 +322,7 @@ error_out:
 }
 
 #ifdef __KERNEL__
-int udf_get_filename(char *sname, char *dname, int flen)
+int udf_get_filename(Uint8 *sname, Uint8 *dname, int flen)
 {
 	struct ustr filename, unifilename;
 	int len;
@@ -351,13 +352,13 @@ int udf_get_filename(char *sname, char *dname, int flen)
 #define CRC_MARK			'#'
 #define EXT_SIZE			5
 
-int udf_translate_to_linux(char *newName, char *udfName, int udfLen, char *fidName, int fidNameLen)
+int udf_translate_to_linux(Uint8 *newName, Uint8 *udfName, int udfLen, Uint8 *fidName, int fidNameLen)
 {
 	int index, newIndex = 0, needsCRC = 0;	
 	int extIndex = 0, newExtIndex = 0, hasExt = 0;
 	unsigned short valueCRC;
-	char curr;
-	const char hexChar[] = "0123456789ABCDEF";
+	Uint8 curr;
+	const Uint8 hexChar[] = "0123456789ABCDEF";
 
 	if (udfName[0] == '.' && (udfLen == 1 ||
 		(udfLen == 2 && udfName[1] == '.')))
@@ -398,7 +399,7 @@ int udf_translate_to_linux(char *newName, char *udfName, int udfLen, char *fidNa
 	}
 	if (needsCRC)
 	{
-		char ext[EXT_SIZE];
+		Uint8 ext[EXT_SIZE];
 		int localExtIndex = 0;
 
 		if (hasExt)

@@ -2,7 +2,7 @@ include ../config.mk
 
 all: kernel.patch
 
-DOC_INC=Configure.help.inc
+DOC_INC=Configure.help.inc MAINTAINERS.inc 00-INDEX.inc
 FS_INC=Config.in.inc filesystems.c.inc Makefile.inc
 INCLUDE_INC=fs.h.inc
 NEW_FILES_INC=udffiles.patch
@@ -15,8 +15,10 @@ B_TEMP=build.tmp
 udffiles.patch:
 	-rm -rf $(B_TEMP)
 	mkdir -p $(B_TEMP)/linux/fs/udf
+	mkdir -p $(B_TEMP)/linux/Documentation/filesystems
 	cp ../linux-$(UTS_SHORT)/* $(B_TEMP)/linux/fs/udf
 	cp Makefile.udf $(B_TEMP)/linux/fs/udf/Makefile
+	cp ../doc/udf.txt $(B_TEMP)/linux/Documentation/filesystems/udf.txt
 	mkdir -p $(B_TEMP)/linux.old/linux/fs $(B_TEMP)/linux.old/linux/include
 	ln -s ../../../include $(B_TEMP)/linux/include
 	-cd $(B_TEMP); diff -u --recursive --new-file linux.old/linux linux > ../udffiles.patch 

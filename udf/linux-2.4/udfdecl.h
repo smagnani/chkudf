@@ -1,7 +1,7 @@
 #ifndef __UDF_DECL_H
 #define __UDF_DECL_H
 
-#define UDF_VERSION_NOTICE "v0.8.8"
+#define UDF_VERSION_NOTICE "v0.8.9"
 
 #ifdef __KERNEL__
 
@@ -14,7 +14,7 @@
 #include <linux/version.h>
 #endif
 
-#if LINUX_VERSION_CODE < 0x020307
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,3,7)
 #error "The UDF Module Current Requires Kernel Version 2.3.7 or greater"
 #endif
 
@@ -98,7 +98,7 @@ extern unsigned int udf_get_last_block(kdev_t, int *);
 extern Uint32 udf_get_pblock(struct super_block *, Uint32, Uint16, Uint32);
 extern Uint32 udf_get_lb_pblock(struct super_block *, lb_addr, Uint32);
 
-extern int udf_get_filename(char *, char *, int);
+extern int udf_get_filename(Uint8 *, Uint8 *, int);
 
 extern void udf_free_inode(struct inode *);
 extern struct inode * udf_new_inode (const struct inode *, int, int *);
@@ -156,15 +156,15 @@ struct ktm
 struct ustr
 {
 	Uint8 u_cmpID;
-	char u_name[UDF_NAME_LEN-1];
+	Uint8 u_name[UDF_NAME_LEN-1];
 	Uint8 u_len;
 	Uint8 padding;
 	unsigned long u_hash;
 };
 
 
-#define udf_fixed_to_variable(x) ( ( ( x >> 5 ) * 39 ) + ( x & 0x0000001F ) )
-#define udf_variable_to_fixed(x) ( ( ( x / 39 ) << 5 ) + ( x % 39 ) )
+#define udf_fixed_to_variable(x) ( ( ( (x) >> 5 ) * 39 ) + ( (x) & 0x0000001F ) )
+#define udf_variable_to_fixed(x) ( ( ( (x) / 39 ) << 5 ) + ( (x) % 39 ) )
 
 #ifdef __KERNEL__
 
@@ -181,6 +181,10 @@ struct ustr
 #define udf_find_first_one_bit(addr, size) find_first_one_bit(addr, size)
 #define udf_find_next_one_bit(addr, size, offset) find_next_one_bit(addr, size, offset)
 
+#define leBPL_to_cpup(x) leNUM_to_cpup(BITS_PER_LONG, x)
+#define leNUM_to_cpup(x,y) xleNUM_to_cpup(x,y)
+#define xleNUM_to_cpup(x,y) (le ## x ## _to_cpup(y))
+
 extern inline int find_next_one_bit (void * addr, int size, int offset)
 {
 	unsigned long * p = ((unsigned long *) addr) + (offset / BITS_PER_LONG);
@@ -193,7 +197,7 @@ extern inline int find_next_one_bit (void * addr, int size, int offset)
 	offset &= (BITS_PER_LONG-1);
 	if (offset)
 	{
-		tmp = *(p++);
+		tmp = leBPL_to_cpup(p++);
 		tmp &= ~0UL << offset;
 		if (size < BITS_PER_LONG)
 			goto found_first;
@@ -204,18 +208,18 @@ extern inline int find_next_one_bit (void * addr, int size, int offset)
 	}
 	while (size & ~(BITS_PER_LONG-1))
 	{
-		if ((tmp = *(p++)))
+		if ((tmp = leBPL_to_cpup(p++)))
 			goto found_middle;
 		result += BITS_PER_LONG;
 		size -= BITS_PER_LONG;
 	}
 	if (!size)
 		return result;
-	tmp = *p;
+	tmp = leBPL_to_cpup(p);
 found_first:
 	tmp &= ~0UL >> (BITS_PER_LONG-size);
 found_middle:
-	return result + ffs(tmp) - 1;
+	return result + ffz(~tmp);
 }
 
 #define find_first_one_bit(addr, size)\
@@ -225,17 +229,17 @@ found_middle:
 
 /* Miscellaneous UDF Prototypes */
 
-extern int udf_ustr_to_dchars(char *, const struct ustr *, int);
-extern int udf_ustr_to_char(char *, const struct ustr *, int);
+extern int udf_ustr_to_dchars(Uint8 *, const struct ustr *, int);
+extern int udf_ustr_to_char(Uint8 *, const struct ustr *, int);
 extern int udf_ustr_to_dstring(dstring *, const struct ustr *, int);
-extern int udf_dchars_to_ustr(struct ustr *, const char *, int);
-extern int udf_char_to_ustr(struct ustr *, const char *, int);
+extern int udf_dchars_to_ustr(struct ustr *, const Uint8 *, int);
+extern int udf_char_to_ustr(struct ustr *, const Uint8 *, int);
 extern int udf_dstring_to_ustr(struct ustr *, const dstring *, int);
 
 extern Uint16 udf_crc(Uint8 *, Uint32, Uint16);
-extern int udf_translate_to_linux(char *, char *, int, char *, int);
-extern int udf_build_ustr(struct ustr *, dstring *ptr, int size);
-extern int udf_build_ustr_exact(struct ustr *, dstring *ptr, int size);
+extern int udf_translate_to_linux(Uint8 *, Uint8 *, int, Uint8 *, int);
+extern int udf_build_ustr(struct ustr *, dstring *, int);
+extern int udf_build_ustr_exact(struct ustr *, dstring *, int);
 extern int udf_CS0toUTF8(struct ustr *, struct ustr *);
 extern int udf_UTF8toCS0(dstring *, struct ustr *, int);
 

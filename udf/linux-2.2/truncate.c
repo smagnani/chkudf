@@ -16,6 +16,7 @@
  *	Each contributing author retains all rights to their own work.
  *
  *  (C) 1999 Ben Fennema
+ *  (C) 1999 Stelias Computing Inc
  *
  * HISTORY
  *

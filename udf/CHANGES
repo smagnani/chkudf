@@ -97,15 +97,17 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
 				files from damaged discs.  Modified ./patch/Makefile to 
 				assist in building kernel patches.
 
-6/16/99 blf		(Hopefully) fixed rename for versions <= 2.2.5
+06/16/99 blf	(Hopefully) fixed rename for versions <= 2.2.5
 				Fixed sparse files
 				Fixed block allocation algorithm to function properly
 
-7/15/99	blf		Fixed deletes (truncate problems)
+07/15/99 blf	Fixed deletes (truncate problems)
 				Fixed various write bugs
 				Add block extension to truncate routine
 				Recalculate crc on udf_insert_aext
 				Changes to mkudf
 
-8/19/99 blf		Ported to linux 2.3.7+
+08/19/99 blf	Ported to linux 2.3.7+
 				Rewrote inode_getblk
+
+02/02/99 blf	Fixed unicode and anchor location bugs

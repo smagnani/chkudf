@@ -1231,7 +1231,6 @@ udf_update_inode(struct inode *inode, int do_sync)
 		strcpy(eid->ident, UDF_ID_DEVELOPER);
 		eid->identSuffix[0] = UDF_OS_CLASS_UNIX;
 		eid->identSuffix[1] = UDF_OS_ID_LINUX;
-		udf_debug("nr=%d\n", kdev_t_to_nr(inode->i_rdev));
 		dsea->majorDeviceIdent = kdev_t_to_nr(inode->i_rdev) >> 8;
 		dsea->minorDeviceIdent = kdev_t_to_nr(inode->i_rdev) & 0xFF;
 		mark_buffer_dirty(tbh, 1);

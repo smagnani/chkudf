@@ -71,19 +71,19 @@ static char error_buf[1024];
 static struct super_block *udf_read_super(struct super_block *, void *, int);
 static void udf_put_super(struct super_block *);
 static int udf_remount_fs(struct super_block *, int *, char *);
-static int udf_check_valid(struct super_block *sb, int, int);
+static int udf_check_valid(struct super_block *, int, int);
 static int udf_vrs(struct super_block *sb, int silent);
-static int udf_load_partition(struct super_block *sb, struct AnchorVolDescPtr *, lb_addr *);
-static int udf_load_logicalvol(struct super_block *sb, struct buffer_head *, lb_addr *);
+static int udf_load_partition(struct super_block *, lb_addr *);
+static int udf_load_logicalvol(struct super_block *, struct buffer_head *, lb_addr *);
 static void udf_load_logicalvolint(struct super_block *, extent_ad);
-static int udf_find_anchor(struct super_block *,long,struct AnchorVolDescPtr *);
+static int udf_find_anchor(struct super_block *, int, int);
 static int udf_find_fileset(struct super_block *, lb_addr *, lb_addr *);
-static void udf_load_pvoldesc(struct super_block *sb, struct buffer_head *);
-static void udf_load_fileset(struct super_block *sb, struct buffer_head *, lb_addr *);
-static void udf_load_partdesc(struct super_block *sb, struct buffer_head *);
-static void udf_open_lvid(struct super_block *sb);
-static void udf_close_lvid(struct super_block *sb);
-static unsigned int udf_count_free(struct super_block *sb);
+static void udf_load_pvoldesc(struct super_block *, struct buffer_head *);
+static void udf_load_fileset(struct super_block *, struct buffer_head *, lb_addr *);
+static void udf_load_partdesc(struct super_block *, struct buffer_head *);
+static void udf_open_lvid(struct super_block *);
+static void udf_close_lvid(struct super_block *);
+static unsigned int udf_count_free(struct super_block *);
 
 /* version specific functions */
 static int udf_statfs(struct super_block *, struct statfs *, int);
@@ -174,7 +174,7 @@ cleanup_module(void)
  */
 int init_module(void)
 #else /* if !defined(MODULE) */
-__initfunc(int init_udf_fs(void))
+int __init init_udf_fs(void)
 #endif
 {
 	printk(KERN_NOTICE "udf: registering filesystem\n");
@@ -204,27 +204,38 @@ __initfunc(int init_udf_fs(void))
  * DESCRIPTION
  *	The following mount options are supported:
  *
- *	bs=		Set the block size.
- *	fixed		Disable removable media checks.
  *	gid=		Set the default group.
- *	umask=		Set the umask
- *	strict		Set strick conformance.
+ *	umask=		Set the default umask.
  *	uid=		Set the default user.
- *	session=	Set the CDROM session sector(default= last)
- *  lastblock=	Override the last sector
- *	anchor=		Override standard anchor location.
- *	volume=		Override the VolumeDesc location.
- *	partition=	Override the PartitionDesc location.
- *	fileset=	Override the fileset block location.
- *	rootdir=	Override the root directory location.
- *      unhide
- *      undelete
- *      novrs           Skip volume sequence recognition (my RW cd recorded by 
- *                       ADAPTEC DirectCD 2.5 has no such sequence but otherwise is fine
+ *	unhide		Show otherwise hidden files.
+ *	undelete	Show deleted files in lists.
+ *	strict		Set strict conformance (unused)
+ *	utf8		(unused)
+ *	iocharset	(unused)
+ *
+ *	The remaining are for debugging and disaster recovery:
+ *
+ *	bs=		Set the block size. (may not work unless 2048)
+ *	novrs           Skip volume sequence recognition 
+ *
+ *	The following expect a offset from 0.
+ *
+ *	session=	Set the CDROM session (default= last session)
+ *	anchor=		Override standard anchor location. (default= 256)
+ *	volume=		Override the VolumeDesc location. (unused)
+ *	partition=	Override the PartitionDesc location. (unused)
+ *	lastblock=	Set the last block of the filesystem/
+ *
+ *	The following expect a offset from the partition root.
+ *
+ *	fileset=	Override the fileset block location. (unused)
+ *	rootdir=	Override the root directory location. (unused)
+ *		WARNING: overriding the rootdir to a non-directory may
+ *		yield highly unpredictable results.
  *
  * PRE-CONDITIONS
- *	sb			Pointer to _locked_ superblock.
- *	opts			Pointer to mount options string.
+ *	options		Pointer to mount options string.
+ *	uopts		Pointer to mount options variable.
  *
  * POST-CONDITIONS
  *	<return>	0	Mount options parsed okay.
@@ -509,19 +520,25 @@ udf_vrs(struct super_block *sb, int silent)
  *	July 1, 1997 - Andrew E. Mileski
  *	Written, tested, and released.
  */
-static  int
-udf_find_anchor(struct super_block *sb, long lastblock, 
-	struct AnchorVolDescPtr *ap)
+static int
+udf_find_anchor(struct super_block *sb, int useranchor, int lastblock)
 {
+	int varlastblock = udf_variable_to_fixed(lastblock);
+	int last[] =  { lastblock, lastblock - 2,
+					lastblock - 150, lastblock - 152,
+					varlastblock, varlastblock - 2,
+					varlastblock - 150, varlastblock - 152 };
 	struct buffer_head *bh = NULL;
 	Uint16 ident;
-	Uint32 anchorlist[4];
+	Uint32 location;
 	int i;
 
-	anchorlist[0] = 256 + UDF_SB_SESSION(sb);
-	anchorlist[1] = 512 + UDF_SB_SESSION(sb);
-	anchorlist[2] = lastblock;
-	anchorlist[3] = lastblock - 256;
+	UDF_SB_ANCHOR(sb)[0] = 0;
+	UDF_SB_ANCHOR(sb)[1] = 0;
+	UDF_SB_ANCHOR(sb)[2] = 0;
+	UDF_SB_ANCHOR(sb)[3] = 256 + UDF_SB_SESSION(sb);
+
+	lastblock = 0;
 
 	/* Search for an anchor volume descriptor pointer */
 
@@ -531,25 +548,127 @@ udf_find_anchor(struct super_block *sb, long lastblock,
 	 *     lastblock
 	 *  however, if the disc isn't closed, it could be 512 */
 
-	for (i=0; i<4; i++)
+	for (i=0; (!lastblock && i<sizeof(last)/sizeof(int)); i++)
 	{
-		if (bh)
+		if (!(bh = bread(sb->s_dev, last[i], sb->s_blocksize)))
+		{
+			ident = location = 0;
+		}
+		else
+		{
+			ident = le16_to_cpu(((tag *)bh->b_data)->tagIdent);
+			location = le32_to_cpu(((tag *)bh->b_data)->tagLocation);
 			udf_release_data(bh);
-		bh = udf_read_tagged(sb, anchorlist[i], anchorlist[i], &ident);
+		}
+
 		if (ident == TID_ANCHOR_VOL_DESC_PTR)
-			break;
+		{
+			if (location == last[i] - UDF_SB_SESSION(sb))
+			{
+				lastblock = UDF_SB_ANCHOR(sb)[0] = last[i];
+				UDF_SB_ANCHOR(sb)[1] = last[i] - 256;
+			}
+			else if (location == udf_variable_to_fixed(last[i]) - UDF_SB_SESSION(sb))
+			{
+				UDF_SB(sb)->s_flags |= UDF_FLAG_VARCONV;
+				lastblock = UDF_SB_ANCHOR(sb)[0] = udf_variable_to_fixed(last[i]);
+				UDF_SB_ANCHOR(sb)[1] = lastblock - 256;
+			}
+			else
+				udf_debug("Anchor found at block %d, location mismatch %d.\n",
+					last[i], location);
+		}
+		else if (ident == TID_FILE_ENTRY || ident == TID_EXTENDED_FILE_ENTRY)
+		{
+			lastblock = last[i];
+			UDF_SB_ANCHOR(sb)[2] = 512 + UDF_SB_SESSION(sb);
+		}
+		else
+		{
+			if (!(bh = bread(sb->s_dev, last[i] - 256, sb->s_blocksize)))
+			{
+				ident = location = 0;
+			}
+			else
+			{
+				ident = le16_to_cpu(((tag *)bh->b_data)->tagIdent);
+				location = le32_to_cpu(((tag *)bh->b_data)->tagLocation);
+				udf_release_data(bh);
+			}
+
+			if (ident == TID_ANCHOR_VOL_DESC_PTR &&
+				location == last[i] - 256 - UDF_SB_SESSION(sb))
+			{
+				lastblock = last[i];
+				UDF_SB_ANCHOR(sb)[1] = last[i] - 256;
+			}
+			else
+			{
+				if (!(bh = bread(sb->s_dev, last[i] - 312 - UDF_SB_SESSION(sb),
+					sb->s_blocksize)))
+				{
+					ident = location = 0;
+				}
+				else
+				{
+					ident = le16_to_cpu(((tag *)bh->b_data)->tagIdent);
+					location = le32_to_cpu(((tag *)bh->b_data)->tagLocation);
+					udf_release_data(bh);
+				}
+
+				if (ident == TID_ANCHOR_VOL_DESC_PTR &&
+					location == udf_variable_to_fixed(last[i]) - 256)
+				{
+					UDF_SB(sb)->s_flags |= UDF_FLAG_VARCONV;
+					lastblock = udf_variable_to_fixed(last[i]);
+					UDF_SB_ANCHOR(sb)[1] = lastblock - 256;
+				}
+			}
+		}
 	}
 
-	if (!bh || ident != TID_ANCHOR_VOL_DESC_PTR)
+	if (!lastblock)
 	{
-		udf_release_data(bh);
-		udf_debug("Couldn't find an anchor\n");
-		return 1;
+		/* We havn't found the lastblock. check 312 */
+		if ((bh = bread(sb->s_dev, 312 + UDF_SB_SESSION(sb), sb->s_blocksize)))
+		{
+			ident = le16_to_cpu(((tag *)bh->b_data)->tagIdent);
+			location = le32_to_cpu(((tag *)bh->b_data)->tagLocation);
+			udf_release_data(bh);
+
+			if (ident == TID_ANCHOR_VOL_DESC_PTR && location == 256)
+				UDF_SB(sb)->s_flags |= UDF_FLAG_VARCONV;
+		}
 	}
-	UDF_SB_ANCHOR(sb) = anchorlist[i];
-	memcpy(ap, bh->b_data, sizeof(struct AnchorVolDescPtr));
-	udf_release_data(bh);
-	return 0;
+
+	for (i=0; i<sizeof(UDF_SB_ANCHOR(sb))/sizeof(int); i++)
+	{
+		if (UDF_SB_ANCHOR(sb)[i])
+		{
+			if (!(bh = udf_read_tagged(sb,
+				UDF_SB_ANCHOR(sb)[i], UDF_SB_ANCHOR(sb)[i], &ident)))
+			{
+				UDF_SB_ANCHOR(sb)[i] = 0;
+			}
+			else
+			{
+				udf_release_data(bh);
+				if ((ident != TID_ANCHOR_VOL_DESC_PTR) && (i ||
+					(ident != TID_FILE_ENTRY && ident != TID_EXTENDED_FILE_ENTRY)))
+				{
+					UDF_SB_ANCHOR(sb)[i] = 0;
+				}
+			}
+		}
+		else if (useranchor != 0xFFFFFFFF)
+		{
+			UDF_SB_ANCHOR(sb)[i] = useranchor;
+			useranchor = 0xFFFFFFFF;
+			i --;
+		}
+	}
+
+	return lastblock;
 }
 
 static int 
@@ -826,8 +945,7 @@ udf_load_logicalvolint(struct super_block *sb, extent_ad loc)
 	struct buffer_head *bh = NULL;
 	Uint16 ident;
 
-	while ((bh = udf_read_tagged(sb, loc.extLocation,
-			loc.extLocation, &ident)) &&
+	while ((bh = udf_read_tagged(sb, loc.extLocation, loc.extLocation, &ident)) &&
 		ident == TID_LOGICAL_VOL_INTEGRITY_DESC && loc.extLength > 0)
 	{
 		UDF_SB_LVIDBH(sb) = bh;
@@ -986,31 +1104,55 @@ udf_check_valid(struct super_block *sb, int novrs, int silent)
 }
 
 static int
-udf_load_partition(struct super_block *sb, struct AnchorVolDescPtr *anchor, lb_addr *fileset)
+udf_load_partition(struct super_block *sb, lb_addr *fileset)
 {
+	struct AnchorVolDescPtr *anchor;
+	Uint16 ident;
+	struct buffer_head *bh;
 	long main_s, main_e, reserve_s, reserve_e;
 	int i;
 
 	if (!sb)
 	    return 1;
-	/* Locate the main sequence */
-	main_s = le32_to_cpu( anchor->mainVolDescSeqExt.extLocation );
-	main_e = le32_to_cpu( anchor->mainVolDescSeqExt.extLength );
-	main_e = main_e >> sb->s_blocksize_bits;
-	main_e += main_s;
 
+	for (i=0; i<sizeof(UDF_SB_ANCHOR(sb))/sizeof(int); i++)
+	{
+		if (UDF_SB_ANCHOR(sb)[i] && (bh = udf_read_tagged(sb,
+			UDF_SB_ANCHOR(sb)[i], UDF_SB_ANCHOR(sb)[i] - UDF_SB_SESSION(sb), &ident)))
+		{
+			anchor = (struct AnchorVolDescPtr *)bh->b_data;
 
-	/* Locate the reserve sequence */
-	reserve_s = le32_to_cpu(anchor->reserveVolDescSeqExt.extLocation);
-	reserve_e = le32_to_cpu(anchor->reserveVolDescSeqExt.extLength);
-	reserve_e = reserve_e >> sb->s_blocksize_bits;
-	reserve_e += reserve_s;
+			/* Locate the main sequence */
+			main_s = le32_to_cpu( anchor->mainVolDescSeqExt.extLocation );
+			main_e = le32_to_cpu( anchor->mainVolDescSeqExt.extLength );
+			main_e = main_e >> sb->s_blocksize_bits;
+			main_e += main_s;
+	
+			/* Locate the reserve sequence */
+			reserve_s = le32_to_cpu(anchor->reserveVolDescSeqExt.extLocation);
+			reserve_e = le32_to_cpu(anchor->reserveVolDescSeqExt.extLength);
+			reserve_e = reserve_e >> sb->s_blocksize_bits;
+			reserve_e += reserve_s;
 
-	/* Process the main & reserve sequences */
-	/* responsible for finding the PartitionDesc(s) */
-	if ( udf_process_sequence(sb, main_s, main_e, fileset) &&
-			udf_process_sequence(sb, reserve_s, reserve_e, fileset) )
+			udf_release_data(bh);
+
+			/* Process the main & reserve sequences */
+			/* responsible for finding the PartitionDesc(s) */
+			if (!(udf_process_sequence(sb, main_s, main_e, fileset) &&
+				udf_process_sequence(sb, reserve_s, reserve_e, fileset)))
+			{
+				break;
+			}
+		}
+	}
+
+	if (i == sizeof(UDF_SB_ANCHOR(sb))/sizeof(int))
+	{
+		udf_debug("No Anchor block found\n");
 		return 1;
+	}
+	else
+		udf_debug("Using anchor in block %d\n", UDF_SB_ANCHOR(sb)[i]);
 
 	for (i=0; i<UDF_SB_NUMPARTS(sb); i++)
 	{
@@ -1145,7 +1287,6 @@ static struct super_block *
 udf_read_super(struct super_block *sb, void *options, int silent)
 {
 	struct inode *inode=NULL;
-	struct AnchorVolDescPtr anchor;
 	struct udf_options uopt;
 	lb_addr rootdir, fileset;
 	int i;
@@ -1169,7 +1310,7 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	if (!udf_parse_options((char *)options, &uopt))
 		goto error_out;
 
-	UDF_SB_ANCHOR(sb)=0;
+	memset(UDF_SB_ANCHOR(sb), 0x00, sizeof(UDF_SB_ANCHOR(sb)));
 	fileset.logicalBlockNum = 0xFFFFFFFF;
 	fileset.partitionReferenceNum = 0xFFFF;
 	UDF_SB_RECORDTIME(sb)=0;
@@ -1197,6 +1338,8 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	else
 		UDF_SB_LASTBLOCK(sb) = uopt.lastblock;
 
+	UDF_SB_LASTBLOCK(sb) = udf_find_anchor(sb, uopt.anchor, UDF_SB_LASTBLOCK(sb));
+
 	udf_debug("Lastblock=%d\n", UDF_SB_LASTBLOCK(sb));
 
 	if (udf_check_valid(sb, uopt.novrs, silent)) /* read volume recognition sequences */
@@ -1204,18 +1347,6 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 		udf_debug("No VRS found\n");
  		goto error_out;
 	}
-
-	if (uopt.anchor == 0xFFFFFFFF)
-	{
-		/* Find an anchor volume descriptor pointer */
-		if (udf_find_anchor(sb, UDF_SB_LASTBLOCK(sb), &anchor))
-		{
-			udf_debug("No Anchor block found\n");
-			goto error_out;
-		}
-	}
-	else
-		UDF_SB_ANCHOR(sb) = uopt.anchor;
 
 	UDF_SB_CHARSET(sb) = NULL;
 
@@ -1245,7 +1376,7 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 	}
 	UDF_SB_LOADED_BLOCK_BITMAPS(sb) = 0;
 
-	if (udf_load_partition(sb, &anchor, &fileset))
+	if (udf_load_partition(sb, &fileset))
 	{
 		udf_debug("No partition found (1)\n");
 		goto error_out;

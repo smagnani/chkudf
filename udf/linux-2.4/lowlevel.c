@@ -86,229 +86,6 @@ udf_get_last_session(kdev_t dev)
 	return vol_desc_start;
 }
 
-#ifdef CDROM_LAST_WRITTEN
-
-static unsigned int
-udf_get_last_written(kdev_t dev, struct inode *inode_fake)
-{
-	extern struct file_operations * get_blkfops(unsigned int);
-	unsigned long lastsector;
-
-	if (!(get_blkfops(MAJOR(dev))->ioctl(inode_fake,
-		NULL,
-		CDROM_LAST_WRITTEN,
-		(unsigned long) &lastsector)))
-	{
-		return lastsector - 1;
-	}
-	else
-		return 0;
-}
-
-#else
-
-static int
-do_scsi(kdev_t dev, struct inode *inode_fake, Uint8 *command, int cmd_len,
-	Uint8 *buffer, Uint32 in_len, Uint32 out_len)
-{
-	extern struct file_operations * get_blkfops(unsigned int);
-	Uint32 *ip;
-
-	ip = (Uint32 *)buffer;
-	ip[0] = in_len;
-	ip[1] = out_len;
-	memcpy(buffer + 8, command, cmd_len);
-	return get_blkfops(MAJOR(dev))->ioctl(inode_fake,
-		NULL, SCSI_IOCTL_SEND_COMMAND, (unsigned long)buffer);
-}
-
-static unsigned int
-udf_get_last_rti(kdev_t dev, struct inode *inode_fake)
-{
-	char buffer[128];
-	int result = 0;
-	int *ip;
-	int track_no;
-	Uint32 trackstart, tracklength, freeblocks;
-	Uint8 cdb[10];
-	unsigned long lastsector = 0;
-
-	ip = (int *)(buffer + 8);
-	memset(cdb, 0, 10);
-	cdb[0] = 0x51;
-	cdb[8] = 32;
-	result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, 32);
-	if (!result)
-	{
-		track_no = buffer[14];
-		udf_debug("Generic Read Disc Info worked; last track is %d. status=0x%x\n",
-			track_no, buffer[10] & 0x3);
-		memset(buffer, 0, 128);
-		cdb[0] = 0x52;
-		cdb[1] = 1;
-		cdb[5] = track_no;
-		cdb[8] = 36;
-		result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, 36);
-		if (!result)
-		{
-			if (buffer[14] & 0x40)
-			{
-				cdb[5] = track_no - 1;
-				result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, 36);
-			}
-			if (!result)
-			{
-				trackstart = be32_to_cpu(ip[2]);
-				tracklength = be32_to_cpu(ip[6]);
-				freeblocks = be32_to_cpu(ip[4]);
-				udf_debug("Start %d, length %d, freeblocks %d.\n", trackstart, tracklength, freeblocks);
-				if (buffer[14] & 0x10)
-				{
-					udf_debug("Packet size is %d.\n", be32_to_cpu(ip[5]));
-					lastsector = trackstart + tracklength - 1;
-				}
-				else
-				{
-					udf_debug("Variable packet written track.\n");
-					lastsector = trackstart + tracklength - 1;
-					if (freeblocks)
-					{
-						lastsector = lastsector - freeblocks - 7;
-					}
-					blk_size[MAJOR(dev)][MINOR(dev)] =
-						(lastsector + 1) << 1;
-				}
-			}
-		}
-	}
-	return lastsector;
-}
-
-static unsigned int
-udf_get_toc_entry(kdev_t dev, struct inode *inode_fake)
-{
-	extern struct file_operations * get_blkfops(unsigned int);
-	struct cdrom_tocentry toc;
-	int res, lastsector = 0;
-
-	toc.cdte_format = CDROM_LBA;
-	toc.cdte_track = 0xAA;
-	
-	if (!(res = get_blkfops(MAJOR(dev))->ioctl(inode_fake,
-			NULL,
-			CDROMREADTOCENTRY,
-			(unsigned long) &toc)))
-	{
-		lastsector = toc.cdte_addr.lba - 1;
-	}
-
-	return lastsector;
-}
-
-static unsigned int
-udf_get_capacity(kdev_t dev, struct inode *inode_fake)
-{
-	char buffer[128];
-	int result = 0;
-	int *ip;
-	Uint8 cdb[10];
-	unsigned long lastsector = 0;
-
-	ip = (int *)(buffer + 8);
-	memset(cdb, 0, 10);
-
-	cdb[0] = READ_CAPACITY;
-	result = do_scsi(dev, inode_fake, cdb, 10, buffer, 0, 8);
-	if (!result)
-		lastsector = be32_to_cpu(ip[0]);
-
-	return lastsector;
-}
-
-static int
-is_mmc(kdev_t dev, struct inode *inode_fake)
-{
-    char buffer[142];
-    int result = 0, n;
-    Uint8 cdb[6];
-
-	cdb[0] = MODE_SENSE;
-	cdb[2] = 0x2A;
-	cdb[4] = 128;
-	cdb[1] = cdb[3] = cdb[5] = 0;
-
-	result = do_scsi(dev, inode_fake, cdb, 6, buffer, 0, 128);
-	if (!result)
-	{
-		n = 8 + buffer[8+3] + 4;
-		udf_debug("DVD-RAM R/W(%c/%c)  DVD-R R/W(%c/%c)  DVD-ROM R(%c)\n",
-			buffer[n+2] & 0x20 ? 'Y' : 'N', buffer[n+3] & 0x20 ? 'Y' : 'N',
-			buffer[n+2] & 0x10 ? 'Y' : 'N', buffer[n+3] & 0x10 ? 'Y' : 'N',
-			buffer[n+2] & 0x08 ? 'Y' : 'N');
-		udf_debug("CD-RW   R/W(%c/%c)  CD-R  R/W(%c/%c)  Fixed Packet (%c)\n",
-			buffer[n+2] & 0x02 ? 'Y' : 'N', buffer[n+3] & 0x02 ? 'Y' : 'N',
-			buffer[n+2] & 0x01 ? 'Y' : 'N', buffer[n+3] & 0x01 ? 'Y' : 'N',
-			buffer[n+2] & 0x04 ? 'Y' : 'N');
-	}
-	return !result;
-}
-
-#endif
-
-unsigned int
-verify_lastblock(kdev_t dev, int lastblock, int *flags)
-{
-	struct buffer_head *bh;
-	tag *tp;
-	int blocklist[10];
-	int i;
-
-	blocklist[0] = blocklist[1] = lastblock - 2;
-	blocklist[2] = blocklist[3] = lastblock;
-	blocklist[4] = blocklist[5] = lastblock - 150;
-	blocklist[6] = blocklist[7] = lastblock - 152;
-	blocklist[8] = blocklist[9] = 32 * ((lastblock + 37) / 39);
-
-	for (i=0; i<10; i+=2)
-	{
-		bh = bread(dev, blocklist[i], blksize_size[MAJOR(dev)][MINOR(dev)]);
-		if (bh)
-		{
-			tp = (tag *)bh->b_data;
-			if (tp->tagIdent == TID_ANCHOR_VOL_DESC_PTR)
-			{
-				if (tp->tagLocation == blocklist[i])
-					break;
-				else if (tp->tagLocation == udf_variable_to_fixed(blocklist[i]))
-				{
-					blocklist[i+1] = udf_variable_to_fixed(blocklist[i+1]);
-					*flags |= UDF_FLAG_VARCONV;
-					break;
-				}
-			}
-			else if (tp->tagIdent == TID_FILE_ENTRY ||
-				tp->tagIdent == TID_EXTENDED_FILE_ENTRY)
-			{
-				blocklist[i] = 512;
-				i -= 2;
-			}
-			brelse(bh);
-			bh = NULL;
-		}
-	}
-
-	if (!bh)
-	{
-		udf_debug("Unable to find Last Anchor @ ~%d\n", lastblock);
-		return 0;
-	}
-	else
-	{
-		brelse(bh);
-		return blocklist[i+1];
-	}
-}
-
 unsigned int
 udf_get_last_block(kdev_t dev, int *flags)
 {
@@ -320,7 +97,6 @@ udf_get_last_block(kdev_t dev, int *flags)
 	unsigned int hbsize = get_hardblocksize(dev);
 	unsigned int mult = 0;
 	unsigned int div = 0;
-	int accurate = 0;
 
 	if (!hbsize)
 		hbsize = 512;
@@ -342,51 +118,28 @@ udf_get_last_block(kdev_t dev, int *flags)
 
 		lblock = 0;
 		ret = get_blkfops(MAJOR(dev))->ioctl(&inode_fake,
-				NULL,
-				BLKGETSIZE,
-				(unsigned long) &lblock);
+			NULL,
+			BLKGETSIZE,
+			(unsigned long) &lblock);
 
 		if (!ret) /* Hard Disk */
 		{
-			udf_debug("BLKGETSIZE lblock=%ld\n", lblock);
 			if (mult)
 				lblock *= mult;
 			else if (div)
 				lblock /= div;
-			lblock --;
-			accurate = 1;
 		}
 		else /* CDROM */
 		{
-#ifdef CDROM_LAST_WRITTEN
-			if ((lblock = udf_get_last_written(dev, &inode_fake)))
-			{
-				udf_debug("last_written lblock=%ld\n", lblock);
-				accurate = 0;
-			}
-#else
-			if (is_mmc(dev, &inode_fake) &&
-				(lblock = udf_get_last_rti(dev, &inode_fake)))
-			{
-				udf_debug("LAST_RTI lblock=%ld\n", lblock);
-				accurate = 1;
-			}
-			else if ((lblock = udf_get_toc_entry(dev, &inode_fake)))
-			{
-				udf_debug("TOC_ENTRY lblock=%ld\n", lblock);
-				accurate = 0;
-			}
-			else if ((lblock = udf_get_capacity(dev, &inode_fake)))
-			{
-				udf_debug("READ_CAPACITY lblock=%ld\n", lblock);
-				accurate = 0;
-			}
-#endif
+			ret = get_blkfops(MAJOR(dev))->ioctl(&inode_fake,
+				NULL,
+				CDROM_LAST_WRITTEN,
+				(unsigned long) &lblock);
 		}
+
 		set_fs(old_fs);
-		if (!accurate)
-			lblock = verify_lastblock(dev, lblock, flags);
-		return lblock;
+		if (!ret)
+			return lblock - 1;
 	}
 	else
 	{

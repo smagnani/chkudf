@@ -335,7 +335,7 @@ udf_find_entry(struct inode *dir, struct dentry *dentry,
  *	Written, tested, and released.
  */
 
-#if LINUX_VERSION_CODE < 0x020207
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,7)
 int
 #else
 struct dentry *
@@ -353,7 +353,7 @@ udf_lookup(struct inode *dir, struct dentry *dentry)
 		lb_addr lb = { 0, simple_strtoul(dentry->d_name.name+3, NULL, 0) };
 		inode = udf_iget(dir->i_sb, lb);
 		if (!inode)
-#if LINUX_VERSION_CODE < 0x020207
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,7)
 			return -EACCES;
 #else
 			return ERR_PTR(-EACCES);
@@ -370,14 +370,14 @@ udf_lookup(struct inode *dir, struct dentry *dentry)
 
 		inode = udf_iget(dir->i_sb, lelb_to_cpu(cfi.icb.extLocation));
 		if ( !inode )
-#if LINUX_VERSION_CODE < 0x020207
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,7)
 			return -EACCES;
 #else
 			return ERR_PTR(-EACCES);
 #endif
 	}
 	d_add(dentry, inode);
-#if LINUX_VERSION_CODE < 0x020207
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,7)
 	return 0;
 #else
 	return NULL;
@@ -411,7 +411,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 		return NULL;
 	sb = dir->i_sb;
 
-#if LINUX_VERSION_CODE < 0x020206
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,6)
 	if (dentry->d_name.len >= UDF_NAME_LEN)
 	{
 		*err = -ENAMETOOLONG;
@@ -714,7 +714,7 @@ int udf_mknod(struct inode * dir, struct dentry * dentry, int mode, int rdev)
 	int err;
 	struct FileIdentDesc cfi, *fi;
 
-#if LINUX_VERSION_CODE < 0x020206
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,6)
 	err = -ENAMETOOLONG;
 	if (dentry->d_name.len >= UDF_NAME_LEN)
 		goto out;
@@ -784,7 +784,7 @@ int udf_mkdir(struct inode * dir, struct dentry * dentry, int mode)
 	struct FileIdentDesc cfi, *fi;
 	Uint32 loc;
 
-#if LINUX_VERSION_CODE < 0x020206
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,6)
 	err = -ENAMETOOLONG;
 	if (dentry->d_name.len >= UDF_NAME_LEN)
 		goto out;
@@ -941,7 +941,7 @@ int udf_rmdir(struct inode * dir, struct dentry * dentry)
 	struct udf_fileident_bh fibh;
 	struct FileIdentDesc *fi, cfi;
 
-#if LINUX_VERSION_CODE < 0x020206
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,6)
 	retval = -ENAMETOOLONG;
 	if (dentry->d_name.len >= UDF_NAME_LEN)
 		goto out;
@@ -958,7 +958,7 @@ int udf_rmdir(struct inode * dir, struct dentry * dentry)
 	if (udf_get_lb_pblock(dir->i_sb, lelb_to_cpu(cfi.icb.extLocation), 0) != inode->i_ino)
 		goto end_rmdir;
 
-#if LINUX_VERSION_CODE < 0x020206
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,6)
 	if (!empty_dir(inode))
 		retval = -ENOTEMPTY;
 	else if (udf_get_lb_pblock(dir->i_sb, lelb_to_cpu(cfi.icb.extLocation), 0) !=
@@ -1010,7 +1010,7 @@ int udf_unlink(struct inode * dir, struct dentry * dentry)
 	struct FileIdentDesc *fi;
 	struct FileIdentDesc cfi;
 
-#if LINUX_VERSION_CODE < 0x020206
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,6)
 	retval = -ENAMETOOLONG;
 	if (dentry->d_name.len >= UDF_NAME_LEN)
 		goto out;
@@ -1187,7 +1187,7 @@ int udf_link(struct dentry * old_dentry, struct inode * dir,
 	if (S_ISDIR(inode->i_mode))
 		return -EPERM;
 
-#if LINUX_VERSION_CODE < 0x020206
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,6)
 	if (IS_APPEND(inode) || IS_IMMUTABLE(inode))
 		return -EPERM;
 #endif
@@ -1231,7 +1231,7 @@ int udf_link(struct dentry * old_dentry, struct inode * dir,
 }
 
 
-#if LINUX_VERSION_CODE < 0x020206
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,6)
 
 /*
  * rename uses retrying to avoid race-conditions: at least they should be

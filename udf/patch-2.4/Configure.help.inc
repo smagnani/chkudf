@@ -1,7 +1,7 @@
 diff -u --recursive --new-file linux.old/linux/Documentation/Configure.help linux/Documentation/Configure.help
 --- linux.old/linux/Documentation/Configure.help	Wed Aug 18 23:27:15 1999
 +++ linux/Documentation/Configure.help	Wed Aug 18 23:20:11 1999
-@@ -7352,6 +7352,25 @@
+@@ -7299,6 +7299,25 @@
    like lynx or netscape). Say Y here if you want to be able to read
    Joliet CDROMs under Linux.
  

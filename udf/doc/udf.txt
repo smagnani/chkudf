@@ -1,58 +1,57 @@
 *
 * ./Documentation/filesystems/udf.txt
 *
-UDF Filesystem version 0.8.7	(Experimental isn't kidding!)
+UDF Filesystem version 0.8.9
 
 If you encounter problems with reading UDF discs using this driver,
 please report them to linux_udf@hootie.lvld.hp.com, which is the
 developer's list.
 
-The following is not necessarily up to date.
+Write support requires a block driver which supports writing. The current
+scsi and ide cdrom drivers do not support writing.
 
-Ben
+-------------------------------------------------------------------------------
+The following mount options are supported:
 
-The driver is known to work 'ok' for discs written with Adaptec's
-DirectCD 2.5, although there's a problem with mis-reported file
-sizes, effecting 'du' and 'ls -ls'.
+	gid=		Set the default group.
+	umask=		Set the default umask.
+	uid=		Set the default user.
+	unhide		Show otherwise hidden files.
+	undelete	Show deleted files in lists.
+	strict		Set strict conformance (unused)
+	utf8		(unused)
+	iocharset	(unused)
 
-The 'find' command doesn't like some directories. 
+The remaining are for debugging and disaster recovery:
 
-The 'diff' command works ok on individual files, but complains
-about file errors when run recursively. 
+	bs=			Set the block size. (may not work unless 2048)
+	novrs		Skip volume sequence recognition 
+
+The following expect a offset from 0.
+
+	session=	Set the CDROM session (default= last session)
+	anchor=		Override standard anchor location. (default= 256)
+	volume=		Override the VolumeDesc location. (unused)
+	partition=	Override the PartitionDesc location. (unused)
+	lastblock=	Set the last block of the filesystem/
+
+The following expect a offset from the partition root.
+
+	fileset=	Override the fileset block location. (unused)
+	rootdir=	Override the root directory location. (unused)
+				WARNING: overriding the rootdir to a non-directory may
+					yield highly unpredictable results.
+-------------------------------------------------------------------------------
 
 
- * ---------------------------------------------------------------------
- *	The following mount options are supported (to some degree):
- *
- *	fixed		Disable removable media checks.
- *	gid=		Set the default group.
- *	mode=		Set the default mode.
- *	uid=		Set the default user.
- *      unhide		Show otherwise hidden files.
- *      undelete	Show deleted files in lists.
- *	strict		Set strict conformance.
- *
- *	The remaining are for debugging and disaster recovery:
- *
- *	bs=		Set the block size. (may not work unless 2048)
- *	debug=		Set the debugging level for _all_ UDF filesystems.
- *      novrs           Skip volume sequence recognition 
- *		(my RW cd recorded by ADAPTEC DirectCD 2.5 has no such 
- *		 sequence but otherwise is fine)
- *
- *	The following expect a parameter given in 'sectors':
- *
- *	session=	Set the CDROM session (default= last session)
- *	anchor=		Override standard anchor location. (default= 256)
- *	volume=		Override the VolumeDesc location.
- *	partition=	Override the PartitionDesc location.
- *	partroot=	Override the partitionStartingLocation.
- *
- *	The following expect a parameter given in 'blocks', 
- *	(which are then added to the partition root to get a 'sector'):
- *
- *	fileset=	Override the fileset block location.
- *	rootdir=	Override the root directory location.
- *		WARNING: overriding the rootdir to a non-directory may
- *			 yield highly unpredictable results.
- *
+For more information see:
+	http://www.trylinux.com/projects/udf/index.html
+
+For the latest version and toolset see:
+	 http://www.csc.calpoly.edu/~bfennema/udf.html
+
+Documentation on UDF and ECMA 167 is available FREE from:
+    http://www.osta.org/
+    http://www.ecma.ch/
+
+Ben Fennema <bfennema@falcon.csc.calpoly.edu>
