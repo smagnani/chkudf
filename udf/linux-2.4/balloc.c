@@ -202,7 +202,7 @@ static inline int load_block_bitmap(struct super_block *sb, Uint32 bitmap,
 	return slot;
 }
 
-void udf_bitmap_free_blocks(const struct inode * inode, Uint32 bitmap,
+static void udf_bitmap_free_blocks(const struct inode * inode, Uint32 bitmap,
 	lb_addr bloc, Uint32 offset, Uint32 count)
 {
 	struct buffer_head * bh = NULL;
@@ -283,7 +283,7 @@ error_return:
 	return;
 }
 
-int udf_bitmap_prealloc_blocks(const struct inode * inode, Uint32 bitmap,
+static int udf_bitmap_prealloc_blocks(const struct inode * inode, Uint32 bitmap,
 	Uint16 partition, Uint32 first_block, Uint32 block_count)
 {
 	int alloc_count = 0;
@@ -349,7 +349,7 @@ out:
 	return alloc_count;
 }
 
-int udf_bitmap_new_block(const struct inode * inode, Uint32 bitmap,
+static int udf_bitmap_new_block(const struct inode * inode, Uint32 bitmap,
 	Uint16 partition, Uint32 goal, int *err)
 {
 	int tmp, newbit, bit=0, block, block_group, group_start;
@@ -500,39 +500,39 @@ error_return:
 inline void udf_free_blocks(const struct inode * inode, lb_addr bloc,
     Uint32 offset, Uint32 count)
 {
-    if (UDF_SB_PARTFLAGS(inode->i_sb, bloc.partitionReferenceNum) & UDF_PART_FLAG_UNALLOC_BITMAP)
+	if (UDF_SB_PARTFLAGS(inode->i_sb, bloc.partitionReferenceNum) & UDF_PART_FLAG_UNALLOC_BITMAP)
 	{
-        return udf_bitmap_free_blocks(inode,
+		return udf_bitmap_free_blocks(inode,
 			UDF_SB_PARTMAPS(inode->i_sb)[bloc.partitionReferenceNum].s_uspace.bitmap,
 			bloc, offset, count);
 	}
-    else if (UDF_SB_PARTFLAGS(inode->i_sb, bloc.partitionReferenceNum) & UDF_PART_FLAG_FREED_BITMAP)
+	else if (UDF_SB_PARTFLAGS(inode->i_sb, bloc.partitionReferenceNum) & UDF_PART_FLAG_FREED_BITMAP)
 	{
-        return udf_bitmap_free_blocks(inode,
+		return udf_bitmap_free_blocks(inode,
 			UDF_SB_PARTMAPS(inode->i_sb)[bloc.partitionReferenceNum].s_fspace.bitmap,
 			bloc, offset, count);
 	}
-    else
-        return;
+	else
+		return;
 }
 
 inline int udf_prealloc_blocks(const struct inode * inode, Uint16 partition,
-    Uint32 first_block, Uint32 block_count)
+	Uint32 first_block, Uint32 block_count)
 {
-    if (UDF_SB_PARTFLAGS(inode->i_sb, partition) & UDF_PART_FLAG_UNALLOC_BITMAP)
+	if (UDF_SB_PARTFLAGS(inode->i_sb, partition) & UDF_PART_FLAG_UNALLOC_BITMAP)
 	{
-        return udf_bitmap_prealloc_blocks(inode,
+		return udf_bitmap_prealloc_blocks(inode,
 			UDF_SB_PARTMAPS(inode->i_sb)[partition].s_uspace.bitmap,
 			partition, first_block, block_count);
 	}
-    else if (UDF_SB_PARTFLAGS(inode->i_sb, partition) & UDF_PART_FLAG_FREED_BITMAP)
+	else if (UDF_SB_PARTFLAGS(inode->i_sb, partition) & UDF_PART_FLAG_FREED_BITMAP)
 	{
-        return udf_bitmap_prealloc_blocks(inode,
+		return udf_bitmap_prealloc_blocks(inode,
 			UDF_SB_PARTMAPS(inode->i_sb)[partition].s_fspace.bitmap,
 			partition, first_block, block_count);
 	}
-    else
-        return 0;
+	else
+		return 0;
 }
 
 inline int udf_new_block(const struct inode * inode, Uint16 partition,
