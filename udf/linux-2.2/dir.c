@@ -69,13 +69,13 @@ static struct file_operations udf_dir_operations = {
 
 struct inode_operations udf_dir_inode_operations = {
 	&udf_dir_operations,
-#ifdef CONFIG_UDF_RW
+#if CONFIG_UDF_RW == 1
 	udf_create, 	/* create */
 #else
 	NULL,			/* create */
 #endif
 	udf_lookup,		/* lookup */
-#ifdef CONFIG_UDF_RW
+#if CONFIG_UDF_RW == 1
 	udf_link,		/* link */
 	udf_unlink,		/* unlink */
 	udf_symlink,	/* symlink */
@@ -143,7 +143,7 @@ int udf_readdir(struct file *filp, void *dirent, filldir_t filldir)
 
 	if ( filp->f_pos == 0 ) 
 	{
-		if (filldir(dirent, ".", 1, filp->f_pos, dir->i_ino) < 0)
+		if (filldir(dirent, ".", 1, filp->f_pos, dir->i_ino))
 			return 0;
 	}
  
@@ -260,7 +260,7 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
  
  		if (!lfi) /* parent directory */
  		{
-			if (filldir(dirent, "..", 2, filp->f_pos, filp->f_dentry->d_parent->d_inode->i_ino) < 0)
+			if (filldir(dirent, "..", 2, filp->f_pos, filp->f_dentry->d_parent->d_inode->i_ino))
 			{
 				if (fibh.sbh != fibh.ebh)
 					udf_release_data(fibh.ebh);
@@ -273,7 +273,6 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 		{
 			if ((flen = udf_get_filename(nameptr, fname, lfi)))
 			{
-				fname[flen] = '\0';
 				if (filldir(dirent, fname, flen, filp->f_pos, iblock))
 				{
 					if (fibh.sbh != fibh.ebh)
