@@ -117,9 +117,10 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 	Uint16 liu;
 	Uint8 lfi;
 	loff_t size = (udf_ext0_offset(dir) + dir->i_size) >> 2;
-	struct buffer_head * bh = NULL;
+	struct buffer_head * bh = NULL, * tmp, * bha[16];
 	lb_addr bloc, eloc;
 	Uint32 extoffset, elen, offset;
+	int i, num;
 
 	if (nf_pos >= size)
 		return 1;
@@ -152,6 +153,28 @@ do_udf_readdir(struct inode * dir, struct file *filp, filldir_t filldir, void *d
 	{
 		udf_release_data(bh);
 		return 0;
+	}
+
+	if (!(offset & ((16 >> (dir->i_sb->s_blocksize_bits - 9))-1)))
+	{
+		i = 16 >> (dir->i_sb->s_blocksize_bits - 9);
+		if (i+offset > (elen >> dir->i_sb->s_blocksize_bits))
+			i = (elen >> dir->i_sb->s_blocksize_bits)-offset;
+		for (num=0; i>0; i--)
+		{
+			block = udf_get_lb_pblock(dir->i_sb, eloc, offset+i);
+			tmp = udf_tgetblk(dir->i_sb, block, dir->i_sb->s_blocksize);
+			if (tmp && !buffer_uptodate(tmp) && !buffer_locked(tmp))
+				bha[num++] = tmp;
+			else
+				brelse(tmp);
+		}
+		if (num)
+		{
+			ll_rw_block(READA, num, bha);
+			for (i=0; i<num; i++)
+				brelse(bha[i]);
+		}
 	}
 
 	while ( nf_pos < size )
