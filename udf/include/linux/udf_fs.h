@@ -34,6 +34,7 @@
 #if !defined(_LINUX_UDF_FS_H)
 #define _LINUX_UDF_FS_H
 
+
 #define UDF_PREALLOCATE
 #define UDF_DEFAULT_PREALLOC_BLOCKS		8
 
@@ -56,14 +57,16 @@
 #define udf_info(f, a...) \
 		printk (KERN_INFO "UDF-fs INFO " ## f, ## a);
 
-#if LINUX_KERNEL_VERSION < KERNEL_VERSION(2,3,0)
 #ifdef __KERNEL__
-/*
- * Function prototypes (all other prototypes included in udfdecl.h)
- */
+
+#ifndef LINUX_VERSION_CODE
+#include <linux/version.h>
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,3,0)
 extern int init_udf_fs(void);
+#endif /* 2.2.XX */
 
 #endif /* __KERNEL__ */
-#endif /* 2.2.XX */
 
 #endif /* !defined(_LINUX_UDF_FS_H) */
