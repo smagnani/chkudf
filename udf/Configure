@@ -361,31 +361,19 @@ fi
 if [ $src -eq 1 ] ; then UTS_VERSION=`uname -v` ; fi
 
 case "$VERSION.$PATCHLEVEL" in
-2.2|2.3|2.4)
+2.2|2.4|2.5)
 	if [ "$CONFIG_MODVERSIONS" = "y" ] ; then
 		echo "MFLAG=-DMODVERSIONS -include $MODVER" >> $CONFIG_MK
 	fi
-	if [ $PATCHLEVEL -eq 1 ] ; then
-		if [ $SUBLEVEL -gt 30 -a $SUBLEVEL -lt 34 ] ; then
-			echo "Kernel versions 2.1.31-33 are broken.  Upgrade to 2.1.34."
-			exit 1
-		fi
-	fi
-	if [ $PATCHLEVEL -eq 3 ] ; then
-		if [ $SUBLEVEL -lt 7 ] ; then
-			echo "This version requires the new vfs code in 2.3.7+."
-			exit 1
-		fi
-	fi
 	;;
 *)
-	echo "This package requires a 2.2-2.4 series kernel."
+	echo "This package requires a 2.2/2.4/2.5 series kernel."
 	exit 1
 	;;
 esac
 
-if [ "`grep "DQUOT_ALLOC_INODE(struct inode \*inode)" $LINUX/include/linux/quotaops.h`" ] ; then
-	echo "ACFLAG=-DQUOTA_CHANGE" >> $CONFIG_MK
+if [ ! "`grep "DQUOT_ALLOC_INODE(struct inode \*inode)" $LINUX/include/linux/quotaops.h`" ] ; then
+	echo "ACFLAG=-DOLD_QUOTA" >> $CONFIG_MK
 fi
 
 UTS_RELEASE=`grep UTS_RELEASE $LINUX/include/linux/version.h | grep -v BOOT | awk '{print $3}' | sed 's/"//g'`
