@@ -62,7 +62,7 @@ static void extent_trunc(struct inode * inode, lb_addr bloc, int extoffset,
 	}
 }
 
-void udf_trunc(struct inode * inode)
+void udf_truncate_extents(struct inode * inode)
 {
 	lb_addr bloc, eloc, neloc = { 0, 0 };
 	Uint32 extoffset, elen, offset, nelen = 0, lelen = 0, lenalloc;
@@ -124,7 +124,7 @@ void udf_trunc(struct inode * inode)
 						aed->lengthAllocDescs = cpu_to_le32(lenalloc);
 						udf_update_tag(bh->b_data, lenalloc +
 							sizeof(struct AllocExtDesc));
-						mark_buffer_dirty(bh, 1);
+						mark_buffer_dirty(bh);
 					}
 				}
 
@@ -166,7 +166,7 @@ void udf_trunc(struct inode * inode)
 				aed->lengthAllocDescs = cpu_to_le32(lenalloc);
 				udf_update_tag(bh->b_data, lenalloc +
 					sizeof(struct AllocExtDesc));
-				mark_buffer_dirty(bh, 1);
+				mark_buffer_dirty(bh);
 			}
 		}
 	}
@@ -210,38 +210,4 @@ void udf_trunc(struct inode * inode)
 	}
 
 	udf_release_data(bh);
-}
-
-void udf_truncate(struct inode * inode)
-{
-	int err;
-
-	if (!(S_ISREG(inode->i_mode) || S_ISDIR(inode->i_mode) ||
-			S_ISLNK(inode->i_mode)))
-		return;
-	if (IS_APPEND(inode) || IS_IMMUTABLE(inode))
-		return;
-
-	if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
-	{
-		if (inode->i_sb->s_blocksize < (udf_file_entry_alloc_offset(inode) +
-			inode->i_size))
-		{
-			udf_expand_file_adinicb(inode, inode->i_size, &err);
-			if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
-			{
-				inode->i_size = UDF_I_LENALLOC(inode);
-				return;
-			}
-			else
-				udf_trunc(inode);
-		}
-		else
-			UDF_I_LENALLOC(inode) = inode->i_size;
-	}
-	else
-		udf_trunc(inode);
-
-	inode->i_mtime = inode->i_ctime = CURRENT_TIME;
-	mark_inode_dirty(inode);
 }
