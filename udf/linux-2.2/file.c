@@ -155,6 +155,28 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 	}
 #endif
 
+	if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
+	{
+		if (inode->i_sb->s_blocksize < (udf_file_entry_alloc_offset(inode) +
+			pos + count))
+		{
+			udf_expand_file_adinicb(inode, pos + count, &err);
+			if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
+			{
+				udf_debug("udf_expand_file_adinicb: err=%d\n", err);
+				return err;
+			}
+		}
+		else
+		{
+			if (pos + count > inode->i_size)
+				UDF_I_LENALLOC(inode) = pos + count;
+			else
+				UDF_I_LENALLOC(inode) = inode->i_size;
+			pos += udf_file_entry_alloc_offset(inode);
+		}
+	}
+
 	if (filp->f_flags & O_SYNC)
 		; /* Do something */
 	block = pos >> sb->s_blocksize_bits;
@@ -224,7 +246,7 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 		c = sb->s_blocksize;
 	} while (count);
 
-    if (buffercount)
+	if (buffercount)
 	{
 		ll_rw_block(WRITE, buffercount, bufferlist);
 		for (i=0; i<buffercount; i++)
@@ -234,176 +256,12 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 				write_error = 1;
 			brelse(bufferlist[i]);
 		}
-	}       
-	if (pos > inode->i_size)
-		inode->i_size = pos ;
-	if (filp->f_flags & O_SYNC)
-		; /* Do something */
-	inode->i_ctime = inode->i_mtime = CURRENT_TIME;
-	UDF_I_UCTIME(inode) = UDF_I_UMTIME(inode) = CURRENT_UTIME;
-	*ppos = pos;
-	mark_inode_dirty(inode);
-	return written;
-}
-
-static ssize_t udf_file_write_adinicb(struct file * filp, const char * buf,
-	size_t count, loff_t *ppos)
-{
-	struct inode * inode = filp->f_dentry->d_inode;
-	off_t pos;
-	long block;
-	int offset;
-	int written, c;
-	struct buffer_head * bh, * bufferlist[NBUF];
-	struct super_block * sb;
-	int err;
-	int i, buffercount, write_error;
-
-	/* POSIX: mtime/ctime may not change for 0 count */
-	if (!count)
-		return 0;
-	write_error = buffercount = 0;
-	if (!inode)
-	{
-		printk("udf_file_write: inode = NULL\n");
-		return -EINVAL;
 	}
-	sb = inode->i_sb;
-	if (sb->s_flags & MS_RDONLY)
-	{
-		return -ENOSPC;
-	}
-
-	if (!S_ISREG(inode->i_mode))
-	{
-		udf_warning(sb, "udf_file_write", "mode = %07o", inode->i_mode);
-		return -EINVAL;
-	}
-	remove_suid(inode);
-
-	if (filp->f_flags & O_APPEND)
-		pos = inode->i_size;
-	else
-	{
-		pos = *ppos;
-		if (pos != *ppos)
-			return -EINVAL;
-	}
-
-#if BITS_PER_LONG < 64
-	if (pos > (Uint32)(pos + count))
-	{
-		count = ~pos; /* == 0xFFFFFFFF - pos */
-		if (!count)
-			return -EFBIG;
-	}
-#endif
-
-	if (inode->i_sb->s_blocksize < (udf_file_entry_alloc_offset(inode) +
-		pos + count))
-	{
-		udf_expand_file_adinicb(filp, pos + count, &err);
-		if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
-		{
-			udf_debug("udf_expand_adinicb: err=%d\n", err);
-			return err;
-		}
-		else
-			return udf_file_write(filp, buf, count, ppos);
-	}
-	else
-	{
-		if (pos + count > inode->i_size)
-			UDF_I_LENALLOC(inode) = pos + count;
-		else
-			UDF_I_LENALLOC(inode) = inode->i_size;
-		pos += udf_file_entry_alloc_offset(inode);
-	}
-
-	if (filp->f_flags & O_SYNC)
-		; /* Do something */
-	block = pos >> sb->s_blocksize_bits;
-	offset = pos & (sb->s_blocksize - 1);
-	c = sb->s_blocksize - offset;
-	written = 0;
-	do
-	{
-		if (c > count)
-			c = count;
-		bh = udf_getblk(inode, block, 1, &err);
-		if (!bh)
-		{
-			udf_debug("udf_getblk failure, err=%d\n", err);
-			if (!written)
-				written = err;
-			break;
-		}
-		if (c != sb->s_blocksize && !buffer_uptodate(bh))
-		{
-			ll_rw_block (READ, 1, &bh);
-			wait_on_buffer(bh);
-			if (!buffer_uptodate(bh))
-			{
-				brelse(bh);
-				if (!written)
-					written = -EIO;
-				break;
-			}
-		}
-		c -= copy_from_user(bh->b_data + offset, buf, c);
-		if (!c)
-		{
-			brelse(bh);
-			if (!written)
-				written = -EFAULT;
-			break;
-		}
-		update_vm_cache(inode, pos, bh->b_data + offset, c);
-		pos += c;
-		written += c;
-		buf += c;
-		count -= c;
-		mark_buffer_uptodate(bh, 1);
-		mark_buffer_dirty(bh, 0);
-
-		if (filp->f_flags & O_SYNC)
-			bufferlist[buffercount++] = bh;
-		else
-			brelse(bh);
-        if (buffercount == NBUF)
-		{
-			ll_rw_block(WRITE, buffercount, bufferlist);
-			for (i=0; i<buffercount; i++)
-			{
-				wait_on_buffer(bufferlist[i]);
-				if (!buffer_uptodate(bufferlist[i]))
-					write_error = 1;
-				brelse(bufferlist[i]);
-			}
-			buffercount = 0;
-		}
-		if (write_error)
-			break;
-		block++;
-		offset = 0;
-		c = sb->s_blocksize;
-	} while (count);
-
-    if (buffercount)
-	{
-		ll_rw_block(WRITE, buffercount, bufferlist);
-		for (i=0; i<buffercount; i++)
-		{
-			wait_on_buffer(bufferlist[i]);
-			if (!buffer_uptodate(bufferlist[i]))
-				write_error = 1;
-			brelse(bufferlist[i]);
-		}
-	}       
-	pos -= udf_file_entry_alloc_offset(inode);
+	if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
+		pos -= udf_file_entry_alloc_offset(inode);
 
 	if (pos > inode->i_size)
-		inode->i_size = pos ;
+		inode->i_size = pos;
 	if (filp->f_flags & O_SYNC)
 		; /* Do something */
 	inode->i_ctime = inode->i_mtime = CURRENT_TIME;
@@ -614,26 +472,8 @@ struct inode_operations udf_file_inode_operations = {
 	NULL					/* revalidate */
 };
 
-static struct file_operations udf_file_operations_adinicb = {
-	udf_file_llseek,		/* llseek */
-	generic_file_read,		/* read */
-	udf_file_write_adinicb,	/* write */
-	NULL,					/* readdir */
-	NULL,					/* poll */
-	udf_ioctl,				/* ioctl */
-	generic_file_mmap,		/* mmap */
-	NULL, 					/* open */
-	NULL,					/* flush */
-	NULL,					/* release */
-	udf_sync_file_adinicb,	/* fsync */
-	NULL,					/* fasync */
-	NULL,					/* check_media_change */
-	NULL,					/* revalidate */
-	NULL					/* lock */
-};
-
 struct inode_operations udf_file_inode_operations_adinicb = {
-	&udf_file_operations_adinicb,
+	&udf_file_operations,
 	NULL,					/* create */
 	NULL,					/* lookup */
 	NULL,					/* link */
