@@ -244,6 +244,9 @@ static int udf_bitmap_prealloc_blocks(const struct inode * inode,
 	if (first_block < 0 || first_block >= UDF_SB_PARTLEN(sb, partition))
 		goto out;
 
+	if (first_block + block_count > UDF_SB_PARTLEN(sb, partition))
+		block_count = UDF_SB_PARTLEN(sb, partition) - first_block;
+
 repeat:
 	nr_groups = (UDF_SB_PARTLEN(sb, partition) +
 		(sizeof(struct SpaceBitmapDesc) << 3) + (sb->s_blocksize * 8) - 1) / (sb->s_blocksize * 8);
