@@ -78,7 +78,8 @@ void udf_put_inode(struct inode * inode)
 	{
 		lock_kernel();
 		udf_discard_prealloc(inode);
-		if (inode == inode->i_sb->s_root->d_inode)
+		/* write the root inode on put, if dirty */
+		if (!inode->i_sb->s_root && inode->i_state & I_DIRTY)
 			udf_update_inode(inode, IS_SYNC(inode));
 		unlock_kernel();
 	}
