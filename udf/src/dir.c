@@ -189,8 +189,9 @@ udf_readdir_callback(struct inode *dir, struct FileIdentDesc*fi,
  		filename.u_name, filename.u_len, ino, (int)filp->f_pos);
  #endif
  
-        if (len = udf_translate_to_linux(name, filename.u_name, filename.u_len-1,
-                unifilename.u_name, unifilename.u_len))
+        len = udf_translate_to_linux(name, filename.u_name, filename.u_len-1,
+				     unifilename.u_name, unifilename.u_len);
+        if (len)
         {
 	 	if (filldir(dirent, name, len, filp->f_pos, ino) < 0)
 	 		return 1; /* halt enum */
@@ -452,10 +453,16 @@ udf_lookup_callback(struct inode *dir, struct FileIdentDesc *fi,
 	   	return 0;
 	}
 
-	if (len = udf_translate_to_linux(name, filename.u_name, filename.u_len-1,
-		unifilename.u_name, unifilename.u_len))
+	len = udf_translate_to_linux(name, filename.u_name, filename.u_len-1,
+				     unifilename.u_name, unifilename.u_len);
+	if (len)
 	{
-		if ( strncmp(dentry->d_name.name, name, len) == 0)
+#ifdef VDEBUG
+		printk ("comparing '%s' with '%s' (%d chars)\n", 
+				dentry->d_name.name, name, len);
+#endif
+		if (( len == dentry->d_name.len ) && 
+		    (strncmp(dentry->d_name.name, name, len) == 0))
 		{
 			*ino = fi->icb.extLocation;
 			return 1; /* stop enum */

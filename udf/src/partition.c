@@ -41,7 +41,8 @@ extern Uint32 udf_get_pblock(struct super_block *sb, Uint32 block, Uint16 partit
 			if (block >= index)
 			{
 				block -= index;
-				newblock = (block / (sb->s_blocksize / sizeof(Uint32)));
+				/* newblock = (block / (sb->s_blocksize / sizeof(Uint32))); */
+				newblock = 1 + (block / (sb->s_blocksize / sizeof(Uint32)));
 				index = block % (sb->s_blocksize / sizeof(Uint32));
 			}
 			else

@@ -265,12 +265,13 @@ int udf_translate_to_linux(char *newName, char *udfName, int udfLen, char *fidNa
 	if (udfLen == 1 && udfName[0] == '.')
 	{
 		needsCRC = 1;
-		newName[newIndex++] = ILLEGAL_CHAR_MARK;
+		newName[newIndex++] = '.';
 	}
 	else if (udfLen == 2 && udfName[0] == '.' && udfName[1] == '.')
 	{
 		needsCRC = 1;
-		newName[newIndex++] = ILLEGAL_CHAR_MARK;
+		newName[newIndex++] = '.';
+		newName[newIndex++] = '.';
 	}
 	else
 	{	

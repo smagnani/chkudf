@@ -1,0 +1,54 @@
+
+udf 1.02:
+
+chk img descr
+	-> Reinoud: what do you mean by this? -- REW
+
+
+  permissions ok?
+    -- OK! Thomas wrote "all ones", the DVD Demystified disk shows
+           the "expected" values. 
+
+  wrong link cnt
+    -- Only in Root dir. Probably root-dir-entries incorrectly inherit
+       the link count from the actual root directory. 
+
+  extended attr.
+	-> Reinoud: what do you mean by this? -- REW
+
+  files in "folder 1" wrong contents
+    -- Fixed. (Name comparisons were done erroneously)
+
+kmsg, busy inodes
+  -- Fixed? (Bens work?)
+
+gcc warns  (will fix these on tuesday (dec 15 1998). -- REW)
+  -- integer constant out of range: Has to do with "long long" type. 
+	Something is wrong. I don't expect mkudf to work in this state.... 
+  -- Wrong arguments to a callback function. (or something like that)
+	-> Fix declarations.
+  -- chkudf is compiled with -ggdb which implies -lg which doesn't
+	work on my system.
+  -- Some "unused variables". 
+
+- Reduce debugging output a bit.... Hmm. Ok Seems it is not on by default.
+  -> Ask reinoud how he turns on debugging. :-)
+
+
+
+Check if other images work.
+
+- Sequential.img:
+
+	- File contents in most files are not correct.
+	- "2 identical files in here" -> Not identical, references past 
+		end-of-disk.
+
+- SparedBlks.img: 
+	- Seems OK.
+
+- Strategy4096:
+	- "Wrong instance of "File 1". resp 2.
+	- I guess our implementation falls for the pitfall.
+
+

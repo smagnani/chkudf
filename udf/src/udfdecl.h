@@ -66,6 +66,8 @@ extern long udf_block_from_inode(struct inode *);
 extern long udf_block_from_bmap(struct inode *, int block, int part);
 extern long udf_inode_from_block(struct super_block *, long block, int part);
 extern int  udf_part_from_inode(struct inode *);
+extern struct FileIdentDesc * udf_get_fileident(void * buffer, int bufsize, 
+						int * offset, int * remainder);
 
 #define DPRINTK(X,Y)	do { if (udf_debuglvl >= X) printk Y ; } while(0)
 #define PRINTK(X)	do { if (udf_debuglvl >= UDF_DEBUG_LVL1) printk X ; } while(0)
