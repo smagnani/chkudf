@@ -36,24 +36,17 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#include <linux/udf_udf.h>
+#include "osta_udf.h"
 
-Uint8 sector[2048];
-
-struct VolDesc
-{
-	tag descTag;
-	Uint32 volDescSeqNum;
-	Uint8 reserved[488];
-};
+uint8_t sector[2048];
 
 int main(int argc, char **argv)
 {
 	int fd, retval;
 	unsigned long sec = 0;
 	unsigned long endsec = 0;
-	struct VolDesc *vd;
-	struct VolStructDesc *vs;
+	struct volDescPtr *vd;
+	struct volStructDesc *vs;
 	int partstart = 0;
 	int verbose=0;
 
@@ -84,22 +77,22 @@ int main(int argc, char **argv)
 	while ((retval > 0) && (sec <= endsec)) {
 		fflush(stdout);
 		/* check for ISO structures */
-		vs = (struct VolStructDesc *)sector;
-		if (!strncmp(vs->stdIdent, STD_ID_BEA01, STD_ID_LEN) ||
-		    !strncmp(vs->stdIdent, STD_ID_BOOT2, STD_ID_LEN) ||
-		    !strncmp(vs->stdIdent, STD_ID_CD001, STD_ID_LEN) ||
-		    !strncmp(vs->stdIdent, STD_ID_CDW02, STD_ID_LEN) ||
-		    !strncmp(vs->stdIdent, STD_ID_NSR02, STD_ID_LEN) ||
-		    !strncmp(vs->stdIdent, STD_ID_TEA01, STD_ID_LEN))
+		vs = (struct volStructDesc *)sector;
+		if (!strncmp(vs->stdIdent, VSD_STD_ID_BEA01, VSD_STD_ID_LEN) ||
+		    !strncmp(vs->stdIdent, VSD_STD_ID_BOOT2, VSD_STD_ID_LEN) ||
+		    !strncmp(vs->stdIdent, VSD_STD_ID_CD001, VSD_STD_ID_LEN) ||
+		    !strncmp(vs->stdIdent, VSD_STD_ID_CDW02, VSD_STD_ID_LEN) ||
+		    !strncmp(vs->stdIdent, VSD_STD_ID_NSR02, VSD_STD_ID_LEN) ||
+		    !strncmp(vs->stdIdent, VSD_STD_ID_TEA01, VSD_STD_ID_LEN))
 		{
-		    char ident[STD_ID_LEN+1];
-		    strncpy(ident, vs->stdIdent, STD_ID_LEN);
-		    ident[STD_ID_LEN] = '\0';
+		    char ident[VSD_STD_ID_LEN+1];
+		    strncpy(ident, vs->stdIdent, VSD_STD_ID_LEN);
+		    ident[VSD_STD_ID_LEN] = '\0';
 		    printf("%8lu: [ISO] %s\n", sec, ident);
 		}
 
 		/* check for UDF structures */
-		vd = (struct VolDesc *)sector;
+		vd = (struct volDescPtr *)sector;
 		if ( (vd->descTag.tagIdent>0) && (vd->descTag.tagIdent <= 0x109) )
 		{
 #if 0
@@ -119,8 +112,8 @@ int main(int argc, char **argv)
 			    case 1:  printf("PrimaryVolDesc\n"); break;
 			    case 2:
 		   	    {
-				struct AnchorVolDescPtr *avdp;
-				avdp = (struct AnchorVolDescPtr *)sector;
+				struct anchorVolDescPtr *avdp;
+				avdp = (struct anchorVolDescPtr *)sector;
 				printf("AnchorVolDescPtr\n");
 				printf("\tMain -> %8u - %8u\n",
 					avdp->mainVolDescSeqExt.extLocation,
@@ -136,8 +129,8 @@ int main(int argc, char **argv)
 			    case 4:  printf("ImpUseVolDesc\n"); break;
 			    case 5:
 			    {
-				struct PartitionDesc *pd;
-				pd = (struct PartitionDesc *)sector;
+				struct partitionDesc *pd;
+				pd = (struct partitionDesc *)sector;
 				partstart = pd->partitionStartingLocation;
 				printf("PartitionDesc\n");
 				printf("\tPartition sector: %d length: %d (in blocks) access: %d\n", 
@@ -146,29 +139,29 @@ int main(int argc, char **argv)
 			    }
 			    case 6:  
 			    {
-				struct LogicalVolDesc *p;
-				struct GenericPartitionMap *mp;
-				struct VirtualPartitionMap *vp;
-				Uint8 * gp;
+				struct logicalVolDesc *p;
+				struct genericPartitionMap *mp;
+				struct virtualPartitionMap *vp;
+				uint8_t * gp;
 				long_ad * la;
 				int i;
 
-				p=(struct LogicalVolDesc *)sector;
+				p=(struct logicalVolDesc *)sector;
 				la=(long_ad *)p->logicalVolContentsUse;
 			    	printf("LogicalVolDesc\n"); 
 				printf("\tmapTableLength: %u Partitions: %u\n", 
 					p->mapTableLength,
 					p->numPartitionMaps);
-				gp=(Uint8 *)p->partitionMaps;
+				gp=(uint8_t *)p->partitionMaps;
 				for (i=0; i<p->numPartitionMaps; i++) {
-					mp=(struct GenericPartitionMap *)gp;
+					mp=(struct genericPartitionMap *)gp;
 					printf("\tPart(%u) [%04Xh]: type: %u len: %u",
-					    i,  (Uint32)gp - (Uint32)p,
+					    i,  (uint32_t)gp - (uint32_t)p,
 					    mp->partitionMapType,
 					    mp->partitionMapLength);
 					if ( ( mp->partitionMapType == 2 ) &&
 					     ( mp->partitionMapLength == 64 )) {
-					    vp=(struct VirtualPartitionMap *)gp;
+					    vp=(struct virtualPartitionMap *)gp;
 					    printf(" Seq: %u Ref: %u %s\n", 
 						vp->volSeqNum, vp->partitionNum,
 						vp->partIdent.ident);
@@ -186,20 +179,20 @@ int main(int argc, char **argv)
 			    case 8:  printf("TerminatingDesc\n"); break;
 			    case 9:  
 			    {
-				struct LogicalVolIntegrityDescImpUse *iu;
-				struct LogicalVolIntegrityDesc *lvd;
+				struct logicalVolIntegrityDescImpUse *iu;
+				struct logicalVolIntegrityDesc *lvd;
 				dstring * p;
 
 				printf("LogicalVolIntegrityDesc\n"); 
 
-				lvd=(struct LogicalVolIntegrityDesc *)sector;
+				lvd=(struct logicalVolIntegrityDesc *)sector;
 				printf("\tType: %x lenImpUse: %u ",
 					lvd->integrityType, lvd->lengthOfImpUse);
 
 				if ( lvd->lengthOfImpUse ) {
 					p=(dstring *)lvd->impUse;
 					p += lvd->numOfPartitions * 8;
-					iu=(struct LogicalVolIntegrityDescImpUse *)p;
+					iu=(struct logicalVolIntegrityDescImpUse *)p;
 					printf("Files: %u Dirs: %u: minR: %04x minW: %04x maxW: %04x\n",
 						iu->numFiles, iu->numDirs, 
 						iu->minUDFReadRev, iu->minUDFWriteRev, iu->maxUDFWriteRev);
@@ -208,8 +201,8 @@ int main(int argc, char **argv)
 			    }
 			    case 0x100:
 			    {
-				struct FileSetDesc *fsd;
-				fsd = (struct FileSetDesc *)sector;
+				struct fileSetDesc *fsd;
+				fsd = (struct fileSetDesc *)sector;
 				printf("FileSetDesc\n");
 				if ( verbose ) {
 				    printf("\tCSL: %x\n", fsd->charSetList);
@@ -231,14 +224,14 @@ int main(int argc, char **argv)
 			    }
 			    case 0x101:
 			    {
-				struct FileIdentDesc *fid;
+				struct fileIdentDesc *fid;
 				int pos = 0;
 				int i;
-				fid = (struct FileIdentDesc *)sector;
+				fid = (struct fileIdentDesc *)sector;
 				printf("FileIdentDesc\n");
 				if ( verbose ) {
 				    while (pos < 2048) {
-				       fid =(struct FileIdentDesc *)&(sector[pos]);
+				       fid =(struct fileIdentDesc *)&(sector[pos]);
 				       printf("\tTAG: %3d POS: %4d ", fid->descTag.tagIdent, pos);
 				       printf("\tVer:  %x (%d)\n", fid->descTag.descVersion, fid->descTag.descVersion);
 				       printf("\tCsum: %x (%d)\n", fid->descTag.tagChecksum, fid->descTag.tagChecksum);
@@ -258,7 +251,7 @@ int main(int argc, char **argv)
 					        printf("%c", fid->fileIdent[i]);
 				    	    printf("\"\n");
 				       }
-				       pos += sizeof(struct FileIdentDesc) + fid->lengthFileIdent + fid->lengthOfImpUse;
+				       pos += sizeof(struct fileIdentDesc) + fid->lengthFileIdent + fid->lengthOfImpUse;
 				       pos += (4 - (pos % 4)) % 4;
 				    }
 				} else {
@@ -289,8 +282,8 @@ int main(int argc, char **argv)
 			    case 0x104:  printf("TerminalEntry\n"); break;
 			    case 0x105:
 			    {
-				struct FileEntry *fe;
-				fe = (struct FileEntry *)sector;
+				struct fileEntry *fe;
+				fe = (struct fileEntry *)sector;
 				printf("FileEntry");
 				if ( verbose ) {
 				    printf("\n");
@@ -320,9 +313,9 @@ int main(int argc, char **argv)
 				    printf("LAD: %d\n", fe->lengthAllocDescs);
 				    if (fe->icbTag.fileType == 4 || fe->icbTag.fileType == 0)
 				    {
-				        struct FileIdentDesc *fid;
+				        struct fileIdentDesc *fid;
 				        long_ad *lad;
-				        fid = (struct FileIdentDesc *)(&(fe->extendedAttr[0]));
+				        fid = (struct fileIdentDesc *)(&(fe->extendedAttr[0]));
 				        printf("TAG: %d ", fid->descTag.tagIdent);
 				        printf("Ver:  %x (%d)\n", fid->descTag.descVersion, fid->descTag.descVersion);
 				        printf("Csum: %x (%d)\n", fid->descTag.tagChecksum, fid->descTag.tagChecksum);

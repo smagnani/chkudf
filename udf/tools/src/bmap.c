@@ -5,7 +5,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <linux/udf_167.h>
+#include "ecma_167.h"
 
 #if 0
                 0000000000111111111122222222223333333333
@@ -52,7 +52,7 @@ int main(int argc, char **argv)
 	sec = strtoul(argv[2], NULL, 0);
 	blocks = strtoul(argv[3], NULL, 0);
 
-	fp = (sec << 11L) + sizeof(struct SpaceBitmapDesc);
+	fp = (sec << 11L) + sizeof(struct spaceBitmapDesc);
 	retval = lseek(fd, fp, SEEK_SET);
 	if (retval < 0)
 	{
