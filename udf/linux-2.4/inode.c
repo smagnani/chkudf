@@ -78,7 +78,8 @@ void udf_put_inode(struct inode * inode)
 	{
 		lock_kernel();
 		udf_discard_prealloc(inode);
-		write_inode_now(inode);
+		if (inode == inode->i_sb->s_root->d_inode)
+			udf_update_inode(inode, IS_SYNC(inode));
 		unlock_kernel();
 	}
 }
@@ -111,7 +112,7 @@ void udf_delete_inode(struct inode * inode)
 
 	inode->i_size = 0;
 	udf_truncate(inode);
-	write_inode_now(inode);
+	udf_update_inode(inode, IS_SYNC(inode));
 	udf_free_inode(inode);
 out:
 	unlock_kernel();

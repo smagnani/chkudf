@@ -75,7 +75,8 @@ void udf_put_inode(struct inode * inode)
 	if (!(inode->i_sb->s_flags & MS_RDONLY))
 	{
 		udf_discard_prealloc(inode);
-		write_inode_now(inode);
+		if (inode == inode->i_sb->s_root->d_inode)
+			udf_update_inode(inode, IS_SYNC(inode));
 	}
 }
 
@@ -110,7 +111,7 @@ void udf_delete_inode(struct inode * inode)
 	else if (UDF_I_ALLOCTYPE(inode) == ICB_FLAG_AD_IN_ICB)
 		udf_truncate_adinicb(inode);
 		
-	write_inode_now(inode);
+	udf_update_inode(inode, IS_SYNC(inode));
 	udf_free_inode(inode);
 }
 
