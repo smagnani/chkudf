@@ -168,15 +168,12 @@ static long long udf_file_llseek(struct file * file, long long offset, int origi
 			break;
 		}
 	}
+#if BITS_PER_LONG < 64
 	if (((unsigned long long) offset >> 32) != 0)
 	{
-#if BITS_PER_LONG < 64
 		return -EINVAL;
-#else
-		if (offset > ???)
-			return -EINVAL;
-#endif
 	}
+#endif
 	if (offset != file->f_pos)
 	{
 		file->f_pos = offset;
@@ -250,10 +247,6 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 		pos = *ppos;
 		if (pos != *ppos)
 			return -EINVAL;
-#if BITS_PER_LONG >= 64
-		if (pos > ???)
-			return -EINVAL;
-#endif
 	}
 
 #if BITS_PER_LONG < 64
@@ -262,17 +255,6 @@ static ssize_t udf_file_write(struct file * filp, const char * buf,
 		count = ~pos; /* == 0xFFFFFFFF - pos */
 		if (!count)
 			return -EFBIG;
-	}
-#else
-	{
-		off_t max = ???;
-
-		if (pos + count > max)
-		{
-			count = max - pos;
-			if (!count)
-				return -EFBIG;
-		}
 	}
 #endif
 
@@ -510,7 +492,7 @@ int udf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 
 	if (!bh || (ident != TID_FILE_ENTRY && ident != TID_EXTENDED_FILE_ENTRY))
 	{
-		udf_debug("bread failed (ino=%ld) or ident (%d) != TID_FILE_ENTRY",
+		udf_debug("bread failed (ino=%ld) or ident (%d) != TID_(EXTENDED_)FILE_ENTRY",
 			inode->i_ino, ident);
 		return -EFAULT;
 	}

@@ -168,15 +168,12 @@ static long long udf_file_llseek(struct file * file, long long offset, int origi
 			break;
 		}
 	}
+#if BITS_PER_LONG < 64
 	if (((unsigned long long) offset >> 32) != 0)
 	{
-#if BITS_PER_LONG < 64
 		return -EINVAL;
-#else
-		if (offset > ???)
-			return -EINVAL;
-#endif
 	}
+#endif
 	if (offset != file->f_pos)
 	{
 		file->f_pos = offset;
@@ -339,11 +336,11 @@ static ssize_t udf_file_read_adinicb(struct file * filp, char * buf,
 int udf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 	unsigned long arg)
 {
-	int result=-1;
-	int size;
+	int result = -1;
 	struct buffer_head *bh = NULL;
-	struct FileEntry *fe;
 	Uint16 ident;
+	long_ad eaicb;
+	Uint8 *ea = NULL;
 
 	if ( permission(inode, MAY_READ) != 0 )
 	{
@@ -371,26 +368,42 @@ int udf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 	/* ok, we need to read the inode */
 	bh = udf_read_ptagged(inode->i_sb, UDF_I_LOCATION(inode), 0, &ident);
 
-	if (!bh || ident != TID_FILE_ENTRY)
+	if (!bh || (ident != TID_FILE_ENTRY && ident != TID_EXTENDED_FILE_ENTRY))
 	{
-		udf_debug("bread failed (ino=%ld) or ident (%d) != TID_FILE_ENTRY",
+		udf_debug("bread failed (ino=%ld) or ident (%d) != TID_(EXTENDED_)FILE_ENTRY",
 			inode->i_ino, ident);
 		return -EFAULT;
 	}
 
-	fe = (struct FileEntry *)bh->b_data;
-	size = le32_to_cpu(fe->lengthExtendedAttr);
+	if (UDF_I_EXTENDED_FE(inode) == 0)
+	{
+		struct FileEntry *fe;
+
+		fe = (struct FileEntry *)bh->b_data;
+		eaicb = fe->extendedAttrICB;
+		if (UDF_I_LENEATTR(inode))
+			ea = fe->extendedAttr;
+	}
+	else
+	{
+		struct ExtendedFileEntry *efe;
+
+		efe = (struct ExtendedFileEntry *)bh->b_data;
+		eaicb = efe->extendedAttrICB;
+		if (UDF_I_LENEATTR(inode))
+			ea = efe->extendedAttr;
+	}
 
 	switch (cmd) 
 	{
 		case UDF_GETEASIZE:
 			if ( (result = verify_area(VERIFY_WRITE, (char *)arg, 4)) == 0) 
-				result= put_user(size, (int *)arg);
+				result = put_user(UDF_I_LENEATTR(inode), (int *)arg);
 			break;
 
 		case UDF_GETEABLOCK:
-			if ( (result = verify_area(VERIFY_WRITE, (char *)arg, size)) == 0) 
-				result= copy_to_user((char *)arg, fe->extendedAttr, size);
+			if ( (result = verify_area(VERIFY_WRITE, (char *)arg, UDF_I_LENEATTR(inode))) == 0) 
+				result = copy_to_user((char *)arg, ea, UDF_I_LENEATTR(inode));
 			break;
 
 		default:

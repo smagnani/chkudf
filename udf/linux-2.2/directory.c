@@ -111,7 +111,7 @@ udf_fileident_read(struct inode *dir, int *nf_pos,
 
 		(*offset) ++;
 
-		if (*offset >= (elen >> dir->i_sb->s_blocksize_bits))
+		if ((*offset << dir->i_sb->s_blocksize_bits) >= elen)
 			*offset = 0;
 		else
 			*extoffset = lextoffset;
@@ -131,7 +131,9 @@ udf_fileident_read(struct inode *dir, int *nf_pos,
 		&(fibh->eoffset));
 
 	if (!fi)
+	{
 		return NULL;
+	}
 
 	*nf_pos += ((fibh->eoffset - fibh->soffset) >> 2);
 
@@ -153,7 +155,7 @@ udf_fileident_read(struct inode *dir, int *nf_pos,
 
 		(*offset) ++;
 
-		if (*offset >= (elen >> dir->i_sb->s_blocksize_bits))
+		if ((*offset << dir->i_sb->s_blocksize_bits) >= elen)
 			*offset = 0;
 		else
 			*extoffset = lextoffset;

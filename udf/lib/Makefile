@@ -15,8 +15,8 @@ CPPFLAGS= $(PCDEBUG) -I../include\
 		-I. -I$(LINUX)/include $(SMPFLAG) $(WRITEFLAG) -DCONFIG_UDF_FS_EXT
 COFLAGS	= -kv
 
-# it shouldn't hurt to use -PIC for both static and shared library
-CFLAGS	= $(KFLAGS) $(MFLAG) -PIC
+# it shouldn't hurt to use -fPIC for both static and shared library
+CFLAGS	= $(KFLAGS) $(MFLAG) -fPIC
 
 SRCS	:= crc.c directory.c misc.c udftime.c unicode.c
 

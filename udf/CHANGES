@@ -122,3 +122,7 @@ rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
 09/18/99 dgb	Updated patch system to properly apply/unapply from kernel 2.2,
 		And updated patch-2.3 to only do updates, since the driver
 		is now in the kernel (2.3.17+).
+
+09/27/99 blf	Fixed bug in long directories. Fixed time hour problems.
+				Coped ioctl changes from 2.2 to 2.3 tree. Added 2.3.18 changes
+				to 2.2 tree.

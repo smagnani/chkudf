@@ -890,6 +890,7 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 	struct FileEntry *fe;
 	struct ExtendedFileEntry *efe;
     time_t convtime;
+	long convtime_usec;
 	int offset, alen;
 
 	fe = (struct FileEntry *)bh->b_data;
@@ -940,21 +941,33 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 		inode->i_blocks = le64_to_cpu(fe->logicalBlocksRecorded) <<
 			(inode->i_sb->s_blocksize_bits - 9);
 
-		if ( udf_stamp_to_time(&convtime, lets_to_cpu(fe->modificationTime)) )
+		if ( udf_stamp_to_time(&convtime, &convtime_usec,
+			lets_to_cpu(fe->modificationTime)) )
 		{
 			inode->i_mtime = convtime;
+			UDF_I_UMTIME(inode) = convtime_usec;
 			inode->i_ctime = convtime;
+			UDF_I_UCTIME(inode) = convtime_usec;
 		}
 		else
 		{
 			inode->i_mtime = UDF_SB_RECORDTIME(inode->i_sb);
+			UDF_I_UMTIME(inode) = 0;
 			inode->i_ctime = UDF_SB_RECORDTIME(inode->i_sb);
+			UDF_I_UCTIME(inode) = 0;
 		}
 
-		if ( udf_stamp_to_time(&convtime, lets_to_cpu(fe->accessTime)) ) 
+		if ( udf_stamp_to_time(&convtime, &convtime_usec,
+			lets_to_cpu(fe->accessTime)) ) 
+		{
 			inode->i_atime = convtime;
+			UDF_I_UATIME(inode) = convtime_usec;
+		}
 		else
+		{
 			inode->i_atime = UDF_SB_RECORDTIME(inode->i_sb);
+			UDF_I_UATIME(inode) = convtime_usec;
+		}
 
 		UDF_I_UNIQUE(inode) = le64_to_cpu(fe->uniqueID);
 		UDF_I_LENEATTR(inode) = le32_to_cpu(fe->lengthExtendedAttr);
@@ -967,20 +980,41 @@ static void udf_fill_inode(struct inode *inode, struct buffer_head *bh)
 		inode->i_blocks = le64_to_cpu(efe->logicalBlocksRecorded) << 
 			(inode->i_sb->s_blocksize_bits - 9);
 
-		if ( udf_stamp_to_time(&convtime, lets_to_cpu(efe->modificationTime)) )
+		if ( udf_stamp_to_time(&convtime, &convtime_usec,
+			lets_to_cpu(efe->modificationTime)) )
+		{
 			inode->i_mtime = convtime;
+			UDF_I_UMTIME(inode) = convtime_usec;
+		}
 		else
+		{
 			inode->i_mtime = UDF_SB_RECORDTIME(inode->i_sb);
+			UDF_I_UMTIME(inode) = 0;
+		}
 
-		if ( udf_stamp_to_time(&convtime, lets_to_cpu(efe->accessTime)) )
+		if ( udf_stamp_to_time(&convtime, &convtime_usec,
+			lets_to_cpu(efe->accessTime)) )
+		{
 			inode->i_atime = convtime;
+			UDF_I_UATIME(inode) = convtime_usec;
+		}
 		else
+		{
 			inode->i_atime = UDF_SB_RECORDTIME(inode->i_sb);
+			UDF_I_UATIME(inode) = 0;
+		}
 
-		if ( udf_stamp_to_time(&convtime, lets_to_cpu(efe->createTime)) )
+		if ( udf_stamp_to_time(&convtime, &convtime_usec,
+			lets_to_cpu(efe->createTime)) )
+		{
 			inode->i_ctime = convtime;
+			UDF_I_UCTIME(inode) = convtime_usec;
+		}
 		else
+		{
 			inode->i_ctime = UDF_SB_RECORDTIME(inode->i_sb);
+			UDF_I_UCTIME(inode) = 0;
+		}
 
 		UDF_I_UNIQUE(inode) = le64_to_cpu(efe->uniqueID);
 		UDF_I_LENEATTR(inode) = le32_to_cpu(efe->lengthExtendedAttr);
