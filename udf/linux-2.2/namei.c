@@ -147,8 +147,8 @@ udf_find_entry(struct inode *dir, struct dentry *dentry,
 	struct FileIdentDesc *cfi)
 {
 	struct FileIdentDesc *fi=NULL;
-	int f_pos, block;
-	int flen;
+	loff_t f_pos;
+	int block, flen;
 	char fname[255];
 	char *nameptr;
 	Uint8 lfi;
@@ -167,6 +167,7 @@ udf_find_entry(struct inode *dir, struct dentry *dentry,
 	if (inode_bmap(dir, f_pos >> (dir->i_sb->s_blocksize_bits - 2),
 		&bloc, &extoffset, &eloc, &elen, &offset, &bh) == EXTENT_RECORDED_ALLOCATED)
 	{
+		offset >>= dir->i_sb->s_blocksize_bits;
 		block = udf_get_lb_pblock(dir->i_sb, eloc, offset);
 		if ((++offset << dir->i_sb->s_blocksize_bits) < elen)
 		{
@@ -356,7 +357,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 	struct ustr unifilename;
 	char name[UDF_NAME_LEN], fname[UDF_NAME_LEN];
 	int namelen;
-	int f_pos;
+	loff_t f_pos;
 	int flen;
 	char *nameptr;
 	int size = (udf_ext0_offset(dir) + dir->i_size) >> 2;
@@ -410,6 +411,7 @@ udf_add_entry(struct inode *dir, struct dentry *dentry,
 	if (inode_bmap(dir, f_pos >> (dir->i_sb->s_blocksize_bits - 2),
 		&bloc, &extoffset, &eloc, &elen, &offset, &bh) == EXTENT_RECORDED_ALLOCATED)
 	{
+		offset >>= dir->i_sb->s_blocksize_bits;
 		block = udf_get_lb_pblock(dir->i_sb, eloc, offset);
 		if ((++offset << dir->i_sb->s_blocksize_bits) < elen)
 		{
@@ -841,7 +843,7 @@ static int empty_dir(struct inode *dir)
 {
 	struct FileIdentDesc *fi, cfi;
 	struct udf_fileident_bh fibh;
-	int f_pos;
+	loff_t f_pos;
 	int size = (udf_ext0_offset(dir) + dir->i_size) >> 2;
 	int block;
 	lb_addr bloc, eloc;
@@ -854,6 +856,7 @@ static int empty_dir(struct inode *dir)
 	if (inode_bmap(dir, f_pos >> (dir->i_sb->s_blocksize_bits - 2),
 		&bloc, &extoffset, &eloc, &elen, &offset, &bh) == EXTENT_RECORDED_ALLOCATED)
 	{
+		offset >>= dir->i_sb->s_blocksize_bits;
 		block = udf_get_lb_pblock(dir->i_sb, eloc, offset);
 		if ((++offset << dir->i_sb->s_blocksize_bits) < elen)
 		{
@@ -1068,6 +1071,7 @@ int udf_symlink(struct inode * dir, struct dentry * dentry, const char * symname
 		eloc.logicalBlockNum = block;
 		eloc.partitionReferenceNum = UDF_I_LOCATION(inode).partitionReferenceNum;
 		elen = inode->i_sb->s_blocksize;
+		UDF_I_LENEXTENTS(inode) = elen;
 		extoffset = udf_file_entry_alloc_offset(inode);
 		udf_add_aext(inode, &bloc, &extoffset, eloc, elen, &bh, 0);
 		udf_release_data(bh);
@@ -1382,8 +1386,8 @@ static int do_udf_rename(struct inode *old_dir, struct dentry *old_dentry,
 	if (dir_bh)
 	{
 		dir_fi->icb.extLocation = lelb_to_cpu(UDF_I_LOCATION(new_dir));
-		udf_update_tag((char *)dir_fi, sizeof(struct FileIdentDesc) +
-			cpu_to_le16(dir_fi->lengthOfImpUse));
+		udf_update_tag((char *)dir_fi, (sizeof(struct FileIdentDesc) +
+			cpu_to_le16(dir_fi->lengthOfImpUse) + 3) & ~3);
 		if (UDF_I_ALLOCTYPE(old_inode) == ICB_FLAG_AD_IN_ICB)
 		{
 			mark_inode_dirty(old_inode);
