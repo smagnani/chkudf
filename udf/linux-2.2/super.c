@@ -247,7 +247,7 @@ udf_parse_options(char *options, struct udf_options *uopt)
 	char *opt, *val;
 
 	uopt->novrs = 0;
-	uopt->blocksize = 2048;
+	uopt->blocksize = 512;
 	uopt->partition = 0xFFFF;
 	uopt->session = 0xFFFFFFFF;
 	uopt->lastblock = 0xFFFFFFFF;
@@ -272,7 +272,7 @@ udf_parse_options(char *options, struct udf_options *uopt)
 		else if (!strcmp(opt, "unhide") && !val)
 			uopt->flags |= (1 << UDF_FLAG_UNHIDE);
 		else if (!strcmp(opt, "undelete") && !val)
-			uopt->flags |= (1 << UDF_FLAG_UNDELETE)
+			uopt->flags |= (1 << UDF_FLAG_UNDELETE);
 		else if (!strcmp(opt, "gid") && val)
 			uopt->gid = simple_strtoul(val, NULL, 0);
 		else if (!strcmp(opt, "umask") && val)
@@ -382,8 +382,8 @@ static  int
 udf_set_blocksize(struct super_block *sb, int bsize)
 {
 	/* Use specified block size if specified */
-	sb->s_blocksize = get_hardblocksize(sb->s_dev);
-	sb->s_blocksize = sb->s_blocksize ? sb->s_blocksize : 2048;
+	if (!(sb->s_blocksize = get_hardblocksize(sb->s_dev)))
+		sb->s_blocksize = 2048;
 	if (bsize > sb->s_blocksize)
 		sb->s_blocksize = bsize;
 
@@ -429,7 +429,7 @@ udf_vrs(struct super_block *sb, int silent)
 	for (;!nsr02 && !nsr03; sector += 2048)
 	{
 		/* Read a block */
-		bh = udf_tread(sb, sector >> sb->s_blocksize_bits, 2048);
+		bh = udf_tread(sb, sector >> sb->s_blocksize_bits, sb->s_blocksize);
 		if (!bh)
 			break;
 
@@ -780,7 +780,7 @@ udf_load_pvoldesc(struct super_block *sb, struct buffer_head *bh)
 
 	if ( !udf_build_ustr(&instr, pvoldesc->volIdent, 32) )
 	{
-		if (!udf_CS0toUTF8(&outstr, &instr))
+		if (udf_CS0toUTF8(&outstr, &instr))
 		{
 			udf_debug("volIdent[] = '%s'\n", outstr.u_name);
 			strncpy( UDF_SB_VOLIDENT(sb), outstr.u_name, outstr.u_len);
@@ -789,7 +789,7 @@ udf_load_pvoldesc(struct super_block *sb, struct buffer_head *bh)
 
 	if ( !udf_build_ustr(&instr, pvoldesc->volSetIdent, 128) )
 	{
-		if (!udf_CS0toUTF8(&outstr, &instr))
+		if (udf_CS0toUTF8(&outstr, &instr))
 			udf_debug("volSetIdent[] = '%s'\n", outstr.u_name);
 	}
 }
@@ -1346,14 +1346,14 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 		goto error_out;
 
 	if ( uopt.session == 0xFFFFFFFF )
-		UDF_SB_SESSION(sb) = udf_get_last_session(sb->s_dev);
+		UDF_SB_SESSION(sb) = udf_get_last_session(sb);
 	else
 		UDF_SB_SESSION(sb) = uopt.session;
 
 	udf_debug("Multi-session=%d\n", UDF_SB_SESSION(sb));
 
 	if ( uopt.lastblock == 0xFFFFFFFF )
-		UDF_SB_LASTBLOCK(sb) = udf_get_last_block(sb->s_dev, &(UDF_SB(sb)->s_flags));
+		UDF_SB_LASTBLOCK(sb) = udf_get_last_block(sb);
 	else
 		UDF_SB_LASTBLOCK(sb) = uopt.lastblock;
 
@@ -1363,7 +1363,7 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 
 	if (udf_check_valid(sb, uopt.novrs, silent)) /* read volume recognition sequences */
 	{
-		printk("UDF-fs: No VRS found\n")
+		printk("UDF-fs: No VRS found\n");
  		goto error_out;
 	}
 
@@ -1395,10 +1395,10 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 		if (minUDFReadRev > UDF_MAX_READ_VERSION)
 		{
 			printk("UDF-fs: minUDFReadRev=%x (max is %x)\n",
-				UDF_SB_LVIDIU(sb)->minUDFReadRev, UDF_MAX_READ_VERSION)
+				UDF_SB_LVIDIU(sb)->minUDFReadRev, UDF_MAX_READ_VERSION);
 			goto error_out;
 		}
-		else if (minUDFWriteRev > UDF_MAX_WRITE_VERSION
+		else if (minUDFWriteRev > UDF_MAX_WRITE_VERSION)
 		{
 			sb->s_flags |= MS_RDONLY;
 		}
