@@ -44,12 +44,15 @@
 #define leBPL_to_cpup(x) leNUM_to_cpup(BITS_PER_LONG, x)
 #define leNUM_to_cpup(x,y) xleNUM_to_cpup(x,y)
 #define xleNUM_to_cpup(x,y) (le ## x ## _to_cpup(y))
+#define UintBPL Uint(BITS_PER_LONG)
+#define Uint(x) xUint(x)
+#define xUint(x) Uint ## x
 
 extern inline int find_next_one_bit (void * addr, int size, int offset)
 {
-	unsigned long * p = ((unsigned long *) addr) + (offset / BITS_PER_LONG);
-	unsigned long result = offset & ~(BITS_PER_LONG-1);
-	unsigned long tmp;
+	UintBPL * p = ((UintBPL *) addr) + (offset / BITS_PER_LONG);
+	UintBPL result = offset & ~(BITS_PER_LONG-1);
+	UintBPL tmp;
 
 	if (offset >= size)
 		return size;
