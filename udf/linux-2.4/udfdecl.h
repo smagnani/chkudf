@@ -207,8 +207,10 @@ extern int udf_build_ustr(struct ustr *, dstring *, int);
 extern int udf_build_ustr_exact(struct ustr *, dstring *, int);
 extern int udf_CS0toUTF8(struct ustr *, struct ustr *);
 extern int udf_UTF8toCS0(dstring *, struct ustr *, int);
+#ifdef __KERNEL__
 extern int udf_CS0toNLS(struct nls_table *, struct ustr *, struct ustr *);
 extern int udf_NLStoCS0(struct nls_table *, dstring *, struct ustr *, int);
+#endif
 
 /* crc.c */
 extern Uint16 udf_crc(Uint8 *, Uint32, Uint16);

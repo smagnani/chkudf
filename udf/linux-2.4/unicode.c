@@ -328,6 +328,7 @@ error_out:
 	return u_len + 1;
 }
 
+#ifdef __KERNEL__
 int udf_CS0toNLS(struct nls_table *nls, struct ustr *utf_o, struct ustr *ocu_i)
 {
 	Uint8 *ocu;
@@ -351,9 +352,7 @@ int udf_CS0toNLS(struct nls_table *nls, struct ustr *utf_o, struct ustr *ocu_i)
 
 	if ((cmp_id != 8) && (cmp_id != 16))
 	{
-#ifdef __KERNEL__
 		printk(KERN_ERR "udf: unknown compression code (%d) stri=%s\n", cmp_id, ocu_i->u_name);
-#endif
 		return 0;
 	}
 
@@ -411,7 +410,6 @@ try_again:
 	return u_len + 1;
 }
 
-#ifdef __KERNEL__
 int udf_get_filename(struct super_block *sb, Uint8 *sname, Uint8 *dname, int flen)
 {
 	struct ustr filename, unifilename;
