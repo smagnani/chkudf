@@ -365,9 +365,15 @@ int udf_CS0toNLS(struct nls_table *nls, struct ustr *utf_o, struct ustr *ocu_i)
 		if (cmp_id == 16)
 			c = (c << 8) | ocu[i++];
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,16)
+		utf_o->u_name[utf_o->u_len] =
+			nls->page_uni2charset[(c >> 8) & 0xFF][c & 0xFF];
+		len = 1;
+#else
 		nls->uni2char((c >> 8) & 0xFF, c & 0xFF,
 			&utf_o->u_name[utf_o->u_len], 
 			UDF_NAME_LEN - utf_o->u_len, &len);
+#endif
 		utf_o->u_len += len;
 	}
 	utf_o->u_cmpID=8;
@@ -392,12 +398,19 @@ int udf_NLStoCS0(struct nls_table *nls, dstring *ocu, struct ustr *uni, int leng
 try_again:
 	uni_char = 0U;
 	uni_cnt = 0U;
-	for (i = 0U; i < uni->u_len; i++)
+	for (i = 0U; i < uni->u_len;)
 	{
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,2,16)
+		ch = nls->charset2uni[uni->u_name[i]].uni1;
+		cl = nls->charset2uni[uni->u_name[i]].uni2;
+		len = 1;
+#else
 		nls->char2uni(&uni->u_name[i], &len, &ch, &cl);
+#endif
+		i += len;
 		uni_char = ((ch & 0xFF) << 8) | (cl & 0xFF);
 
-		if (len == 2 && max_val == 0xff)
+		if (ch && max_val == 0xff)
 		{
 			max_val = 0xffffU;
 			ocu[0] = (Uint8)0x10U;
