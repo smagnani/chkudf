@@ -165,6 +165,7 @@ module_exit(exit_udf_fs)
  *	shortad		Use short ad's
  *	longad		Use long ad's (default)
  *	strict		Set strict conformance
+ *	iocharset=	Set the NLS character set
  *
  *	The remaining are for debugging and disaster recovery:
  *
@@ -1538,7 +1539,7 @@ error_out:
 		if (UDF_SB_PARTTYPE(sb, UDF_SB_PARTITION(sb)) == UDF_SPARABLE_MAP15)
 		{
 			for (i=0; i<4; i++)
-					udf_release_data(UDF_SB_TYPESPAR(sb, UDF_SB_PARTITION(sb)).s_spar_map[i]);
+				udf_release_data(UDF_SB_TYPESPAR(sb, UDF_SB_PARTITION(sb)).s_spar_map[i]);
 		}
 	}
 #ifdef CONFIG_NLS
