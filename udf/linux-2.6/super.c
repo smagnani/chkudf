@@ -26,7 +26,7 @@
  *  Each contributing author retains all rights to their own work.
  *
  *  (C) 1998 Dave Boynton
- *  (C) 1998-2003 Ben Fennema
+ *  (C) 1998-2004 Ben Fennema
  *  (C) 2000 Stelias Computing Inc
  *
  * HISTORY
@@ -416,7 +416,7 @@ udf_parse_options(char *options, struct udf_options *uopt)
 			case Opt_utf8:
 				uopt->flags |= (1 << UDF_FLAG_UTF8);
 				break;
-#ifdef CONFIG_NLS
+#if defined(CONFIG_NLS) || defined(CONFIG_NLS_MODULE)
 			case Opt_iocharset:
 				uopt->nls_map = load_nls(args[0].from);
 				uopt->flags |= (1 << UDF_FLAG_NLS_MAP);
@@ -1511,7 +1511,7 @@ static int udf_fill_super(struct super_block *sb, void *options, int silent)
 			"utf8 cannot be combined with iocharset\n");
 		goto error_out;
 	}
-#ifdef CONFIG_NLS
+#if defined(CONFIG_NLS) || defined(CONFIG_NLS_MODULE)
 	if ((uopt.flags & (1 << UDF_FLAG_NLS_MAP)) && !uopt.nls_map)
 	{
 		uopt.nls_map = load_nls_default();
@@ -1661,7 +1661,7 @@ error_out:
 				udf_release_data(UDF_SB_TYPESPAR(sb, UDF_SB_PARTITION(sb)).s_spar_map[i]);
 		}
 	}
-#ifdef CONFIG_NLS
+#if defined(CONFIG_NLS) || defined(CONFIG_NLS_MODULE)
 	if (UDF_QUERY_FLAG(sb, UDF_FLAG_NLS_MAP))
 		unload_nls(UDF_SB(sb)->s_nls_map);
 #endif
@@ -1739,7 +1739,7 @@ udf_put_super(struct super_block *sb)
 				udf_release_data(UDF_SB_TYPESPAR(sb, UDF_SB_PARTITION(sb)).s_spar_map[i]);
 		}
 	}
-#ifdef CONFIG_NLS
+#if defined(CONFIG_NLS) || defined(CONFIG_NLS_MODULE)
 	if (UDF_QUERY_FLAG(sb, UDF_FLAG_NLS_MAP))
 		unload_nls(UDF_SB(sb)->s_nls_map);
 #endif
