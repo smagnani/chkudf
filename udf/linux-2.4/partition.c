@@ -76,7 +76,11 @@ uint32_t udf_get_pblock_virt15(struct super_block *sb, uint32_t block, uint16_t 
 
 	loc = udf_block_map(UDF_SB_VAT(sb), newblock);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,18)
+	if (!(bh = sb_bread(sb, loc)))
+#else
 	if (!(bh = bread(sb->s_dev, loc, sb->s_blocksize)))
+#endif
 	{
 		udf_debug("get_pblock(UDF_VIRTUAL_MAP:%p,%d,%d) VAT: %d[%d]\n",
 			sb, block, partition, loc, index);
