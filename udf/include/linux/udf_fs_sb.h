@@ -15,12 +15,8 @@
  *	Each contributing author retains all rights to their own work.
  */
 
-#if !defined(_LINUX_UDF_FS_SB_H)
-#define _LINUX_UDF_FS_SB_H
-
-#ifndef LINUX_VERSION_CODE
-#include <linux/version.h>
-#endif
+#ifndef _UDF_FS_SB_H
+#define _UDF_FS_SB_H 1
 
 #pragma pack(1)
 
@@ -124,4 +120,4 @@ struct udf_sb_info
 #endif
 };
 
-#endif /* !defined(_LINUX_UDF_FS_SB_H) */
+#endif /* _UDF_FS_SB_H */
