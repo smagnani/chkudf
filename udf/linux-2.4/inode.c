@@ -1969,8 +1969,11 @@ int udf_readpage_adinicb (struct dentry *dentry, struct page * page)
 	memset((char *)kaddr, 0, PAGE_CACHE_SIZE);
 	block = udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0);
 	bh = getblk (inode->i_dev, block, inode->i_sb->s_blocksize);
-	ll_rw_block (READ, 1, &bh);
-	wait_on_buffer(bh);
+	if (!buffer_uptodate(bh))
+	{
+		ll_rw_block (READ, 1, &bh);
+		wait_on_buffer(bh);
+	}
 	memcpy((char *)kaddr, bh->b_data + udf_ext0_offset(inode),
 		inode->i_size);
 	brelse(bh);

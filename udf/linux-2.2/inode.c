@@ -1971,8 +1971,11 @@ int udf_readpage_adinicb (struct file * file, struct page * page)
 	memset((char *)page_address(page), 0, PAGE_SIZE);
 	block = udf_get_lb_pblock(inode->i_sb, UDF_I_LOCATION(inode), 0);
 	bh = getblk (inode->i_dev, block, inode->i_sb->s_blocksize);
-	ll_rw_block (READ, 1, &bh);
-	wait_on_buffer(bh);
+	if (!buffer_uptodate(bh))
+	{
+		ll_rw_block (READ, 1, &bh);
+		wait_on_buffer(bh);
+	}
 	memcpy((char *)page_address(page), bh->b_data + udf_ext0_offset(inode),
 		inode->i_size);
 	brelse(bh);
