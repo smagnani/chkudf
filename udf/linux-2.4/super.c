@@ -261,11 +261,13 @@ udf_parse_options(char *options, struct udf_options *uopt)
 			uopt->fileset = simple_strtoul(val, NULL, 0);
 		else if (!strcmp(opt, "rootdir") && val)
 			uopt->rootdir = simple_strtoul(val, NULL, 0);
+#ifdef CONFIG_NLS
 		else if (!strcmp(opt, "iocharset") && val)
 		{
 			uopt->nls_map = load_nls(val);
 			uopt->flags |= (1 << UDF_FLAG_NLS_MAP);
 		}
+#endif
 		else if (!strcmp(opt, "utf8") && !val)
 			uopt->flags |= (1 << UDF_FLAG_UTF8);
 		else if (val)
@@ -1372,7 +1374,7 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 			"utf8 cannot be combined with iocharset\n");
 		goto error_out;
 	}
-
+#ifdef CONFIG_NLS
 	if ((uopt.flags & (1 << UDF_FLAG_NLS_MAP)) && !uopt.nls_map)
 	{
 		uopt.nls_map = load_nls_default();
@@ -1381,6 +1383,7 @@ udf_read_super(struct super_block *sb, void *options, int silent)
 		else
 			udf_debug("Using default NLS map\n");
 	}
+#endif
 	if (!(uopt.flags & (1 << UDF_FLAG_NLS_MAP)))
 		uopt.flags |= (1 << UDF_FLAG_UTF8);
 
@@ -1600,8 +1603,10 @@ udf_put_super(struct super_block *sb)
 				udf_release_data(UDF_SB_TYPESPAR(sb, UDF_SB_PARTITION(sb)).s_spar_map[i]);
 		}
 	}
+#ifdef CONFIG_NLS
 	if (UDF_SB(sb)->s_flags & (1 << UDF_FLAG_NLS_MAP))
 		unload_nls(UDF_SB(sb)->s_nls_map);
+#endif
 	if (!(sb->s_flags & MS_RDONLY))
 		udf_close_lvid(sb);
 	udf_release_data(UDF_SB_LVIDBH(sb));
