@@ -58,7 +58,7 @@ static void extent_trunc(struct inode * inode, lb_addr bloc, int extoffset,
 		{
 			if (etype == (EXT_RECORDED_ALLOCATED >> 30))
 			{
-#ifndef QUOTA_CHANGE
+#ifdef OLD_QUOTA
 				inode->i_blocks -= ((inode->i_sb->s_blocksize / 512) * (last_block - first_block));
 #endif
 				mark_inode_dirty(inode);
