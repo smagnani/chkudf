@@ -461,7 +461,7 @@ static void udf_table_free_blocks(const struct inode * inode,
 	Uint32 nextoffset, oextoffset, elen;
 	lb_addr nbloc, obloc, eloc;
 	struct buffer_head *obh, *nbh;
-	char etype;
+	Sint8 etype;
 	int i;
 
 	udf_debug("ino=%ld, bloc=%d, offset=%d, count=%d\n",
@@ -713,7 +713,7 @@ static int udf_table_prealloc_blocks(const struct inode * inode,
 	Uint32 extoffset, elen, adsize;
 	lb_addr bloc, eloc;
 	struct buffer_head *bh;
-	char etype = -1;
+	Sint8 etype = -1;
 
 	udf_debug("ino=%ld, partition=%d, first_block=%d, block_count=%d\n",
 		inode->i_ino, partition, first_block, block_count);
@@ -795,7 +795,7 @@ static int udf_table_new_block(const struct inode * inode,
 	Uint32 extoffset, goal_extoffset, elen, goal_elen = 0;
 	lb_addr bloc, goal_bloc, eloc, goal_eloc;
 	struct buffer_head *bh, *goal_bh;
-	char etype;
+	Sint8 etype;
 
 	udf_debug("ino=%ld, partition=%d, goal=%d\n",
 		inode->i_ino, partition, goal);

@@ -33,7 +33,7 @@
 #include "udf_sb.h"
 
 static void extent_trunc(struct inode * inode, lb_addr bloc, int extoffset,
-	lb_addr eloc, Uint8 etype, Uint32 elen, struct buffer_head *bh, Uint32 nelen)
+	lb_addr eloc, Sint8 etype, Uint32 elen, struct buffer_head *bh, Uint32 nelen)
 {
 	lb_addr neloc = { 0, 0 };
 	int blocks = inode->i_sb->s_blocksize / 512;
@@ -66,7 +66,7 @@ void udf_truncate_extents(struct inode * inode)
 {
 	lb_addr bloc, eloc, neloc = { 0, 0 };
 	Uint32 extoffset, elen, offset, nelen = 0, lelen = 0, lenalloc;
-	int etype;
+	Sint8 etype;
 	int first_block = inode->i_size >> inode->i_sb->s_blocksize_bits;
 	struct buffer_head *bh = NULL;
 	int adsize;

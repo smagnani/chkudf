@@ -1811,7 +1811,7 @@ udf_count_free_table(struct super_block *sb, struct inode * table)
 	unsigned int accum = 0;
 	Uint32 extoffset, elen;
 	lb_addr bloc, eloc;
-	char etype;
+	Sint8 etype;
 	struct buffer_head *bh = NULL;
 
 	bloc = UDF_I_LOCATION(table);

@@ -307,7 +307,7 @@ static struct buffer_head * inode_getblk(struct inode * inode, long block,
 	int c = 1;
 	int lbcount = 0, b_off = 0, offset = 0;
 	Uint32 newblocknum, newblock;
-	char etype;
+	Sint8 etype;
 	int goal = 0, pgoal = UDF_I_LOCATION(inode).logicalBlockNum;
 	char lastblock = 0;
 
@@ -1529,14 +1529,14 @@ udf_iget(struct super_block *sb, lb_addr ino)
 	return inode;
 }
 
-int udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
+Sint8 udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 	lb_addr eloc, Uint32 elen, struct buffer_head **bh, int inc)
 {
 	int adsize;
 	short_ad *sad = NULL;
 	long_ad *lad = NULL;
 	struct AllocExtDesc *aed;
-	int ret;
+	Sint8 etype;
 
 	if (!(*bh))
 	{
@@ -1638,7 +1638,7 @@ int udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 		*bh = nbh;
 	}
 
-	ret = udf_write_aext(inode, *bloc, extoffset, eloc, elen, *bh, inc);
+	etype = udf_write_aext(inode, *bloc, extoffset, eloc, elen, *bh, inc);
 
 	if (!memcmp(&UDF_I_LOCATION(inode), bloc, sizeof(lb_addr)))
 	{
@@ -1657,10 +1657,10 @@ int udf_add_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 		mark_buffer_dirty(*bh, 1);
 	}
 
-	return ret;
+	return etype;
 }
 
-int udf_write_aext(struct inode *inode, lb_addr bloc, int *extoffset,
+Sint8 udf_write_aext(struct inode *inode, lb_addr bloc, int *extoffset,
     lb_addr eloc, Uint32 elen, struct buffer_head *bh, int inc)
 {
 	int adsize;
@@ -1727,7 +1727,7 @@ int udf_write_aext(struct inode *inode, lb_addr bloc, int *extoffset,
 	return (elen >> 30);
 }
 
-int udf_next_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
+Sint8 udf_next_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 	lb_addr *eloc, Uint32 *elen, struct buffer_head **bh, int inc)
 {
 	Uint16 tagIdent;
@@ -1851,11 +1851,11 @@ int udf_next_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 	return -1;
 }
 
-int udf_current_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
+Sint8 udf_current_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 	lb_addr *eloc, Uint32 *elen, struct buffer_head **bh, int inc)
 {
 	int pos, alen;
-	Uint8 etype;
+	Sint8 etype;
 
 	if (!(*bh))
 	{
@@ -1932,12 +1932,12 @@ int udf_current_aext(struct inode *inode, lb_addr *bloc, int *extoffset,
 	return -1;
 }
 
-int udf_insert_aext(struct inode *inode, lb_addr bloc, int extoffset,
+Sint8 udf_insert_aext(struct inode *inode, lb_addr bloc, int extoffset,
 	lb_addr neloc, Uint32 nelen, struct buffer_head *bh)
 {
 	lb_addr oeloc;
 	Uint32 oelen;
-	int type;
+	Sint8 etype;
 
 	if (!bh)
 	{
@@ -1953,25 +1953,25 @@ int udf_insert_aext(struct inode *inode, lb_addr bloc, int extoffset,
 	else
 		bh->b_count ++;
 
-	while ((type = udf_next_aext(inode, &bloc, &extoffset, &oeloc, &oelen, &bh, 0)) != -1)
+	while ((etype = udf_next_aext(inode, &bloc, &extoffset, &oeloc, &oelen, &bh, 0)) != -1)
 	{
 		udf_write_aext(inode, bloc, &extoffset, neloc, nelen, bh, 1);
 
 		neloc = oeloc;
-		nelen = (type << 30) | oelen;
+		nelen = (etype << 30) | oelen;
 	}
 	udf_add_aext(inode, &bloc, &extoffset, neloc, nelen, &bh, 1);
 	udf_release_data(bh);
 	return (nelen >> 30);
 }
 
-int udf_delete_aext(struct inode *inode, lb_addr nbloc, int nextoffset,
+Sint8 udf_delete_aext(struct inode *inode, lb_addr nbloc, int nextoffset,
 	lb_addr eloc, Uint32 elen, struct buffer_head *nbh)
 {
 	struct buffer_head *obh;
 	lb_addr obloc;
 	int oextoffset, adsize;
-	char type;
+	Sint8 etype;
 	struct AllocExtDesc *aed;
 
 	if (!(nbh))
@@ -2003,9 +2003,9 @@ int udf_delete_aext(struct inode *inode, lb_addr nbloc, int nextoffset,
 	if (udf_next_aext(inode, &nbloc, &nextoffset, &eloc, &elen, &nbh, 1) == -1)
 		return -1;
 
-	while ((type = udf_next_aext(inode, &nbloc, &nextoffset, &eloc, &elen, &nbh, 1)) != -1)
+	while ((etype = udf_next_aext(inode, &nbloc, &nextoffset, &eloc, &elen, &nbh, 1)) != -1)
 	{
-		udf_write_aext(inode, obloc, &oextoffset, eloc, (type << 30) | elen, obh, 1);
+		udf_write_aext(inode, obloc, &oextoffset, eloc, (etype << 30) | elen, obh, 1);
 		if (memcmp(&nbloc, &obloc, sizeof(lb_addr)))
 		{
 			obloc = nbloc;
@@ -2066,11 +2066,11 @@ int udf_delete_aext(struct inode *inode, lb_addr nbloc, int nextoffset,
 	return (elen >> 30);
 }
 
-int inode_bmap(struct inode *inode, int block, lb_addr *bloc, Uint32 *extoffset,
+Sint8 inode_bmap(struct inode *inode, int block, lb_addr *bloc, Uint32 *extoffset,
 	lb_addr *eloc, Uint32 *elen, Uint32 *offset, struct buffer_head **bh)
 {
 	Uint64 lbcount = 0, bcount = block << inode->i_sb->s_blocksize_bits;
-	char etype;
+	Sint8 etype;
 
 	if (block < 0)
 	{
