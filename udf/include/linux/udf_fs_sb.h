@@ -49,7 +49,8 @@ struct udf_virtual_data
 
 struct udf_bitmap
 {
-	short_ad			s_ad;
+	__u32				s_extLength;
+	__u32				s_extPosition;
 	__u16				s_nr_groups;
 	struct buffer_head 	**s_block_bitmap;
 };

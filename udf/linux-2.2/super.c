@@ -861,15 +861,13 @@ udf_load_partdesc(struct super_block *sb, struct buffer_head *bh)
 				if (phd->unallocatedSpaceBitmap.extLength)
 				{
 					UDF_SB_ALLOC_BITMAP(sb, i, s_uspace);
-					UDF_SB_PARTMAPS(sb)[i].s_uspace.s_bitmap->s_ad =
-						lesa_to_cpu(phd->unallocatedSpaceBitmap);
-					udf_debug("bitmap=%p, block=%p, size=%d\n",
-						UDF_SB_PARTMAPS(sb)[i].s_uspace.s_bitmap,
-						UDF_SB_PARTMAPS(sb)[i].s_uspace.s_bitmap->s_block_bitmap,
-						sizeof(struct udf_bitmap));
+					UDF_SB_PARTMAPS(sb)[i].s_uspace.s_bitmap->s_extLength =
+						le32_to_cpu(phd->unallocatedSpaceBitmap.extLength);
+					UDF_SB_PARTMAPS(sb)[i].s_uspace.s_bitmap->s_extPosition =
+						le32_to_cpu(phd->unallocatedSpaceBitmap.extPosition);
 					UDF_SB_PARTFLAGS(sb,i) |= UDF_PART_FLAG_UNALLOC_BITMAP;
 					udf_debug("unallocatedSpaceBitmap (part %d) @ %d\n",
-						i, UDF_SB_PARTMAPS(sb)[i].s_uspace.s_bitmap->s_ad.extPosition);
+						i, UDF_SB_PARTMAPS(sb)[i].s_uspace.s_bitmap->s_extPosition);
 				}
 				if (phd->partitionIntegrityTable.extLength)
 					udf_debug("partitionIntegrityTable (part %d)\n", i);
@@ -886,11 +884,13 @@ udf_load_partdesc(struct super_block *sb, struct buffer_head *bh)
 				if (phd->freedSpaceBitmap.extLength)
 				{
 					UDF_SB_ALLOC_BITMAP(sb, i, s_fspace);
-					UDF_SB_PARTMAPS(sb)[i].s_fspace.s_bitmap->s_ad =
-						lesa_to_cpu(phd->freedSpaceBitmap);
+					UDF_SB_PARTMAPS(sb)[i].s_fspace.s_bitmap->s_extLength =
+						le32_to_cpu(phd->freedSpaceBitmap.extLength);
+					UDF_SB_PARTMAPS(sb)[i].s_fspace.s_bitmap->s_extPosition =
+						le32_to_cpu(phd->freedSpaceBitmap.extPosition);
 					UDF_SB_PARTFLAGS(sb,i) |= UDF_PART_FLAG_FREED_BITMAP;
 					udf_debug("freedSpaceBitmap (part %d) @ %d\n",
-						i, UDF_SB_PARTMAPS(sb)[i].s_fspace.s_bitmap->s_ad.extPosition);
+						i, UDF_SB_PARTMAPS(sb)[i].s_fspace.s_bitmap->s_extPosition);
 				}
 			}
 			break;
@@ -1651,7 +1651,7 @@ udf_count_free_bitmap(struct super_block *sb, struct udf_bitmap *bitmap)
 	Uint16 ident;
 	struct SpaceBitmapDesc *bm;
 
-	loc.logicalBlockNum = bitmap->s_ad.extPosition;
+	loc.logicalBlockNum = bitmap->s_extPosition;
 	loc.partitionReferenceNum = UDF_SB_PARTITION(sb);
 	bh = udf_read_ptagged(sb, loc, 0, &ident);
 

@@ -92,7 +92,7 @@ static int read_block_bitmap(struct super_block * sb,
 	int retval = 0;
 	lb_addr loc;
 
-	loc.logicalBlockNum = bitmap->s_ad.extPosition;
+	loc.logicalBlockNum = bitmap->s_extPosition;
 	loc.partitionReferenceNum = UDF_SB_PARTITION(sb);
 
 	bh = udf_tread(sb, udf_get_lb_pblock(sb, loc, block), sb->s_blocksize);
