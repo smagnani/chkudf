@@ -139,7 +139,8 @@ fi
 
 ARCH=`uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc64/ -e s/arm.*/arm/ -e s/sa110/arm/`
 if [ -f $LINUX/arch/$ARCH/Makefile ] ; then
-	echo "include $LINUX/arch/$ARCH/Makefile" > $CONFIG_MAKEFILE
+	echo "srctree=$LINUX" > $CONFIG_MAKEFILE
+	echo "include $LINUX/arch/$ARCH/Makefile" >> $CONFIG_MAKEFILE
 	echo 'udftest:' >> $CONFIG_MAKEFILE
 	echo '	echo $(LD)' >> $CONFIG_MAKEFILE
 
@@ -289,7 +290,7 @@ if [ $src != "1" -a "$CONFIG_MODVERSIONS" = "y" ] ; then
     if [ ! -r $MODVER ] ; then
 	echo "$MODVER does not exist!"
 	echo "    To fix, run 'make dep' in $LINUX."
-	exit 1
+#	exit 1
     fi
 else
     MODVER="../$MODVER"
@@ -352,11 +353,24 @@ if [ -f $LINUX/include/linux/compile.h ] ; then
 fi
 if [ $src -eq 1 ] ; then UTS_VERSION=`uname -r` ; fi
 
+UTS_RELEASE=`grep UTS_RELEASE $LINUX/include/linux/version.h | grep -v BOOT | awk '{print $3}' | sed 's/"//g'`
+if [ "`echo $UTS_RELEASE | wc -w | sed 's/ //g'`" != "1" -o "$UTS_RELEASE" == "" ] ; then
+	echo "Cannot determine version from version.h. Using Makefile."
+	UTS_RELEASE=$CUR_RELEASE
+fi
+UTS_SHORT=`echo $UTS_RELEASE | sed 's/[^0-9\.].*//' | sed 's/.[0-9]*$//'`
+
 case "$VERSION.$PATCHLEVEL" in
-2.2|2.4|2.5)
+2.2|2.4)
+	BUILD_PATH=module
+	BUILD_SUBDIRS=`pwd`/module
 	if [ "$CONFIG_MODVERSIONS" = "y" ] ; then
 		echo "MFLAG=-DMODVERSIONS -include $MODVER" >> $CONFIG_MK
 	fi
+	;;
+2.5|2.6)
+	BUILD_PATH=$PREFIX/lib/modules/$UTS_RELEASE/build
+	BUILD_SUBDIRS=`pwd`/linux-2.6
 	;;
 *)
 	echo "This package requires a 2.2/2.4/2.5 series kernel."
@@ -368,15 +382,11 @@ if [ ! "`grep "DQUOT_ALLOC_INODE(struct inode \*inode)" $LINUX/include/linux/quo
 	echo "ACFLAG=-DOLD_QUOTA" >> $CONFIG_MK
 fi
 
-UTS_RELEASE=`grep UTS_RELEASE $LINUX/include/linux/version.h | grep -v BOOT | awk '{print $3}' | sed 's/"//g'`
-if [ "`echo $UTS_RELEASE | wc -w | sed 's/ //g'`" != "1" -o "$UTS_RELEASE" == "" ] ; then
-	echo "Cannot determine version from version.h. Using Makefile."
-	UTS_RELEASE=$CUR_RELEASE
-fi
-UTS_SHORT=`echo $UTS_RELEASE | sed 's/[^0-9\.].*//' | sed 's/.[0-9]*$//'`
 write_str UTS_RELEASE
 write_str UTS_SHORT
 write_str UTS_VERSION
+write_str BUILD_PATH
+write_str BUILD_SUBDIRS
 echo "LINUX_VERSION_CODE=$VERSION_CODE" >> $CONFIG
 echo "LINUX_VERSION_CODE=$VERSION_CODE" >> $CONFIG_MK
 

@@ -38,7 +38,8 @@ kcheck:
 
 .PHONY : udf.o
 udf.o: .prereq.ok
-	@$(MAKE) -C module
+	@. config.out ; \
+	$(MAKE) -C "$$BUILD_PATH" modules SUBDIRS="$$BUILD_SUBDIRS"
 
 .PHONY : patch
 patch:  .prereq.ok
@@ -64,7 +65,8 @@ devtools: .prereq.ok
 	@$(MAKE) -C tools
 
 install: .prereq.ok
-	@$(MAKE) -C module install
+	@. config.out ; \
+	$(MAKE) -C "$$BUILD_PATH" modules_install SUBDIRS="$$BUILD_SUBDIRS"
 
 clean: clean-subdirs
 
