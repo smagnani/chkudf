@@ -6,7 +6,6 @@ help all:
 	@echo "Pick one of the following targets:"
 	@echo -e "\tmake config\t\t- configure and check system setup"
 	@echo -e "\tmake clean\t\t- clean up the directory"
-	@echo -e "\tmake lib\t\t- build udf libraries for tools"
 	@echo -e "\tmake udftools\t\t- build udf tools"
 	@echo -e "Module:"
 	@echo -e "\tmake udf.o (or module)\t\t- build Udf module"
@@ -61,11 +60,7 @@ update:  .prereq.ok
 remove:  .prereq.ok
 	@$(MAKE) -C patch remove
 
-libudf: .prereq.ok
-	@$(MAKE) -C lib
-
-
-udftools: libudf .prereq.ok
+udftools: .prereq.ok
 	@$(MAKE) -C tools
 
 install: .prereq.ok
@@ -75,7 +70,6 @@ clean: clean-subdirs
 
 clean-subdirs:
 	touch config.mk
-	-@$(MAKE) -C lib clean
 	-@$(MAKE) -C module clean
 	-@$(MAKE) -C tools clean
 	-@$(MAKE) -C patch-2.2 clean
