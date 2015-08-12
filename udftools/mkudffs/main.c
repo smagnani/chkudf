@@ -162,6 +162,10 @@ int main(int argc, char *argv[])
 #else
 	fd = open(filename, O_RDWR | O_CREAT | O_LARGEFILE, 0660);
 #endif
+	if (fd == -1) {
+		perror("Error opening device");
+		exit(1);
+	}
 	disc.head->blocks = get_blocks(fd, disc.blocksize, disc.head->blocks);
 	disc.write = write_func;
 	disc.write_data = &fd;
