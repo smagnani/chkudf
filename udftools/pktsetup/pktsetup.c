@@ -90,7 +90,7 @@ static int setup_dev(char *pkt_device, char *device, int rem)
 
 	if ((pkt_fd = open(pkt_device, O_RDONLY | O_CREAT, 0600)) == -1) {
 		perror("open packet device");
-		return;
+		return 1;
 	}
 
 	if (!rem) {
