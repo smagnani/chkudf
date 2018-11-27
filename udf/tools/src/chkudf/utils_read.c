@@ -1,3 +1,4 @@
+#define _LARGEFILE64_SOURCE    // lseek64()
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -57,7 +58,8 @@ int ReadSectors(void *buffer, UINT32 address, UINT8 Count)
           Cache[bufno].Count = 0;
         }
       } else {
-        result = lseek(device, address * secsize, SEEK_SET);
+        off64_t byte_address = address * (off64_t) secsize;
+        result = lseek64(device, byte_address, SEEK_SET);
         if (result != -1) {
           result = read(device, Cache[bufno].Buffer, secsize * Count);
           if (result == -1) {
