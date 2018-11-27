@@ -14,7 +14,10 @@ int checkICB(struct FileEntry *fe, struct long_ad FE, int dir)
 {
   if (fe) {
     if (!CheckTag((struct tag *)fe, U_endian32(FE.Location_LBN), TAGID_FILE_ENTRY, 16, blocksize)) {
-      printf("(%10d) ", U_endian32(fe->InfoLengthL));
+      unsigned long long infoLength =   (((unsigned long long) U_endian32(fe->InfoLengthH)) << 32)
+                                      | U_endian32(fe->InfoLengthL);
+
+      printf("(%ull) ", infoLength);
     }
 
     if (dir && fe->sICBTag.FileType != FILE_TYPE_DIRECTORY) {
