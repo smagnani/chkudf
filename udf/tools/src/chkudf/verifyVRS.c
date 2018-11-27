@@ -16,7 +16,7 @@ int ReadVRD (UINT8 *VRD, int i)
 
   count = 2048 >> sdivshift;
   if (count == 0) count = 1;
-  sector = (32768 >> sdivshift) + i * count + SS;
+  sector = (32768 >> sdivshift) + i * count + lastSessionStartLBA;
   printf("  VRS %d (sector %d): ", i, sector);
   return ReadSectors(VRD, sector, count);
 }
@@ -115,7 +115,7 @@ int VerifyVRS(void)
       printf("\n**No Extended VRS found.\n");
     }
     if (i) {
-      track_volspace(SS + (32768 >> sdivshift), 
+      track_volspace(lastSessionStartLBA + (32768 >> sdivshift), 
                      i * ((2048 >> sdivshift) ? (2048 >> sdivshift) : 1), 
                      "Volume Recognition Sequence");
     }

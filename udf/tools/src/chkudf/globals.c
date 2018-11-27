@@ -19,7 +19,7 @@ BOOL    scsi = FALSE;                //Boolean for command selection
 int     device = 0;                  //Device/file handle for operations
 UINT32  LastSector = 0;              //Location of the last readable sector
 BOOL    LastSectorAccurate = FALSE;  //Indication of confidence
-UINT32  SS = 0;                      //Start of last session
+UINT32  lastSessionStartLBA = 0;     //Start of last session
 BOOL	isType5 = FALSE;             //Is a CD or DVD drive
 BOOL    isCDRW = FALSE;
 

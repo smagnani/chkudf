@@ -19,15 +19,15 @@ void VerifyAVDP(void)
     printf("\n--Verifying the Anchor Volume Descriptor Pointers.\n");
     
     for (i = 0; front_avdp[i] != -1; i++) {
-      printf("  Checking %d: ", SS + front_avdp[i]);
-      result = ReadSectors(AVDPtr, SS + front_avdp[i], 1);
+      printf("  Checking %d: ", lastSessionStartLBA + front_avdp[i]);
+      result = ReadSectors(AVDPtr, lastSessionStartLBA + front_avdp[i], 1);
       if (!result) {
-        result = CheckTag((struct tag *)AVDPtr, SS + front_avdp[i], TAGID_ANCHOR, 
+        result = CheckTag((struct tag *)AVDPtr, lastSessionStartLBA + front_avdp[i], TAGID_ANCHOR, 
                       16, 496);
         if (result < CHECKTAG_OK_LIMIT) {
           printf("AVDP present.\n");
           DumpError();
-          track_volspace(SS + front_avdp[i], 1, "Front AVDP");
+          track_volspace(lastSessionStartLBA + front_avdp[i], 1, "Front AVDP");
           if (!avdp_count) {
             VDS_Loc = U_endian32(AVDPtr->sMainVDSAdr.Location);
             VDS_Len = U_endian32(AVDPtr->sMainVDSAdr.Length);
@@ -41,7 +41,7 @@ void VerifyAVDP(void)
                 RVDS_Loc != U_endian32(AVDPtr->sReserveVDSAdr.Location) ||
                 RVDS_Len != U_endian32(AVDPtr->sReserveVDSAdr.Length)) {
               Error.Code = ERR_VDS_NOT_EQUIVALENT;
-              Error.Sector = SS + front_avdp[i];
+              Error.Sector = lastSessionStartLBA + front_avdp[i];
               DumpError();
             }
           } /* If first AVDP */

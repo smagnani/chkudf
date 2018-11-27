@@ -127,7 +127,7 @@ extern BOOL        scsi;
 extern int         device;
 extern UINT32      LastSector;
 extern BOOL        LastSectorAccurate;
-extern UINT32      SS;
+extern UINT32      lastSessionStartLBA;
 extern BOOL        isType5;
 extern BOOL        isCDRW;
 

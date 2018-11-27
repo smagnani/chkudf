@@ -51,9 +51,9 @@ BOOL Get_First_RTI()
               cdb[5] = track_no;
               result = do_scsi(cdb, 10, buffer, 36, 0, sensedata, sensebufsize);
               if (!result && (buffer[3] == target_session)) {
-                SS = S_endian32(ip[2]);
+                lastSessionStartLBA = S_endian32(ip[2]);
                 printf("  Generic RDI/RTI:  Session %d, track %d, start %d.\n",
-                       buffer[3], track_no, SS);
+                       buffer[3], track_no, lastSessionStartLBA);
                 success = TRUE;
               }
             }
@@ -62,8 +62,8 @@ BOOL Get_First_RTI()
           /*
            * Track is recorded.  Use it.
            */
-          SS = S_endian32(ip[2]);
-          printf("  Generic RDI/RTI worked.  Last session starts at %d.\n", SS);
+          lastSessionStartLBA = S_endian32(ip[2]);
+          printf("  Generic RDI/RTI worked.  Last session starts at %d.\n", lastSessionStartLBA);
           success = TRUE;
         }
       }
@@ -75,6 +75,6 @@ BOOL Get_First_RTI()
 
 void SetFirstSector(void)
 {
-  SS = 0;
+  lastSessionStartLBA = 0;
   Get_First_RTI();
 }
