@@ -73,10 +73,11 @@ void SetSectorSize(void)
     }
   }
   if (secsize == 0) {                 /* Block size still not set */
-	secsize = 0x200;
+    secsize = 0x200;
     found = FALSE;
     avdpbuf = malloc(MAX_SECTOR_SIZE);
     if (avdpbuf) {
+      secsize >>= 1;    // Precompensate for initial 'secsize <<= 1'
       while ((secsize < MAX_SECTOR_SIZE) && !found) {
         secsize <<= 1;
         lseek(device, 256 * secsize, SEEK_SET);
