@@ -23,7 +23,8 @@ int compare_address(UINT16 ptn1, UINT16 ptn2, UINT32 addr1, UINT32 addr2)
  */
 int track_file_allocation(struct FileEntry *FE, UINT16 ptn)
 {
-  int    file_length;
+  unsigned long long file_length;
+  unsigned long long infoLength;
   int    error, sizeAD, Prev_Typ;
   struct long_ad *lad;
   struct short_ad *sad;
@@ -39,6 +40,10 @@ int track_file_allocation(struct FileEntry *FE, UINT16 ptn)
   Next_ptn = 0;    //The partition ref no of the previous AD
   Next_LBN = 0;    //The LBN of the sector after the previous AD
   Prev_Typ = -1;   //The type of the previous AD
+
+  infoLength =   (((unsigned long long) U_endian32(FE->InfoLengthH)) << 32)
+               | U_endian32(FE->InfoLengthL);
+
   ADlength = U_endian32(FE->L_AD);
   switch(U_endian16(FE->sICBTag.Flags) & ADTYPEMASK) {
     case ADSHORT:
@@ -47,16 +52,15 @@ int track_file_allocation(struct FileEntry *FE, UINT16 ptn)
              sizeAD = isLAD ?  sizeof(struct long_ad) : sizeof(struct short_ad);
              file_length = 0;
              ad_start = (UINT8 *)(FE + 1) + U_endian32(FE->L_EA);
-             printf("\n  [type=%s, ad_start=%p, ADlength=%d, info_length=%d]  ",
-				isLAD ? "LONG" : "SHORT", ad_start, ADlength,
-				U_endian32(FE->InfoLengthL));
+             printf("\n  [type=%s, ad_start=%p, ADlength=%d, info_length=%llu]  ",
+				isLAD ? "LONG" : "SHORT", ad_start, ADlength, infoLength);
              while (ad_offset < ADlength) {
                sad = (struct short_ad *)(ad_start + ad_offset);
                lad = (struct long_ad *)(ad_start + ad_offset);
                if (isLAD) {
                   ptn = U_endian16(lad->Location_PartNo);
                }
-               printf("\n    [ad_offset=%d, atype=%d, loc=%d, len=%d, file_length=%d]  ",
+               printf("\n    [ad_offset=%d, atype=%d, loc=%d, len=%d, file_length=%llu]  ",
 					ad_offset,
 					U_endian32(sad->ExtentLength.Length32) >> 30,
 					U_endian32(sad->Location),
@@ -77,7 +81,7 @@ int track_file_allocation(struct FileEntry *FE, UINT16 ptn)
                                    Next_ptn = ptn;
                                    Next_LBN = U_endian32(sad->Location) + ((U_endian32(sad->ExtentLength.Length32) && 0x3FFFFFFF) >> bdivshift);
                                    Prev_Typ = U_endian32(sad->ExtentLength.Length32) >> 30;
-                                   if (file_length >= U_endian32(FE->InfoLengthL)) {
+                                   if (file_length >= infoLength) {
                                      printf(" (Tail)");
                                    } else {
                                      file_length += U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF;
@@ -85,7 +89,7 @@ int track_file_allocation(struct FileEntry *FE, UINT16 ptn)
                                    ad_offset += sizeAD;
                                    break;
                    case E_UNALLOCATED:
-                                   if (file_length >= U_endian32(FE->InfoLengthL)) {
+                                   if (file_length >= infoLength) {
                                      printf(" (ILLEGAL TAIL)");
                                    } else {
                                      file_length += U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF;
@@ -136,15 +140,16 @@ int track_file_allocation(struct FileEntry *FE, UINT16 ptn)
                  ad_offset = ADlength;
                }
              }
-				printf("  [file_length=%d]  ", file_length);
-             if (file_length != U_endian32(FE->InfoLengthL)) {
-               if (((FE->InfoLengthL + blocksize - 1) & ~(blocksize - 1)) == 
+             printf("  [file_length=%llu]  ", file_length);
+             if (file_length != infoLength) {
+               if (((infoLength + blocksize - 1) & ~(blocksize - 1)) ==
                    file_length) {
                  printf(" **ADs rounded up");
                } else {
                  Error.Code = ERR_BAD_AD;
                  Error.Sector = U_endian32(FE->sTag.uTagLoc);
-                 Error.Expected = U_endian32(FE->InfoLengthL);
+// sjm: FIXME: capture 64-bit lengths properly
+                 Error.Expected = infoLength;
                  Error.Found = file_length;
                }
              }
@@ -155,7 +160,8 @@ int track_file_allocation(struct FileEntry *FE, UINT16 ptn)
              if (U_endian32(FE->InfoLengthL) != U_endian32(FE->L_AD)) {
                Error.Code = ERR_BAD_AD;
                Error.Sector = U_endian32(FE->sTag.uTagLoc);
-               Error.Expected = U_endian32(FE->InfoLengthL);
+// sjm: FIXME: capture 64-bit length properly
+               Error.Expected = infoLength;
                Error.Found = U_endian32(FE->L_AD);
              }
              break;
