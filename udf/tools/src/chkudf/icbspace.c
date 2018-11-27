@@ -21,7 +21,7 @@ int compare_address(UINT16 ptn1, UINT16 ptn2, UINT32 addr1, UINT32 addr2)
  * The following routine takes a File Entry as input and tracks the space
  * used by the file data and by the Extended Attributes of that file.
  */
-int track_file_allocation(struct FileEntry *FE, UINT16 ptn)
+int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
 {
   unsigned long long file_length;
   unsigned long long infoLength;
@@ -33,6 +33,8 @@ int track_file_allocation(struct FileEntry *FE, UINT16 ptn)
   UINT32 Location_AEDP, ad_offset;
   UINT16 Next_ptn;
   UINT32 Next_LBN;
+  UINT32 L_EA, L_AD;
+  size_t xfe_hdr_sz;
   UINT8 *ad_start;
   BOOL   isLAD;
 
@@ -41,17 +43,26 @@ int track_file_allocation(struct FileEntry *FE, UINT16 ptn)
   Next_LBN = 0;    //The LBN of the sector after the previous AD
   Prev_Typ = -1;   //The type of the previous AD
 
-  infoLength =   (((unsigned long long) U_endian32(FE->InfoLengthH)) << 32)
-               | U_endian32(FE->InfoLengthL);
+  infoLength =   (((unsigned long long) U_endian32(xFE->InfoLengthH)) << 32)
+               | U_endian32(xFE->InfoLengthL);
+  if (U_endian16(xFE->sTag.uTagID) == TAGID_EXT_FILE_ENTRY) {
+    xfe_hdr_sz = sizeof(struct ExtFileEntry);
+    L_EA = U_endian32(xFE->EFE.L_EA);
+    L_AD = U_endian32(xFE->EFE.L_AD);
+  } else {
+    xfe_hdr_sz = sizeof(struct FileEntry);
+    L_EA = U_endian32(xFE->FE.L_EA);
+    L_AD = U_endian32(xFE->FE.L_AD);
+  }
 
-  ADlength = U_endian32(FE->L_AD);
-  switch(U_endian16(FE->sICBTag.Flags) & ADTYPEMASK) {
+  ADlength = L_AD;
+  switch(U_endian16(xFE->sICBTag.Flags) & ADTYPEMASK) {
     case ADSHORT:
     case ADLONG:
-             isLAD = (U_endian16(FE->sICBTag.Flags) & ADTYPEMASK) == ADLONG;
+             isLAD = (U_endian16(xFE->sICBTag.Flags) & ADTYPEMASK) == ADLONG;
              sizeAD = isLAD ?  sizeof(struct long_ad) : sizeof(struct short_ad);
              file_length = 0;
-             ad_start = (UINT8 *)(FE + 1) + U_endian32(FE->L_EA);
+             ad_start = ((UINT8 *) xFE) + xfe_hdr_sz + L_EA;
              printf("\n  [type=%s, ad_start=%p, ADlength=%d, info_length=%llu]  ",
 				isLAD ? "LONG" : "SHORT", ad_start, ADlength, infoLength);
              while (ad_offset < ADlength) {
@@ -74,7 +85,7 @@ int track_file_allocation(struct FileEntry *FE, UINT16 ptn)
                                    if ((ptn == Next_ptn) && (U_endian32(sad->Location) == Next_LBN) && 
                                        ((U_endian32(sad->ExtentLength.Length32) >> 30) == Prev_Typ)) {
                                      Error.Code = ERR_SEQ_ALLOC;
-                                     Error.Sector = FE->sTag.uTagLoc;
+                                     Error.Sector = xFE->sTag.uTagLoc;
                                      Error.Expected = Next_LBN;
                                      DumpError();
                                    }
@@ -147,7 +158,7 @@ int track_file_allocation(struct FileEntry *FE, UINT16 ptn)
                  printf(" **ADs rounded up");
                } else {
                  Error.Code = ERR_BAD_AD;
-                 Error.Sector = U_endian32(FE->sTag.uTagLoc);
+                 Error.Sector = U_endian32(xFE->sTag.uTagLoc);
 // sjm: FIXME: capture 64-bit lengths properly
                  Error.Expected = infoLength;
                  Error.Found = file_length;
@@ -157,12 +168,12 @@ int track_file_allocation(struct FileEntry *FE, UINT16 ptn)
              break;
 
     case ADNONE:
-             if (U_endian32(FE->InfoLengthL) != U_endian32(FE->L_AD)) {
+             if (U_endian32(xFE->InfoLengthL) != L_AD) {
                Error.Code = ERR_BAD_AD;
-               Error.Sector = U_endian32(FE->sTag.uTagLoc);
+               Error.Sector = U_endian32(xFE->sTag.uTagLoc);
 // sjm: FIXME: capture 64-bit length properly
                Error.Expected = infoLength;
-               Error.Found = U_endian32(FE->L_AD);
+               Error.Found = L_AD;
              }
              break;
   }
@@ -179,7 +190,7 @@ int track_file_allocation(struct FileEntry *FE, UINT16 ptn)
  * This means that on write once media, errors will be generated when more
  * than one File Entry in an ICB hierarchy identifies the same space.
  */
-int walk_icb_hierarchy(struct FileEntry *FE, UINT16 ptn, UINT32 Location, 
+int walk_icb_hierarchy(struct FE_or_EFE *xFE, UINT16 ptn, UINT32 Location,
                    UINT32 Length, int ICB_offs)
 {
   int i, error;
@@ -193,26 +204,35 @@ int walk_icb_hierarchy(struct FileEntry *FE, UINT16 ptn, UINT32 Location,
    * Read each sector in turn (1 sector == 1 ICB)
    */
   for (i = 0; i < (Length >> bdivshift); i++) {
-    error = ReadLBlocks(FE, Location + i, ptn, 1);
+    error = ReadLBlocks(xFE, Location + i, ptn, 1);
     if (!error) {
-      if (!CheckTag((struct tag *)FE, Location + i, TAGID_FILE_ENTRY, 16, Length)) {
-        ICBlist[ICB_offs].LinkRec = U_endian16(FE->LinkCount);
-        ICBlist[ICB_offs].UniqueID_L = U_endian32(FE->UniqueIdL);
+      if (!CheckTag((struct tag *)xFE, Location + i, TAGID_FILE_ENTRY, 16, Length)) {
+        ICBlist[ICB_offs].LinkRec = U_endian16(xFE->LinkCount);
+        ICBlist[ICB_offs].UniqueID_L = U_endian32(xFE->FE.UniqueIdL);
         ICBlist[ICB_offs].FE_LBN = Location + i;
         ICBlist[ICB_offs].FE_Ptn = ptn;
-        track_file_allocation(FE, ptn);
+        track_file_allocation(xFE, ptn);
       } else {
-        /*
-         * A descriptor was found that wasn't a File Entry.
-         */
         ClearError();
-        if (!CheckTag((struct tag *)FE, Location + i, TAGID_INDIRECT, 16, Length)) {
-          walk_icb_hierarchy(FE, U_endian32(((struct IndirectEntry *)FE)->sIndirectICB.Location_LBN),
-                       U_endian16(((struct IndirectEntry *)FE)->sIndirectICB.Location_PartNo),
-                       U_endian32(((struct IndirectEntry *)FE)->sIndirectICB.ExtentLength.Length32) & 0x3FFFFFFF,
-                       ICB_offs);
+        if (!CheckTag((struct tag *)xFE, Location + i, TAGID_EXT_FILE_ENTRY, 16, Length)) {
+          ICBlist[ICB_offs].LinkRec = U_endian16(xFE->LinkCount);
+          ICBlist[ICB_offs].UniqueID_L = U_endian32(xFE->EFE.UniqueIdL);
+          ICBlist[ICB_offs].FE_LBN = Location + i;
+          ICBlist[ICB_offs].FE_Ptn = ptn;
+          track_file_allocation(xFE, ptn);
         } else {
-          DumpError();  // Wasn't a file entry, but should have been.
+          /*
+           * A descriptor was found that wasn't a File Entry.
+           */
+          ClearError();
+          if (!CheckTag((struct tag *)xFE, Location + i, TAGID_INDIRECT, 16, Length)) {
+            walk_icb_hierarchy(xFE, U_endian32(((struct IndirectEntry *)xFE)->sIndirectICB.Location_LBN),
+                           U_endian16(((struct IndirectEntry *)xFE)->sIndirectICB.Location_PartNo),
+                           U_endian32(((struct IndirectEntry *)xFE)->sIndirectICB.ExtentLength.Length32) & 0x3FFFFFFF,
+                           ICB_offs);
+          } else {
+            DumpError();  // Wasn't a file entry, but should have been.
+          }
         }
       }
     } else {
@@ -239,13 +259,14 @@ int walk_icb_hierarchy(struct FileEntry *FE, UINT16 ptn, UINT32 Location,
  *   FID == 0, space is not tracked and link counts not incremented.
  *   FID == 1, space is tracked and link counts are incremented.
  */
-int read_icb(struct FileEntry *FE, UINT16 ptn, UINT32 Location, UINT32 Length, 
+int read_icb(struct FE_or_EFE *xFE, UINT16 ptn, UINT32 Location, UINT32 Length,
              int FID)
 {
   UINT32 interval;
   INT32  ICB_offs;
   int    error, temp;
-  struct FileEntry *EA;
+  struct FE_or_EFE *EA;
+  struct long_ad *sExtAttrICB = NULL;
 
   error = 0;
 
@@ -281,7 +302,7 @@ int read_icb(struct FileEntry *FE, UINT16 ptn, UINT32 Location, UINT32 Length,
            */
           ICBlist[ICB_offs].Link++;
         }
-        ReadLBlocks(FE, ICBlist[ICB_offs].FE_LBN, ICBlist[ICB_offs].FE_Ptn, 1);
+        ReadLBlocks(xFE, ICBlist[ICB_offs].FE_LBN, ICBlist[ICB_offs].FE_Ptn, 1);
       } else if (temp == 1) {
         ICB_offs -= interval;
         if (ICB_offs < 0) ICB_offs = 0;
@@ -331,8 +352,8 @@ int read_icb(struct FileEntry *FE, UINT16 ptn, UINT32 Location, UINT32 Length,
       } else {
         ICBlist[ICB_offs].Link = 0;
       }
-      walk_icb_hierarchy(FE, ptn, Location, Length, ICB_offs);
-      switch(FE->sICBTag.FileType) {
+      walk_icb_hierarchy(xFE, ptn, Location, Length, ICB_offs);
+      switch(xFE->sICBTag.FileType) {
           case FILE_TYPE_UNSPECIFIED:
                            Num_Type_Err++;
                            break;
@@ -343,14 +364,21 @@ int read_icb(struct FileEntry *FE, UINT16 ptn, UINT32 Location, UINT32 Length,
                            Num_Files++;
                            break;
       }
-      if (U_endian32(FE->sExtAttrICB.ExtentLength.Length32) & 0x3FFFFFFF) {
-        EA = (struct FileEntry *)malloc(blocksize);
+
+      if (U_endian16(xFE->sTag.uTagID) == TAGID_EXT_FILE_ENTRY) {
+        sExtAttrICB = &xFE->EFE.sExtAttrICB;
+      } else {
+        sExtAttrICB = &xFE->FE.sExtAttrICB;
+      }
+
+      if (U_endian32(sExtAttrICB->ExtentLength.Length32) & 0x3FFFFFFF) {
+        EA = (struct FE_or_EFE *)malloc(blocksize);
         if (EA) {
-          if (U_endian16(FE->sExtAttrICB.Location_PartNo) < PTN_no) {
-            printf(" EA: [%x:%08x]", U_endian16(FE->sExtAttrICB.Location_PartNo), 
-                   U_endian32(FE->sExtAttrICB.Location_LBN));
-            read_icb(EA, U_endian16(FE->sExtAttrICB.Location_PartNo), U_endian32(FE->sExtAttrICB.Location_LBN),
-                  U_endian32(FE->sExtAttrICB.ExtentLength.Length32) & 0x3FFFFFFF, 0);
+          if (U_endian16(sExtAttrICB->Location_PartNo) < PTN_no) {
+            printf(" EA: [%x:%08x]", U_endian16(sExtAttrICB->Location_PartNo),
+                   U_endian32(sExtAttrICB->Location_LBN));
+            read_icb(EA, U_endian16(sExtAttrICB->Location_PartNo), U_endian32(sExtAttrICB->Location_LBN),
+                  U_endian32(sExtAttrICB->ExtentLength.Length32) & 0x3FFFFFFF, 0);
           } else {
             printf("\n**EA field contains illegal partition reference number.\n");
           }

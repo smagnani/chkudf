@@ -3,7 +3,7 @@
 /********************************************************************/
 /*  nsr.h - NSR structures, tags and definitions                    */
 /*                                                                  */
-/*      © Copyright 1996 Hewlett-Packard Development Company, L.P   */                         
+/*      Â© Copyright 1996 Hewlett-Packard Development Company, L.P   */                         
 /*                                                                  */
 /*  Permission is hereby granted, free of charge, to any person     */    
 /*  obtaining a copy of this software and associated documentation  */
@@ -83,6 +83,7 @@
 #define TAGID_UNALLOC_SP_ENTRY (UINT16) 263  /* Unallocated space entry (WORM)*/
 #define TAGID_SPACE_BMAP       (UINT16) 264  /* Space bitmap desc */
 #define TAGID_PART_INTEGRITY   (UINT16) 265  /* Partition integrity desc */
+#define TAGID_EXT_FILE_ENTRY   (UINT16) 266  /* Extended File entry */
 
 /* Stuff for display tool */
 

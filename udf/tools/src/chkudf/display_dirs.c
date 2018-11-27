@@ -61,7 +61,7 @@ int DisplayDirs(void)
   UINT16 part[MAX_DEPTH + 1];   // Partition of ICB of current dir    
   int depth, i, error;
   struct FileIDDesc *File;      // Directory entry for the current file
-  struct FileEntry *ICB;        // ICB for current directory
+  struct FE_or_EFE *ICB;        // ICB for current directory
 
   UINT32 address;
   UINT16 partition;
@@ -77,7 +77,7 @@ int DisplayDirs(void)
 
   printf("\nDisplaying directory hierarchy:\n%04x:%08x: \\", partition, address);
   File = (struct FileIDDesc *)malloc(blocksize * 2);
-  ICB = (struct FileEntry *)malloc(blocksize);
+  ICB = (struct FE_or_EFE *)malloc(blocksize);
   if (File && ICB) {
     depth = 1;
     offs[depth] = 0;
@@ -178,7 +178,7 @@ int DisplayDirs(void)
   return 0;
 }
 
-int GetFID(struct FileIDDesc *FID, struct FileEntry *fe, UINT16 part, int offset)
+int GetFID(struct FileIDDesc *FID, struct FE_or_EFE *fe, UINT16 part, int offset)
 {
   int count;
   UINT32 location;

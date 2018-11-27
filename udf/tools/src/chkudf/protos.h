@@ -61,7 +61,7 @@ void cleanup(void);
 
 int GetRootDir(void);
 int DisplayDirs(void);
-int GetFID(struct FileIDDesc *FID, struct FileEntry *fe, UINT16 part, int offset);
+int GetFID(struct FileIDDesc *FID, struct FE_or_EFE *fe, UINT16 part, int offset);
 
 /*****************************************************************************
  * do_scsi.c
@@ -178,7 +178,7 @@ extern UINT32         FID_Loc_Wrong;
  * This routine tracks ICBs, link counts, and file space
  ****************************************************************************/
 
-int read_icb(struct FileEntry *FE, UINT16, UINT32 Location, UINT32 Length, 
+int read_icb(struct FE_or_EFE *FE, UINT16, UINT32 Location, UINT32 Length,
              int FID);
 
 
@@ -288,7 +288,7 @@ int ReadSectors(void *buffer, UINT32 address, UINT8 Count);
 
 int ReadLBlocks(void *buffer, UINT32 address, UINT16 partition, UINT8 Count);
 
-int ReadFileData(void *buffer, struct FileEntry *ICB, UINT16 part, 
+int ReadFileData(void *buffer, struct FE_or_EFE *ICB, UINT16 part,
                  int offset, int Count, UINT32 *data_start_loc);
 
 /*****************************************************************************
@@ -306,7 +306,7 @@ void VerifyAVDP(void);
  * These routines read and verify file ICBs.
  ****************************************************************************/
 
-int checkICB(struct FileEntry *fe, struct long_ad FE, int dir);
+int checkICB(struct FE_or_EFE *fe, struct long_ad FE, int dir);
 
 
 /*****************************************************************************

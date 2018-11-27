@@ -10,22 +10,26 @@
  *  Read a File Entry and extract the basics.
  */
 
-int checkICB(struct FileEntry *fe, struct long_ad FE, int dir)
+int checkICB(struct FE_or_EFE *xfe, struct long_ad FE, int dir)
 {
-  if (fe) {
-    if (!CheckTag((struct tag *)fe, U_endian32(FE.Location_LBN), TAGID_FILE_ENTRY, 16, blocksize)) {
-      unsigned long long infoLength =   (((unsigned long long) U_endian32(fe->InfoLengthH)) << 32)
-                                      | U_endian32(fe->InfoLengthL);
-
-      printf("(%ull) ", infoLength);
+  if (xfe) {
+    unsigned long long infoLength =   (((unsigned long long) U_endian32(xfe->InfoLengthH)) << 32)
+                                    | U_endian32(xfe->InfoLengthL);
+    if (!CheckTag((struct tag *)xfe, U_endian32(FE.Location_LBN), TAGID_FILE_ENTRY, 16, blocksize)) {
+      printf("(%llu) ", infoLength);
+    } else {
+      ClearError();
+      if (!CheckTag((struct tag *)xfe, U_endian32(FE.Location_LBN), TAGID_EXT_FILE_ENTRY, 16, blocksize)) {
+        printf("(%llu) ", infoLength);
+      }
     }
 
-    if (dir && fe->sICBTag.FileType != FILE_TYPE_DIRECTORY) {
-       printf("[Type: %d] ", fe->sICBTag.FileType);
+    if (dir && xfe->sICBTag.FileType != FILE_TYPE_DIRECTORY) {
+       printf("[Type: %d] ", xfe->sICBTag.FileType);
     }
 
-    if (!dir && fe->sICBTag.FileType != FILE_TYPE_RAW) {
-       printf("[Type: %d] ", fe->sICBTag.FileType);
+    if (!dir && xfe->sICBTag.FileType != FILE_TYPE_RAW) {
+       printf("[Type: %d] ", xfe->sICBTag.FileType);
     }
   } else {
     Error.Code = ERR_READ;

@@ -161,28 +161,45 @@ int ReadLBlocks(void *buffer, UINT32 address, UINT16 p_ref, UINT8 Count)
 /*
  * The offset and count are specified in bytes.  
  */
-int ReadFileData(void *buffer, struct FileEntry *fe, UINT16 part, int offset_0, int count_0, UINT32 *data_start_loc)
+int ReadFileData(void *buffer, struct FE_or_EFE *xfe, UINT16 part, int offset_0, int count_0, UINT32 *data_start_loc)
 {
   struct short_ad  *exts_ptr, *exts_end;
   struct long_ad   *extl_ptr, *extl_end;
   struct AllocationExtentDesc *AED = NULL;
   UINT32           sector;
+  UINT32           L_EA, L_AD;
   int              ADlength, error, offset, count, offset_im, count_im, firstpass;
   void            *t_buffer;
+  BOOL             isEFE;
 
   firstpass = TRUE;
   error = 0;
   offset_im = offset_0;
   count_im  = count_0;
   t_buffer = buffer;
+
+  if (U_endian16(xfe->sTag.uTagID) == TAGID_EXT_FILE_ENTRY) {
+    isEFE = TRUE;
+    L_EA = U_endian32(xfe->EFE.L_EA);
+    L_AD = U_endian32(xfe->EFE.L_AD);
+  } else {
+    isEFE = FALSE;
+    L_EA = U_endian32(xfe->FE.L_EA);
+    L_AD = U_endian32(xfe->FE.L_AD);
+  }
+
   while (count_im > 0 && !error) {
     offset = offset_im;
     count  = count_im;
-    if (offset < U_endian32(fe->InfoLengthL)) {
-      switch(U_endian16(fe->sICBTag.Flags) & ADTYPEMASK) {
+    if (offset < U_endian32(xfe->InfoLengthL)) {
+      switch(U_endian16(xfe->sICBTag.Flags) & ADTYPEMASK) {
         case ADSHORT:
-          exts_ptr = (struct short_ad *)((char *)fe + sizeof(struct FileEntry) + U_endian32(fe->L_EA));
-          exts_end = (struct short_ad *)((char *)exts_ptr + U_endian32(fe->L_AD));
+          if (isEFE) {
+            exts_ptr = (struct short_ad *)((char *)xfe + sizeof(struct ExtFileEntry) + L_EA);
+          } else {
+            exts_ptr = (struct short_ad *)((char *)xfe + sizeof(struct FileEntry) + L_EA);
+          }
+          exts_end = (struct short_ad *)((char *)exts_ptr + L_AD);
           // The following while loop "eats" all unneeded extents.
           while (((offset >= (U_endian32(exts_ptr->ExtentLength.Length32) & 0x3FFFFFFF)) || 
                  ((U_endian32(exts_ptr->ExtentLength.Length32) >> 30) == E_ALLOCEXTENT)) &&
@@ -229,8 +246,12 @@ int ReadFileData(void *buffer, struct FileEntry *fe, UINT16 part, int offset_0, 
           break;
 
         case ADLONG:
-          extl_ptr = (struct long_ad *)((char *)fe + sizeof(struct FileEntry) + U_endian32(fe->L_EA));
-          extl_end = (struct long_ad *)((char *)extl_ptr + U_endian32(fe->L_AD));
+          if (isEFE) {
+            extl_ptr = (struct long_ad *)((char *)xfe + sizeof(struct ExtFileEntry) + L_EA);
+          } else {
+            extl_ptr = (struct long_ad *)((char *)xfe + sizeof(struct FileEntry) + L_EA);
+          }
+          extl_end = (struct long_ad *)((char *)extl_ptr + L_AD);
           // The following while loop "eats" all unneeded extents.
           while (((offset >= (U_endian32(extl_ptr->ExtentLength.Length32) & 0x3FFFFFFF)) || 
                  ((U_endian32(extl_ptr->ExtentLength.Length32) >> 30) == E_ALLOCEXTENT)) &&
@@ -276,14 +297,17 @@ int ReadFileData(void *buffer, struct FileEntry *fe, UINT16 part, int offset_0, 
           break;
     
         case ADNONE:
-          if ((U_endian32(fe->L_AD) != U_endian32(fe->InfoLengthL)) && !offset) {
+          if ((L_AD != U_endian32(xfe->InfoLengthL)) && !offset) {
             printf("**Embedded data error: L_AD = %d, Information Length = %d\n",
-                   U_endian32(fe->L_AD), U_endian32(fe->InfoLengthL));
+                   L_AD, U_endian32(xfe->InfoLengthL));
           }
-          ADlength = MAX(U_endian32(fe->L_AD), U_endian32(fe->InfoLengthL));
+          ADlength = MAX(L_AD, U_endian32(xfe->InfoLengthL));
           if (offset < ADlength) {
-            *data_start_loc = U_endian32(fe->sTag.uTagLoc);
-            memcpy(buffer, (char *)(fe + 1) + U_endian32(fe->L_EA), ADlength);
+            char *emb_data = (char *)xfe + L_EA;
+            emb_data += isEFE ? sizeof(struct ExtFileEntry)
+                              : sizeof(struct FileEntry);
+            *data_start_loc = U_endian32(xfe->sTag.uTagLoc);
+            memcpy(buffer, emb_data, ADlength);
             count_im -= ADlength - offset_im;
             offset_im += ADlength - offset_im;
           } else {

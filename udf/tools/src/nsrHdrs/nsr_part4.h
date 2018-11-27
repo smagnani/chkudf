@@ -288,6 +288,91 @@ struct PartIntegrityEntry {
     UINT8 aImpUse[256];
 };
 
+/* [4/14.17] Extended File Entry -------------------------------------------*/
+struct ExtFileEntry {
+    struct tag sTag;        /* uTagID = 266 */
+    struct ICBTag sICBTag;  /* FileType = [4-10] */
+    UINT32 UID;
+    UINT32 GID;
+    UINT32 Permissions;
+    UINT16 LinkCount;
+    UINT8 RecFormat;
+    UINT8 RecDisplayAttr;
+    UINT32 RecLength;
+    UINT32 InfoLengthL;
+    UINT32 InfoLengthH;
+    UINT32 ObjectSizeL;
+    UINT32 ObjectSizeH;
+    UINT32 LogBlocksL;
+    UINT32 LogBlocksH;
+    struct timestamp sAccessTime;   /* each timestamp is 12 bytes long */
+    struct timestamp sModifyTime;
+    struct timestamp sCreationTime;
+    struct timestamp sAttrTime;
+    UINT32 Checkpoint;
+    UINT32 Reserved;
+    struct long_ad sExtAttrICB;     /* 16 bytes */
+    struct long_ad sStreamDirICB;   /* 16 bytes */
+    struct implEntityId sImpID;
+    UINT32 UniqueIdL;           /* for 13346 */
+    UINT32 UniqueIdH;
+    UINT32 L_EA;
+    UINT32 L_AD;
+    /* allocation descriptors go here: ADMacros at end of file */
+};
+
+struct FE_or_EFE {
+    struct tag sTag;        /* uTagID = 266 */
+    struct ICBTag sICBTag;  /* FileType = [4-10] */
+    UINT32 UID;
+    UINT32 GID;
+    UINT32 Permissions;
+    UINT16 LinkCount;
+    UINT8 RecFormat;
+    UINT8 RecDisplayAttr;
+    UINT32 RecLength;
+    UINT32 InfoLengthL;
+    UINT32 InfoLengthH;
+
+    union {
+      struct FE {
+        UINT32 LogBlocksL;
+        UINT32 LogBlocksH;
+        struct timestamp sAccessTime;   /* each timestamp is 12 bytes long */
+        struct timestamp sModifyTime;
+        struct timestamp sAttrTime;
+        UINT32 Checkpoint;
+        struct long_ad sExtAttrICB;     /* 16 bytes */
+        struct implEntityId sImpID;
+        UINT32 UniqueIdL;           /* for 13346 */
+        UINT32 UniqueIdH;
+        UINT32 L_EA;
+        UINT32 L_AD;
+        /* allocation descriptors go here: ADMacros at end of file */
+      } FE;
+      struct EFE {
+        UINT32 ObjectSizeL;
+        UINT32 ObjectSizeH;
+        UINT32 LogBlocksL;
+        UINT32 LogBlocksH;
+        struct timestamp sAccessTime;   /* each timestamp is 12 bytes long */
+        struct timestamp sModifyTime;
+        struct timestamp sCreationTime;
+        struct timestamp sAttrTime;
+        UINT32 Checkpoint;
+        UINT32 Reserved;
+        struct long_ad sExtAttrICB;     /* 16 bytes */
+        struct long_ad sStreamDirICB;   /* 16 bytes */
+        struct implEntityId sImpID;
+        UINT32 UniqueIdL;           /* for 13346 */
+        UINT32 UniqueIdH;
+        UINT32 L_EA;
+        UINT32 L_AD;
+        /* allocation descriptors go here: ADMacros at end of file */
+      } EFE;
+    };
+};
+
 /* INTEGRITY CONSTANTS
    The first two are valid for LVIDs as well as PIEs.
    The final one, INTEGRITY_STABLE, is ONLY valid for PIE.
