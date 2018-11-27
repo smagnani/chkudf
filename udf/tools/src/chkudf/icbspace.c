@@ -340,7 +340,7 @@ int read_icb(struct FileEntry *FE, UINT16 ptn, UINT32 Location, UINT32 Length,
       if (U_endian32(FE->sExtAttrICB.ExtentLength.Length32) & 0x3FFFFFFF) {
         EA = (struct FileEntry *)malloc(blocksize);
         if (EA) {
-          if (U_endian16(EA->sExtAttrICB.Location_PartNo) < PTN_no) {
+          if (U_endian16(FE->sExtAttrICB.Location_PartNo) < PTN_no) {
             printf(" EA: [%x:%08x]", U_endian16(FE->sExtAttrICB.Location_PartNo), 
                    U_endian32(FE->sExtAttrICB.Location_LBN));
             read_icb(EA, U_endian16(FE->sExtAttrICB.Location_PartNo), U_endian32(FE->sExtAttrICB.Location_LBN),
