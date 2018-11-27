@@ -7,6 +7,8 @@ OBJS=chkudf.o read_udf.o errors.o utils.o verifyVRS.o verifyAVDP.o \
         readSpMap.o filespace.o icbspace.o linkcount.o setSectorSize.o \
         setFirstSector.o do_scsi.o verifyLVID.o
 
+all:	chkudf
+
 chkudf: $(OBJS)
 	gcc -o chkudf -g $(OBJS)
 
