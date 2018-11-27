@@ -60,7 +60,7 @@
  *  UINTn values must be unsigned and have exactly n bits.
  *  MINTn values must be signed and have at least n bits, but may have
  *           more for efficiency (i.e. system native int size)
- *  MUINTn values bust be unsigned and have at least n bits, but may have
+ *  MUINTn values must be unsigned and have at least n bits, but may have
  *           more for efficiency (i.e. system native int size)
  */
 
