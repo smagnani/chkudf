@@ -64,13 +64,29 @@ int CheckTag(struct tag *TagPtr, UINT32 uTagLoc, UINT16 TagID,
   }
 
   if (!Error.Code) {
-    if (Version_OK && (U_endian16(TagPtr->uDescriptorVersion) != UDF_Version)) {
-      Version_OK = FALSE;
-      Error.Code = ERR_NSR_VERSION;
-      Error.Sector = uTagLoc;
-      Error.Expected = UDF_Version;
-      Error.Found = U_endian16(TagPtr->uDescriptorVersion);
-      result = CHECKTAG_TAG_DAMAGED;
+    UINT16 descriptorVersion = U_endian16(TagPtr->uDescriptorVersion);
+    if (Version_OK && (descriptorVersion != UDF_Version)) {
+      /*
+       * ECMA-167r3 sec. 3/7.2.2 Descriptor Version
+       *   "...This value shall be 2 or 3...
+       *    Note 2:
+       *    Structures with version 2 descriptors may be on the medium due to
+       *    changing the medium from NSR02 to NSR03 without rewriting all
+       *    descriptors as version 3. Originating systems shall record a 3 in
+       *    this field; receiving systems shall allow a 2 or 3."
+       *
+       * Extended File Entry descriptors did not exist in ECMA-167r2.
+       * Don't treat this as an error though because the above ECMA-167r3
+       * clause implies that OS UDF drivers won't care.
+       */
+      if (!((UDF_Version == 3) && (descriptorVersion == 2))) {
+        Version_OK = FALSE;
+        Error.Code = ERR_NSR_VERSION;
+        Error.Sector = uTagLoc;
+        Error.Expected = UDF_Version;
+        Error.Found = U_endian16(TagPtr->uDescriptorVersion);
+        result = CHECKTAG_TAG_DAMAGED;
+      }
     }
   }
 
