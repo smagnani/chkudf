@@ -46,18 +46,43 @@ int track_filespace(UINT16 ptn, UINT32 addr, UINT32 extent)
 int check_filespace(void)
 {
   int i, j;
+  int numSuppressed = 0;
+  int numReported = 0;
+  int askForMore = 24;
+  BOOL bSuppress = FALSE;
 
   for (i = 0; i < PTN_no; i++) {
     if (Part_Info[i].SpMap && Part_Info[i].MyMap) {
       printf("\n--Checking partition reference %d for space errors.\n", i);
       for (j = 0; j < (Part_Info[i].Len >> 3); j++) {
         if (Part_Info[i].SpMap[j] != Part_Info[i].MyMap[j]) {
-          printf("**At byte %d, (sectors %d-%d), recorded mask is %02x, mapped is %02x\n", 
-               j, j * 8, j* 8 + 7, Part_Info[i].SpMap[j], Part_Info[i].MyMap[j]);
+          if (bSuppress) {
+            ++numSuppressed;
+          } else {
+            ++numReported;
+            printf("**At byte %d, (sectors %d-%d), recorded mask is %02x, mapped is %02x\n",
+                 j, j * 8, j* 8 + 7, Part_Info[i].SpMap[j], Part_Info[i].MyMap[j]);
+
+            if (askForMore && ((numReported % askForMore) == 0)) {
+              char ans;
+              printf("Print more? ");
+              fflush(stdout);
+              ans = getchar();
+              if ((ans == 'n') || (ans == 'N')) {
+                bSuppress = TRUE;
+              } else if ((ans == 'a') || (ans == 'A')) {
+                askForMore = 0;
+              }
+            }
+          }
         }
       }
     }
   }
+
+  if (numSuppressed > 0)
+    printf("(%d additional mismatching bytes)\n", numSuppressed);
+
   printf("  There are %d directories and %d files.\n", Num_Dirs, Num_Files);
   if (Num_Dirs != ID_Dirs) {
     printf("**The integrity descriptor (if it existed) indicated %d directories.\n",
