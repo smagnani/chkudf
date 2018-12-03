@@ -101,7 +101,8 @@ struct FileSetDesc {
     struct long_ad        sRootDirICB;
     struct domainEntityId DomainID;
     struct long_ad        sNextExtent;
-    UINT8                aReserved[48];
+    struct long_ad        sStreamDirICB;
+    UINT8                aReserved[32];
 };
 
 /* [4/14.3] Partition Header Descriptor ------------------------------------*/

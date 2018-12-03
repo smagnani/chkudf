@@ -29,6 +29,14 @@ int GetRootDir(void)
         DumpError();
         if (result < CHECKTAG_OK_LIMIT) {
           RootDirICB = FSDPtr->sRootDirICB;
+          StreamDirICB = FSDPtr->sStreamDirICB;
+          if ((UDF_Version == 3) && StreamDirICB.ExtentLength.Length32) {
+            // @todo Real traversal of stream directory
+            // Code below is a hack to avoid reporting space table mismatch
+            // on filesystems having a stub stream directory
+       	    track_filespace(U_endian16(StreamDirICB.Location_PartNo), U_endian32(StreamDirICB.Location_LBN),
+       	                    U_endian32(StreamDirICB.ExtentLength.Length32) & 0x3FFFFFFF);
+          }
           error = 0;
           if (U_endian32(FSDPtr->sNextExtent.ExtentLength.Length32) & 0x3FFFFFFF) {
             printf("  Found another FSD extent.\n");

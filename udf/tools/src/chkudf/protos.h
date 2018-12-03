@@ -160,6 +160,7 @@ extern UINT32       VATLength;
 
 extern struct long_ad FSD;
 extern struct long_ad RootDirICB;
+extern struct long_ad StreamDirICB;
 extern sICB_trk      *ICBlist;
 extern MUINT32        ICBlist_len;
 extern MUINT32        ICBlist_alloc;

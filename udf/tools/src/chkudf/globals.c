@@ -110,6 +110,7 @@ UINT32       VATLength;
  ---------------------------------------------------------------------------*/
 struct long_ad FSD;
 struct long_ad RootDirICB;
+struct long_ad StreamDirICB;
 sICB_trk      *ICBlist = NULL;
 MUINT32        ICBlist_len = 0;
 MUINT32        ICBlist_alloc = 0;
