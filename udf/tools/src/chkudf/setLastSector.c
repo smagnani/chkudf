@@ -34,6 +34,7 @@ BOOL Get_Last_BGS()
   if (!result)
   {
       LastSector = (buffer * 512) / secsize - 1;
+      LastSectorAccurate = TRUE;
       success = TRUE;
   }
   return success;
