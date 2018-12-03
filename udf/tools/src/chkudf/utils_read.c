@@ -1,6 +1,7 @@
 #define _LARGEFILE64_SOURCE    // lseek64()
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <errno.h>
 #include "../nsrHdrs/nsr.h"
@@ -10,7 +11,7 @@
 /* Cache everything in units of packet_size.  packet_size will be filled
  * in for all media, packet or not. */
 
-int ReadSectors(void *buffer, UINT32 address, UINT8 Count)
+int ReadSectors(void *buffer, UINT32 address, UINT32 Count)
 {
   int readOK, result, numsecs, i;
   void *curbuffer;
@@ -86,7 +87,7 @@ int ReadSectors(void *buffer, UINT32 address, UINT8 Count)
         }
       }       /* scsi */
     } else {
-      printf("**Couldn't malloc space for %d %d byte sectors.\n", Count, secsize);
+      printf("**Couldn't malloc space for %u %u byte sectors.\n", Count, secsize);
     }
     if (readOK) {
       curbuffer = Cache[bufno].Buffer;
@@ -103,10 +104,11 @@ int ReadSectors(void *buffer, UINT32 address, UINT8 Count)
 
 /* Bug: If count crosses sparing boundary... */
 
-int ReadLBlocks(void *buffer, UINT32 address, UINT16 p_ref, UINT8 Count)
+int ReadLBlocks(void *buffer, UINT32 address, UINT16 p_ref, UINT32 Count)
 {
   sST_desc *PM_ST;
-  int i, j, error, spared;
+  int error, spared;
+  UINT32 i, j;
 
   error = 0;
   if (p_ref < PTN_no) {

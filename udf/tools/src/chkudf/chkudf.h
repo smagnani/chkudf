@@ -33,8 +33,8 @@
 typedef struct _sCacheData {
     UINT8 *Buffer;
     UINT32 Address;
-    int    Count;
-    int    Allocated;
+    UINT32 Count;
+    UINT32 Allocated;
 } sCacheData;
 
 

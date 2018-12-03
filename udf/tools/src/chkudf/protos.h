@@ -284,9 +284,9 @@ void printLongAd(struct long_ad *longad);
  * ReadLBlocks.
  ****************************************************************************/
 
-int ReadSectors(void *buffer, UINT32 address, UINT8 Count);
+int ReadSectors(void *buffer, UINT32 address, UINT32 Count);
 
-int ReadLBlocks(void *buffer, UINT32 address, UINT16 partition, UINT8 Count);
+int ReadLBlocks(void *buffer, UINT32 address, UINT16 partition, UINT32 Count);
 
 int ReadFileData(void *buffer, struct FE_or_EFE *ICB, UINT16 part,
                  int offset, int Count, UINT32 *data_start_loc);
