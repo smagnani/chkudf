@@ -1,6 +1,7 @@
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,7 +48,10 @@ BOOL do_scsi(UINT8 *command, int cmd_len, UINT8 *buffer, UINT32 in_len,
       } else if (result == 0x25040000) {
         printf("SCSI error - can't talk to drive.\n");
       } else if (result < 0) {
-        printf("ioctl error %d.\n", -result);
+        if (result == -EPERM)
+          printf("  SCSI access not permitted.\n");
+        else
+          printf("ioctl error %d.\n", -result);
       } else {
         printf("Unknown ioctl error 0x%08x.\n", result);
       }
