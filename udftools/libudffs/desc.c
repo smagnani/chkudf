@@ -34,12 +34,12 @@
 #include "libudffs.h"
 #include "config.h"
 
-inline struct impUseVolDescImpUse *query_iuvdiu(struct udf_disc *disc)
+struct impUseVolDescImpUse *query_iuvdiu(struct udf_disc *disc)
 {
 	return (struct impUseVolDescImpUse *)disc->udf_iuvd[0]->impUse;
 }
 
-inline struct logicalVolIntegrityDescImpUse *query_lvidiu(struct udf_disc *disc)
+struct logicalVolIntegrityDescImpUse *query_lvidiu(struct udf_disc *disc)
 {
 	return (struct logicalVolIntegrityDescImpUse *)&(disc->udf_lvid->impUse[le32_to_cpu(disc->udf_lvd[0]->numPartitionMaps) * 2 * sizeof(uint32_t)]);
 }

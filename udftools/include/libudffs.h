@@ -169,8 +169,8 @@ void append_data(struct udf_desc *, struct udf_data *);
 struct udf_data *alloc_data(void *, int);
 
 /* desc.c */
-inline struct impUseVolDescImpUse *query_iuvdiu(struct udf_disc *);
-inline struct logicalVolIntegrityDescImpUse *query_lvidiu(struct udf_disc *);
+extern struct impUseVolDescImpUse *query_iuvdiu(struct udf_disc *);
+extern struct logicalVolIntegrityDescImpUse *query_lvidiu(struct udf_disc *);
 
 /* file.c */
 tag query_tag(struct udf_disc *, struct udf_extent *, struct udf_desc *, uint16_t);
