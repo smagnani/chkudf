@@ -46,13 +46,14 @@ int track_filespace(UINT16 ptn, UINT32 addr, UINT32 extent)
 int check_filespace(void)
 {
   int i, j;
-  int numSuppressed = 0;
-  int numReported = 0;
-  int askForMore = 24;
-  BOOL bSuppress = FALSE;
 
   for (i = 0; i < PTN_no; i++) {
     if (Part_Info[i].SpMap && Part_Info[i].MyMap) {
+      int numSuppressed = 0;
+      int numReported = 0;
+      int askForMore = 24;
+      BOOL bSuppress = FALSE;
+
       printf("\n--Checking partition reference %d for space errors.\n", i);
       for (j = 0; j < (Part_Info[i].Len >> 3); j++) {
         if (Part_Info[i].SpMap[j] != Part_Info[i].MyMap[j]) {
@@ -77,11 +78,11 @@ int check_filespace(void)
           }
         }
       }
+
+      if (numSuppressed > 0)
+        printf("(%d additional mismatching bytes)\n", numSuppressed);
     }
   }
-
-  if (numSuppressed > 0)
-    printf("(%d additional mismatching bytes)\n", numSuppressed);
 
   printf("  There are %d directories and %d files.\n", Num_Dirs, Num_Files);
   if (Num_Dirs != ID_Dirs) {
