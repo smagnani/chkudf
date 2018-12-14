@@ -23,6 +23,8 @@
  */
 
 #define MAX(a,b)((a)>(b)?(a):(b))
+#define MIN(a,b)((a)<(b)?(a):(b))
+#define BITMAP_NUM_BYTES(numBits)    (((numBits) + 7) >> 3)
 
 #include "../nsrHdrs/nsr.h"
 /*----------------------------------------------------------------------------
@@ -69,6 +71,7 @@ typedef struct _sPart_Info {
                 UINT16  Num;     //Physical partition number
                 UINT32  Offs;    //Offset of physical partition
                 UINT32  Len;     //Length (for error checking)
+                UINT8   FinalMapByteMask; // Valid bits in final space map byte
                 UINT32  Space;   //Address of space map/list
                 UINT32  SpLen;   //Number of bytes in space map/list
                 UINT32 *Extra;   //Pointer to VAT or sparing table, or ??.

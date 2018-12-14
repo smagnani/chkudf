@@ -297,17 +297,50 @@ int checkPD(struct PartDesc *mPD, struct PartDesc *rPD)
     hit = 0;
     for (i = 0; i < PTN_no; i++) {
       if (Part_Info[i].Num == U_endian16(mPD->uPartNumber)) {
+        UINT32 expectedBitmapNumBytes;    // Expected/maximum
         Part_Info[i].Offs = U_endian32(mPD->uPartStartingLoc);
         Part_Info[i].Len = U_endian32(mPD->uPartLength);
+        expectedBitmapNumBytes = BITMAP_NUM_BYTES(Part_Info[i].Len);    // Expected/maximum
+
+        // Calculate the mask for the last byte of the space map
+        // (screen out bits representing blocks beyond end of partition)
+        if (Part_Info[i].Len & 7) {
+          unsigned int finalByteNumInvalid = 8 - (Part_Info[i].Len & 7);
+
+          /**
+           * Note, bitmap accounting is such that lowest bit == lowest location,
+           * or in ECMA-speak:
+           *
+           *   "The bit for logical block s is bit rem(s,8) in byte ip(s/8),
+           *    where byte 0 is the first byte in this field."
+           *
+           * where:
+           *
+           *   "The notation ip(x) shall mean the integer part of x.
+           *    The notation rem(a,b) shall mean a−b×ip(a /b), where a and b
+           *    are integers."
+           *
+           * So, any blocks beyond the end of the partition would be at the
+           * most significant bits of the last byte.
+           */
+          Part_Info[i].FinalMapByteMask = 0xFF >> finalByteNumInvalid;
+        }
+
         hit++;
         PHD = (struct PartHeaderDesc *)(mPD->aPartContentsUse);
         if (U_endian32(PHD->USB.ExtentLength.Length32)) {
           Part_Info[i].Space = U_endian32(PHD->USB.Location);
           Part_Info[i].SpLen = U_endian32(PHD->USB.ExtentLength.Length32) & 0x3FFFFFFF;
-          Part_Info[i].SpMap = malloc(Part_Info[i].SpLen);
-          Part_Info[i].MyMap = malloc(Part_Info[i].SpLen);
+          Part_Info[i].SpMap = malloc(expectedBitmapNumBytes);
+          Part_Info[i].MyMap = malloc(expectedBitmapNumBytes);
+          if (Part_Info[i].SpMap) {
+            // Fill in case of underread later
+            memset(Part_Info[i].SpMap, 0xff, expectedBitmapNumBytes-1);
+            Part_Info[i].SpMap[expectedBitmapNumBytes-1] = Part_Info[i].FinalMapByteMask;
+          }
           if (Part_Info[i].MyMap) {
-            memset(Part_Info[i].MyMap, 0xff, Part_Info[i].SpLen);
+            memset(Part_Info[i].MyMap, 0xff, expectedBitmapNumBytes-1);
+            Part_Info[i].MyMap[expectedBitmapNumBytes-1] = Part_Info[i].FinalMapByteMask;
           }
         }
       }

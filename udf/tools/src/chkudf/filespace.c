@@ -49,13 +49,14 @@ int check_filespace(void)
 
   for (i = 0; i < PTN_no; i++) {
     if (Part_Info[i].SpMap && Part_Info[i].MyMap) {
+      unsigned int numMapBytes = BITMAP_NUM_BYTES(Part_Info[i].Len);
       int numSuppressed = 0;
       int numReported = 0;
       int askForMore = 24;
       BOOL bSuppress = FALSE;
 
       printf("\n--Checking partition reference %d for space errors.\n", i);
-      for (j = 0; j < (Part_Info[i].Len >> 3); j++) {
+      for (j = 0; j < numMapBytes; j++) {
         if (Part_Info[i].SpMap[j] != Part_Info[i].MyMap[j]) {
           if (bSuppress) {
             ++numSuppressed;
