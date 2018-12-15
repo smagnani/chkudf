@@ -271,6 +271,7 @@ void printCharSpec(struct charspec chars);
 void printTimestamp( struct timestamp x);
 void printExtentAD(struct extent_ad extent);
 void printLongAd(struct long_ad *longad);
+unsigned int countSetBits(unsigned int value);
 
 /*****************************************************************************
  * utils_read.c

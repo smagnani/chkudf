@@ -207,3 +207,17 @@ void printLongAd(struct long_ad *longad)
          U_endian16(longad->Location_PartNo), U_endian32(longad->Location_LBN));
 }
 
+unsigned int countSetBits(unsigned int value)
+{
+  unsigned int numSetBits = 0;
+
+  while (value) {
+    if (value & 1) {
+      ++numSetBits;
+    }
+
+    value >>= 1;
+  }
+
+  return numSetBits;
+}

@@ -46,44 +46,76 @@ int track_filespace(UINT16 ptn, UINT32 addr, UINT32 extent)
 int check_filespace(void)
 {
   int i, j;
+  int pass;    // 1 == in-use blocks marked free, 2 == free blocks marked in-use
 
   for (i = 0; i < PTN_no; i++) {
     if (Part_Info[i].SpMap && Part_Info[i].MyMap) {
       unsigned int numMapBytes = BITMAP_NUM_BYTES(Part_Info[i].Len);
-      int numSuppressed = 0;
-      int numReported = 0;
-      int askForMore = 24;
-      BOOL bSuppress = FALSE;
-
+      unsigned int numMismarkedFree = 0;
+      unsigned int numMismarkedInUse = 0;
       printf("\n--Checking partition reference %d for space errors.\n", i);
-      for (j = 0; j < numMapBytes; j++) {
-        if (Part_Info[i].SpMap[j] != Part_Info[i].MyMap[j]) {
-          if (bSuppress) {
-            ++numSuppressed;
-          } else {
-            ++numReported;
-            printf("**At byte %d, (sectors %d-%d), recorded mask is %02x, mapped is %02x\n",
-                 j, j * 8, j* 8 + 7, Part_Info[i].SpMap[j], Part_Info[i].MyMap[j]);
+      for (pass = 1; pass <= 2; ++pass) {
+        int numSuppressed = 0;
+        int numReported = 0;
+        int askForMore = 24;
+        BOOL bSuppress = FALSE;
 
-            if (askForMore && ((numReported % askForMore) == 0)) {
-              char ans;
-              printf("Print more? ");
-              fflush(stdout);
-              ans = getchar();
-              if ((ans == 'n') || (ans == 'N')) {
-                bSuppress = TRUE;
-              } else if ((ans == 'a') || (ans == 'A')) {
-                askForMore = 0;
-              }
+        for (j = 0; j < numMapBytes; j++) {
+          if (Part_Info[i].SpMap[j] != Part_Info[i].MyMap[j]) {
+            // See if the mismatch is for the current pass
+            UINT8 mismatchBits = Part_Info[i].SpMap[j] ^ Part_Info[i].MyMap[j];
+            if (pass == 1) {
+              // In-use, but marked free?
+              mismatchBits &= ~Part_Info[i].MyMap[j];
+              if (mismatchBits)
+                numMismarkedFree += countSetBits(mismatchBits);
+              else
+                continue;  // No
+            } else {
+              // Free, but marked in-use?
+              mismatchBits &= Part_Info[i].MyMap[j];
+              if (mismatchBits)
+                numMismarkedInUse += countSetBits(mismatchBits);
+              else
+                continue;  // No
             }
-          }
-        }
-      }
+            if (bSuppress) {
+              ++numSuppressed;
+            } else {
+              if (numReported == 0) {
+                if (pass == 1)
+                  printf("  In-use blocks marked free:\n");
+                else
+                  printf("  Free blocks marked in-use:\n");
+              }
+              ++numReported;
+              printf("  **At byte %d, (sectors %d-%d), recorded mask is %02x, mapped is %02x (mismatch %02x)\n",
+                   j, j * 8, j* 8 + 7, Part_Info[i].SpMap[j], Part_Info[i].MyMap[j], mismatchBits);
 
-      if (numSuppressed > 0)
-        printf("(%d additional mismatching bytes)\n", numSuppressed);
-    }
-  }
+              if (askForMore && ((numReported % askForMore) == 0)) {
+                char ans;
+                printf("Print more? ");
+                fflush(stdout);
+                ans = getchar();
+                if ((ans == 'n') || (ans == 'N')) {
+                  bSuppress = TRUE;
+                } else if ((ans == 'a') || (ans == 'A')) {
+                  askForMore = 0;
+                }
+              }
+            } // if details not suppressed
+          }   // if byte mismatch
+        }     // for each partition slot
+
+        if (numSuppressed > 0) {
+          printf("  (%d additional mismatching bytes)\n", numSuppressed);
+        }
+      }  // for each pass
+
+      printf("\n  %u in-use blocks mismarked free.\n", numMismarkedFree);
+      printf("  %u free blocks mismarked in-use.\n", numMismarkedInUse);
+    }  // if maps are available to compare
+  }    // for each partition
 
   printf("  There are %d directories and %d files.\n", Num_Dirs, Num_Files);
   if (Num_Dirs != ID_Dirs) {
