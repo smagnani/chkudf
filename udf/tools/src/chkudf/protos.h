@@ -89,7 +89,8 @@ void ClearError(void);
  * This routine checks file space assignments
  ****************************************************************************/
 
-int track_filespace(UINT16 ptn, UINT32 Location, UINT32 Length);
+int track_freespace(UINT16 ptn, UINT32 Location, UINT32 numBlocks);
+int track_filespace(UINT16 ptn, UINT32 Location, UINT32 numBytes);
 int check_filespace(void);
 int check_uniqueid(void);
 
@@ -204,10 +205,10 @@ int TestLinkCount(void);
 /*****************************************************************************
  * readSpMap.c
  *
- * This routine reads and verifies a space allocation bitmap
+ * This routine reads and verifies a space allocation bitmap or table
  ****************************************************************************/
 
-int ReadSpaceMap(void);
+int ReadPartitionUnallocatedSpaceDescs(void);
 
 /*****************************************************************************
  * read_udf.c

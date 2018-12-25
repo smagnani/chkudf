@@ -61,12 +61,157 @@ static int ReadSpaceBitmap(UINT16 ptn)
   return 0;
 }
 
-int ReadSpaceMap(void)
+static void ReadSpaceTable(UINT16 ptn)
 {
-  int i;
+  struct UnallocSpEntry *USE = malloc(blocksize);
+
+  if (USE) {
+    UINT32 nextUSELocation = Part_Info[ptn].Space;
+    UINT32 nextUSESize     = Part_Info[ptn].SpLen;
+    UINT32 minNextUnallocStart = 0;
+    BOOL   bWarnedUnsorted = FALSE;
+    const UINT32 maxExtentLength = 0x3FFFFFFF & ~(blocksize - 1);
+
+    printf("\n--Reading Unallocated Space Entries for partition reference %d.\n", ptn);
+    while (nextUSELocation != -1) {
+      struct short_ad *sad;
+      UINT32 L_AD;
+      UINT32 ad_offset = 0;
+
+      UINT32 curUSESize     = nextUSESize;
+      UINT32 curUSELocation = nextUSELocation;
+      nextUSELocation = -1;
+
+      printf("  [loc=%u, size=%u]\n", curUSELocation, curUSESize);
+      ReadLBlocks(USE, curUSELocation, ptn, 1);
+      // @todo Handle nextSpaceSize > blocksize gracefully
+      track_filespace(ptn, curUSELocation, blocksize);
+
+      CheckTag((struct tag *)USE, curUSELocation, TAGID_UNALLOC_SP_ENTRY,
+                   0, curUSESize);
+      if (Error.Code == ERR_TAGID) {
+        printf("    **Not a space entry descriptor.\n");
+        break;
+      }
+
+      DumpError();
+
+// @todo bail if  Error.Code??
+
+      // UDF: "Only Short Allocation Descriptors shall be used."
+      if ((U_endian16(USE->sICBTag.Flags) & ADTYPEMASK) != ADSHORT) {
+        Error.Code     = ERR_PROHIBITED_AD_TYPE;
+        Error.Sector   = curUSELocation;
+        Error.Expected = ADSHORT;
+        Error.Found    = U_endian16(USE->sICBTag.Flags) & ADTYPEMASK;
+
+        DumpError();
+        break;    // Can't proceed further with the table
+      }
+
+      L_AD = U_endian32(USE->L_AD);
+      sad = (struct short_ad *) (USE + 1);
+
+      while ((ad_offset < L_AD) && (nextUSELocation == -1)) {
+        UINT32 extentLocation = U_endian32(sad->Location);
+        UINT32 extentLength   = U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF;
+        UINT32 extentType     = U_endian32(sad->ExtentLength.Length32) >> 30;
+        if (extentLength) {
+          switch (extentType) {
+            case E_RECORDED:
+            case E_UNALLOCATED:
+              Error.Code     = ERR_PROHIBITED_EXTENT_TYPE;
+              Error.Expected = E_ALLOCATED;
+              Error.Found    = extentType;
+              break;
+
+            case E_ALLOCATED:
+              // UDF requires extents to be sorted by ascending location,
+              // and for adjacent extents to be discontiguous except when
+              // the preceding one is the maximum allowable length
+              if (extentLength & (blocksize - 1)) {
+                Error.Code     = ERR_BAD_AD;
+                Error.Expected = (extentLength & ~(blocksize - 1)) + blocksize;
+                Error.Found    = extentLength;
+              } else if (extentLocation < minNextUnallocStart) {
+                Error.Expected = minNextUnallocStart;
+                Error.Found    = extentLocation;
+                if (extentLocation == (minNextUnallocStart - 1)) {
+                  Error.Code = ERR_SEQ_ALLOC;  // Adjacent, but shouldn't be
+                } else {
+                  Error.Code = ERR_UNSORTED_EXTENTS;
+                }
+              } else {
+                minNextUnallocStart = extentLocation + (extentLength >> bdivshift);
+                if (extentLength < maxExtentLength)
+                  ++minNextUnallocStart;
+              }
+              break;
+
+            case E_ALLOCEXTENT:
+              // Chain
+              if ((extentLength > blocksize) || (extentLength < sizeof(*USE))) {
+                Error.Code     = ERR_BAD_AD;
+                Error.Expected = blocksize;
+                Error.Found    = extentLength;
+              }
+
+              nextUSESize     = extentLength;
+              nextUSELocation = extentLocation;
+              break;
+          }  // switch (extentType)
+        }    // if (extentLength)
+
+        printf("    [ad_offset=%u, atype=%u, loc=%u, len=%u]%s\n",
+                ad_offset, extentType, extentLocation, extentLength,
+                Error.Code ? " (ILLEGAL!)" : "");
+
+        if (Error.Code == ERR_UNSORTED_EXTENTS) {
+          if (bWarnedUnsorted) {
+            ClearError();
+          }
+          bWarnedUnsorted = TRUE;
+        }
+
+        if (Error.Code) {
+          Error.Sector = curUSELocation;
+          DumpError();
+        }
+
+        if (extentLength == 0) {
+          // ECMA-167r3 sec. 4.12: zero extent length terminates allocation descriptors
+          nextUSELocation = -1;
+          break;
+        }
+
+        // Do this after the above print to provide context in the event of
+        // a tracking error
+        if (extentType == E_ALLOCATED) {
+          track_freespace(ptn, extentLocation, extentLength >> bdivshift);
+        }
+        ++sad;
+        ad_offset += sizeof(sad);
+      }  // walk short_ads
+
+    }  // walk USE block chain
+
+    free(USE);
+  }
+}
+/*
+ *  Read description of unallocated space (bitmap or table) for each partition.
+ */
+
+int ReadPartitionUnallocatedSpaceDescs(void)
+{
+  UINT16 i;
 
   for (i = 0; i < PTN_no; i++) {
+    if (Part_Info[i].SpaceTag == TAGID_SPACE_BMAP) {
       ReadSpaceBitmap(i);
+    } else if (Part_Info[i].SpaceTag == TAGID_UNALLOC_SP_ENTRY) {
+      ReadSpaceTable(i);
+    }
   }
 
   return 0;

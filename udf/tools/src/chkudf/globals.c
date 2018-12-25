@@ -68,7 +68,10 @@ char *Error_Msgs[] = {"Expected Tag ID of %d, found %d",                 /* 1 */
                       "%d Partitions found, Partition Reference Number %d out of range",
                       "%d blocks in Partition, Logical Block Number %d out of range",
                       "Adjacent Allocation Descriptors found (descriptor for %d)",
-                      "Expected Serial number of %d, found %d. (disabling reporting)"
+                      "Expected Serial number of %d, found %d. (disabling reporting)",    /* 30 */
+                      "Expected Extent Type %d, found prohibited type %d",
+                      "Expected AD Type %d, found prohibited type %d",
+                      "Unallocated extents not sorted in ascending order"
 };
 
 

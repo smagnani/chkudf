@@ -4,6 +4,45 @@
 
 int bitv[8] = {1, 2, 4, 8, 16, 32, 64, 128};
 
+int track_freespace(UINT16 ptn, UINT32 addr, UINT32 extent)
+{
+  UINT32 bytep, bitp;
+  if (ptn < PTN_no) {
+    // @todo this is not sufficient to prevent overrunning the array
+    // (also in track_filespace())
+    if (addr < Part_Info[ptn].Len) {
+      if (Part_Info[ptn].SpMap) {
+        while (extent > 0) {
+          bytep = addr >> 3;
+          bitp = addr & 7;
+          if ((Part_Info[ptn].SpMap[bytep] & bitv[bitp])) {
+            Error.Code = ERR_FILE_SPACE_OVERLAP;    // @todo Appropriate error?
+            Error.Sector = addr;
+          } else {
+            Part_Info[ptn].SpMap[bytep] |= bitv[bitp];
+          }
+          extent--;
+          addr++;
+        }
+      }
+    } else {
+      Error.Code = ERR_BAD_LBN;
+      Error.Sector = addr;
+      Error.Expected = Part_Info[ptn].Len;
+      Error.Found = addr;
+    }
+  } else {
+    Error.Code = ERR_BAD_PTN;
+    Error.Sector = addr;
+    Error.Expected = PTN_no;
+    Error.Found = ptn;
+  }
+  if (Error.Code) {
+    DumpError();
+  }
+  return 0;
+}
+
 int track_filespace(UINT16 ptn, UINT32 addr, UINT32 extent)
 
 {

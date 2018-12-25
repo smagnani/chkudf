@@ -305,7 +305,7 @@ int VerifyVDS()
       DumpError();
     }
 
-    ReadSpaceMap();
+    ReadPartitionUnallocatedSpaceDescs();
 
     if (Error.Code) {
       DumpError();

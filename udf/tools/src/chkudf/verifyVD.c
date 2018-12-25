@@ -329,6 +329,8 @@ int checkPD(struct PartDesc *mPD, struct PartDesc *rPD)
         hit++;
         PHD = (struct PartHeaderDesc *)(mPD->aPartContentsUse);
         if (U_endian32(PHD->USB.ExtentLength.Length32)) {
+          /* Unallocated Space Bitmap */
+          Part_Info[i].SpaceTag = TAGID_SPACE_BMAP;
           Part_Info[i].Space = U_endian32(PHD->USB.Location);
           Part_Info[i].SpLen = U_endian32(PHD->USB.ExtentLength.Length32) & 0x3FFFFFFF;
           Part_Info[i].SpMap = malloc(expectedBitmapNumBytes);
@@ -339,6 +341,38 @@ int checkPD(struct PartDesc *mPD, struct PartDesc *rPD)
             Part_Info[i].SpMap[expectedBitmapNumBytes-1] = Part_Info[i].FinalMapByteMask;
           }
           if (Part_Info[i].MyMap) {
+            memset(Part_Info[i].MyMap, 0xff, expectedBitmapNumBytes-1);
+            Part_Info[i].MyMap[expectedBitmapNumBytes-1] = Part_Info[i].FinalMapByteMask;
+          }
+        } else if (U_endian32(PHD->UST.ExtentLength.Length32)) {
+          /* Unallocated Space Table */
+          Part_Info[i].SpaceTag = TAGID_UNALLOC_SP_ENTRY;
+          Part_Info[i].Space = U_endian32(PHD->UST.Location);
+          Part_Info[i].SpLen = U_endian32(PHD->UST.ExtentLength.Length32) & 0x3FFFFFFF;
+
+          // Ambiguity in the UDF and ECMA standards:
+          // it's not clear whether PD references to space tables whose blocks
+          // are stored contiguously should indicate the full contiguous length
+          // or just a single block. Since USE descriptors are limited to a single block
+          // each and chained together, the closest analogy would seem to be
+          // the (Extended) File Entry reference in the ICB long_ad of a File Identifier
+          // Descriptor. In that case, Windows 10 uses a 1-block length for an ICB (EFE)
+          // extent that chains to a contiguous Allocation Extent Descriptor.
+          // So if that model applies to the Unallocated Space Table the PD should
+          // indicate a 1-block extent.
+          // Nevertheless, mkudffs in udftools 1.3 indicates an extent length that
+          // encompasses the entire table of contiguous blocks.
+          if (Part_Info[i].SpLen > blocksize)
+            Part_Info[i].SpLen = blocksize;
+
+          Part_Info[i].SpMap = malloc(expectedBitmapNumBytes);
+          Part_Info[i].MyMap = malloc(expectedBitmapNumBytes);
+          if (Part_Info[i].SpMap) {
+            // In-use until marked free
+            memset(Part_Info[i].SpMap, 0, expectedBitmapNumBytes);
+          }
+          if (Part_Info[i].MyMap) {
+            // Free until marked in-use
             memset(Part_Info[i].MyMap, 0xff, expectedBitmapNumBytes-1);
             Part_Info[i].MyMap[expectedBitmapNumBytes-1] = Part_Info[i].FinalMapByteMask;
           }

@@ -71,6 +71,7 @@ typedef struct _sPart_Info {
                 UINT16  Num;     //Physical partition number
                 UINT32  Offs;    //Offset of physical partition
                 UINT32  Len;     //Length (for error checking)
+                UINT16  SpaceTag;//Tag expected for space map
                 UINT8   FinalMapByteMask; // Valid bits in final space map byte
                 UINT32  Space;   //Address of space map/list
                 UINT32  SpLen;   //Number of bytes in space map/list
@@ -157,4 +158,7 @@ struct extent_ad_name {
 #define ERR_BAD_LBN		   28
 #define ERR_SEQ_ALLOC              29
 #define ERR_SERIAL                 30
+#define ERR_PROHIBITED_EXTENT_TYPE 31
+#define ERR_PROHIBITED_AD_TYPE     32
+#define ERR_UNSORTED_EXTENTS       33
 #endif
