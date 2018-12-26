@@ -49,10 +49,10 @@ typedef struct _sCacheData {
  */
 
 typedef struct _sError {
-    int    Code;
-    UINT32 Sector;
-    int    Expected;
-    int    Found;
+    int       Code;
+    UINT32    Sector;
+    long long Expected;
+    long long Found;
 } sError;
 
 /* From CheckTag */

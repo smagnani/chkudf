@@ -195,8 +195,8 @@ int GetFID(struct FileIDDesc *FID, struct FE_or_EFE *fe, UINT16 part, int offset
   if (count < blocksize) {
     CheckTag((struct tag *)FID, location, TAGID_FILE_ID, 0, blocksize - 16);
     if (Error.Code == ERR_TAGLOC) {
-      printf("** Wrong Tag Location. Expected %d, Found %d (%d)\n",
-         Error.Expected, Error.Found, location);
+      printf("** Wrong Tag Location. Expected %lld, Found %lld (%u)\n",
+         Error.Expected, Error.Found, (unsigned int) location);
       FID_Loc_Wrong++;
       Error.Code = 0;
     }

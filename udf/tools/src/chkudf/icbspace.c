@@ -159,7 +159,6 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
                } else {
                  Error.Code = ERR_BAD_AD;
                  Error.Sector = U_endian32(xFE->sTag.uTagLoc);
-// sjm: FIXME: capture 64-bit lengths properly
                  Error.Expected = infoLength;
                  Error.Found = file_length;
                }
@@ -171,7 +170,6 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
              if (U_endian32(xFE->InfoLengthL) != L_AD) {
                Error.Code = ERR_BAD_AD;
                Error.Sector = U_endian32(xFE->sTag.uTagLoc);
-// sjm: FIXME: capture 64-bit length properly
                Error.Expected = infoLength;
                Error.Found = L_AD;
              }

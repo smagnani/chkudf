@@ -39,38 +39,38 @@ int     sensebufsize = 18;           //Sense data buffer size
 sCacheData Cache[NUM_CACHE];
 MUINT8     bufno = 0;
 sError     Error = {0, 0, 0, 0};
-char *Error_Msgs[] = {"Expected Tag ID of %d, found %d",                 /* 1 */
-                      "Expected Tag location of %08x, read %08x",
-                      "Expected Tag checksum of %02x, computed %02x",
-                      "Expected Tag CRC of %04x, found %04x",
+char *Error_Msgs[] = {"Expected Tag ID of %lld, found %lld",             /* 1 */
+                      "Expected Tag location of %08llx, read %08llx",
+                      "Expected Tag checksum of %02llx, computed %02llx",
+                      "Expected Tag CRC of %04llx, found %04llx",
                       "Not an Anchor Volume Descriptor Pointer",         /* 5 */
-                      "%d sectors did not contain a volume descriptor matching %d",
+                      "%lld sectors did not contain a volume descriptor matching %lld",
                       "Either a non-valid structure or terminating descriptor was encountered",
-                      "This program can handle %d partitions and the logical volume has %d",
+                      "This program can handle %lld partitions and the logical volume has %lld",
                       "Error reading sector",
                       "No VAT present",                                 /* 10 */
                       "Not able to allocate memory for VAT",
                       "No virtual space described",
                       "No file set descriptor found",
-                      "Tag CRC length limit is %04x, found %04x",
+                      "Tag CRC length limit is %04llx, found %04llx",
                       "Volume Descriptor Sequences are not equivalent", /* 15 */
                       "Anchor Volume Descriptor Pointers are not equivalent",
                       "Volume Space overlap detected",
                       "No sparable partition present",
-                      "NSR descriptor version should be %d, was %d",
+                      "NSR descriptor version should be %lld, was %lld",
                       "Not able to allocate memory for Sparing Map",    /* 20 */
                       "Specified location does not contain a Sparing Map",
                       "Volume Descriptor Sequence not found",
                       "Can't allocate memory for Volume Descriptors",
                       "Partition Space overlap detected",
                       "No more memory for ICB tracking available",      /* 25 */
-                      "Expected Allocation Descriptors for %d bytes, found %d",
-                      "%d Partitions found, Partition Reference Number %d out of range",
-                      "%d blocks in Partition, Logical Block Number %d out of range",
-                      "Adjacent Allocation Descriptors found (descriptor for %d)",
-                      "Expected Serial number of %d, found %d. (disabling reporting)",    /* 30 */
-                      "Expected Extent Type %d, found prohibited type %d",
-                      "Expected AD Type %d, found prohibited type %d",
+                      "Expected Allocation Descriptors for %lld bytes, found %lld",
+                      "%lld Partitions found, Partition Reference Number %lld out of range",
+                      "%lld blocks in Partition, Logical Block Number %lld out of range",
+                      "Adjacent Allocation Descriptors found (descriptor for %lld)",
+                      "Expected Serial number of %lld, found %lld. (disabling reporting)",    /* 30 */
+                      "Expected Extent Type %lld, found prohibited type %lld",
+                      "Expected AD Type %lld, found prohibited type %lld",
                       "Unallocated extents not sorted in ascending order"
 };
 
