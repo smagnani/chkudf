@@ -6,17 +6,14 @@
 #include "chkudf.h"
 #include "protos.h"
 
-int CheckRegid(struct udfEntityId *reg, char *ID)
+int CheckRegid(const struct udfEntityId *reg, const char *ID)
 {
   int error = 0;
-  UINT8 cbuf[23];
-
-  strncpy(cbuf, ID, 23);
 
   if (!reg) {
     error = 1;
   }
-  if (strncmp(reg->aID, cbuf, 23)) {
+  if (strncmp((const char*)reg->aID, ID, 23)) {
     error = 1;
   }
   if (reg->uOSClass > 6) {

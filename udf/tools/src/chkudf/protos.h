@@ -326,7 +326,7 @@ int verifyLVID(UINT32 loc, UINT32 len);
  *
  * These routines read and verify various registered identifiers.
  ****************************************************************************/
-int CheckRegid(struct udfEntityId *reg, char *ID);
+int CheckRegid(const struct udfEntityId *reg, const char *ID);
 void DisplayImplID(struct implEntityId * ieip);
 void DisplayUdfID(struct udfEntityId * ueip);
 void DisplayRegIDID( struct regid *RegIDp);
