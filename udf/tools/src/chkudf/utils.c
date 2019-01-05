@@ -189,12 +189,12 @@ void printTimestamp( struct timestamp Time)
     printf("%2.2u%2.2u%2.2u",
            Time.uCentiseconds,Time.uHundredMicroseconds,Time.uMicroseconds);
     printf(" (%s)",
-           (tp == 0 ? "CUT" :
+           (tp == 0 ? "UTC" :
             (tp == 1 ? "Local" :
              "Non-ISO")));
     printf(", %d %s\n",
            tz,(tz == -2047 ? "(No timezone specified)" :
-               (tz <= 1440 && tz >= -1440 ? "min. from CUT" :
+               (tz <= 1440 && tz >= -1440 ? "min. from UTC" :
                 "(***INVALID timezone value***)")));
 }
 
