@@ -43,8 +43,8 @@ BOOL do_pkt(UINT8 *command, int cmd_len, UINT8 *buffer, UINT32 in_len,
   if (ret)
   {
     memcpy(sense, &rs, sense_len);
-    printf("sense: valid=%d, error_code=%d, segment_num=%d, ili=%d, sense_key=%d, information=%x, add_sense_len=%d, command_info=%x\n",
-      rs.valid, rs.error_code, rs.segment_number, rs.ili, rs.sense_key, *(int *)rs.information, rs.add_sense_len, *(int *)rs.command_info);
+    printf("sense: valid=%u, error_code=%u, segment_num=%u, ili=%u, sense_key=%u, information=%x, add_sense_len=%u, command_info=%x\n",
+      rs.valid, rs.error_code, rs.segment_number, rs.ili, rs.sense_key, *(unsigned int *)rs.information, rs.add_sense_len, *(unsigned int *)rs.command_info);
     printf("**PKT error %x/%02x/%02x**", sense[2] & 0xf, 
       (int)sense[12], (int)sense[13]);
     return TRUE;

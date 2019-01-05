@@ -30,7 +30,7 @@ void GetMap(void)
     PM_ST = (struct _sST_desc *)Part_Info[SP].Extra;
     if (PM_ST) {
       PM_ST->Map = NULL;
-      printf("\n--Partition Reference %d is sparable, reading sparing maps.\n", SP);
+      printf("\n--Partition Reference %u is sparable, reading sparing maps.\n", SP);
 
       Spare = (struct SparingTable *)malloc(PM_ST->Size + secsize);
       if (Spare) {
@@ -45,8 +45,8 @@ void GetMap(void)
             printf("  Sparing table candidate found\n");
             if(!CheckRegid(&Spare->sEntityId, E_REGID_SPARE)) {
               printf("  Structure is a sparing table.\n");
-              printf("  Sparing Table contains %d entries.\n", Spare->uRT_L);
-              printf("  Sparing sequence %d.\n", Spare->uSequence);
+              printf("  Sparing Table contains %u entries.\n", Spare->uRT_L);
+              printf("  Sparing sequence %u.\n", Spare->uSequence);
               PM_ST->Map = (struct _sMap_Entry *)malloc(Spare->uRT_L * 8);
               if (PM_ST->Map) {
                 PM_ST->Size = Spare->uRT_L;

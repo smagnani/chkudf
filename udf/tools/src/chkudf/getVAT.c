@@ -29,7 +29,7 @@ void GetVAT(void)
   if (found && (s_per_b == 1)) {
     VATICB = (struct FileEntry *)malloc(blocksize);
     if (VATICB) {
-      printf("\n--Partition Reference %d is virtual, finding VAT ICB.\n", VirtPart);
+      printf("\n--Partition Reference %u is virtual, finding VAT ICB.\n", VirtPart);
       ReadSectors(VATICB, LastSector, 1);
       result = CheckTag((struct tag *)VATICB, LastSector - Part_Info[VirtPart].Offs,
                         TAGID_FILE_ENTRY, 20, blocksize);
@@ -46,11 +46,11 @@ void GetVAT(void)
         if (VATICB->sICBTag.FileType == 0) {
           Part_Info[VirtPart].Extra = malloc(VATICB->InfoLengthL + blocksize);
           if (Part_Info[VirtPart].Extra) {
-            printf("  Allocated %d (0x%04x) bytes for the VAT.\n", VATICB->InfoLengthL, VATICB->InfoLengthL);
+            printf("  Allocated %u (0x%04x) bytes for the VAT.\n", VATICB->InfoLengthL, VATICB->InfoLengthL);
             ReadFileData(Part_Info[VirtPart].Extra, VATICB, Part_Info[VirtPart].Num,
                          0, VATICB->InfoLengthL, &i);
             Part_Info[VirtPart].Len = (VATICB->InfoLengthL - 36) >> 2;
-            printf("  Virtual partition is %d sectors long.\n", Part_Info[VirtPart].Len);
+            printf("  Virtual partition is %u sectors long.\n", Part_Info[VirtPart].Len);
             printf("%sVAT Identifier is: ", CheckRegid((struct udfEntityId *)(Part_Info[VirtPart].Extra + (VATICB->InfoLengthL >> 2) - 9), E_REGID_VAT) ? "**" : "  ");
             DisplayRegIDID((struct regid *)(Part_Info[VirtPart].Extra + (VATICB->InfoLengthL >> 2) - 9));
             printf("\n");

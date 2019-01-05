@@ -40,7 +40,7 @@ int track_volspace(UINT32 Location, UINT32 Length, char *Name)
     }
   //  printf("\nVolume Allocation list:\n");
   //  for (i = 0; i < VolSpaceListLen; i++) {
-  //    printf("  %8d %d\n", VolSpace[i].Location, VolSpace[i].Length);
+  //    printf("  %8u %u\n", VolSpace[i].Location, VolSpace[i].Length);
   //  }
     if (error) {
       DumpError();

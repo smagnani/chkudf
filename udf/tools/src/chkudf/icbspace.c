@@ -63,7 +63,7 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
              sizeAD = isLAD ?  sizeof(struct long_ad) : sizeof(struct short_ad);
              file_length = 0;
              ad_start = ((UINT8 *) xFE) + xfe_hdr_sz + L_EA;
-             printf("\n  [type=%s, ad_start=%p, ADlength=%d, info_length=%llu]  ",
+             printf("\n  [type=%s, ad_start=%p, ADlength=%u, info_length=%llu]  ",
 				isLAD ? "LONG" : "SHORT", ad_start, ADlength, infoLength);
              while (ad_offset < ADlength) {
                sad = (struct short_ad *)(ad_start + ad_offset);
@@ -71,12 +71,12 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
                if (isLAD) {
                   ptn = U_endian16(lad->Location_PartNo);
                }
-               printf("\n    [ad_offset=%d, atype=%d, loc=%d, len=%d, file_length=%llu]  ",
-					ad_offset,
-					U_endian32(sad->ExtentLength.Length32) >> 30,
-					U_endian32(sad->Location),
-					U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF,
-					file_length);
+               printf("\n    [ad_offset=%u, atype=%d, loc=%u, len=%u, file_length=%llu]  ",
+                      ad_offset,
+                      U_endian32(sad->ExtentLength.Length32) >> 30,
+                      U_endian32(sad->Location),
+                      U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF,
+                      file_length);
                if (U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF) {
                  switch(U_endian32(sad->ExtentLength.Length32) >> 30) {
                    case E_RECORDED:
@@ -143,8 +143,8 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
                                    } else {
                                      ad_offset = ADlength;
                                    }
-									printf("\n      [NEW ad_start=%p, ADlength=%d]  ",
-										ad_start, ADlength);
+                                   printf("\n      [NEW ad_start=%p, ADlength=%u]  ",
+                                          ad_start, ADlength);
                                    break;
                  }
                } else {

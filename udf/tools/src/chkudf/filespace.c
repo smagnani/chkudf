@@ -156,19 +156,19 @@ int check_filespace(void)
     }  // if maps are available to compare
   }    // for each partition
 
-  printf("  There are %d directories and %d files.\n", Num_Dirs, Num_Files);
+  printf("  There are %u directories and %u files.\n", Num_Dirs, Num_Files);
   if (Num_Dirs != ID_Dirs) {
-    printf("**The integrity descriptor (if it existed) indicated %d directories.\n",
+    printf("**The integrity descriptor (if it existed) indicated %u directories.\n",
            ID_Dirs);
   }
   if (Num_Files != ID_Files) {
-    printf("**The integrity descriptor (if it existed) indicated %d files.\n",
+    printf("**The integrity descriptor (if it existed) indicated %u files.\n",
            ID_Files);
   }
   if (Num_Type_Err) {
-    printf("**%d files had a bad File Type.\n", Num_Type_Err);
+    printf("**%u files had a bad File Type.\n", Num_Type_Err);
   }
-  printf("\n%s%d FIDs had a wrong location value.\n", FID_Loc_Wrong ? "**" : "  ", FID_Loc_Wrong);
+  printf("\n%s%u FIDs had a wrong location value.\n", FID_Loc_Wrong ? "**" : "  ", FID_Loc_Wrong);
   return 0;
 }
 
@@ -184,15 +184,15 @@ int check_uniqueid(void)
 
     for (j = i + 1; j < ICBlist_len; j++) {
       if (ICBlist[i].UniqueID_L == ICBlist[j].UniqueID_L) {
-        printf("ICBs at %04x:%08x and %04x:%08x have a Unique ID of %d.\n",
+        printf("ICBs at %04x:%08x and %04x:%08x have a Unique ID of %u.\n",
           ICBlist[i].Ptn, ICBlist[i].LBN, ICBlist[j].Ptn, ICBlist[j].LBN,
           ICBlist[i].UniqueID_L);
       }
     }
   }
-  printf("  The maximum Unique ID is %d.\n", Max);
+  printf("  The maximum Unique ID is %u.\n", Max);
   if (Max != (ID_UID-1)) {
-    printf("**The Integrity Descriptor indicated a maximum Unique ID of %d.\n",
+    printf("**The Integrity Descriptor indicated a maximum Unique ID of %u.\n",
            (ID_UID-1));
   }
   return 0;

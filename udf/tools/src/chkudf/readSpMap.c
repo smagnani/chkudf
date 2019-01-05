@@ -11,8 +11,8 @@ static int ReadSpaceBitmap(UINT16 ptn)
   struct SpaceBitmapHdr *BMD;
 
   if (Part_Info[ptn].Space != -1) {
-    printf("\n--Reading the Space Bitmap Descriptor for partition reference %d.\n", ptn);
-    printf("  Descriptor is %d sectors at %d:%d.\n",
+    printf("\n--Reading the Space Bitmap Descriptor for partition reference %u.\n", ptn);
+    printf("  Descriptor is %u sectors at %u:%u.\n",
            Part_Info[ptn].SpLen >> bdivshift, ptn, Part_Info[ptn].Space);
     BMD = (struct SpaceBitmapHdr *)malloc(Part_Info[ptn].SpLen);
     if (BMD) {
@@ -29,14 +29,14 @@ static int ReadSpaceBitmap(UINT16 ptn)
       if (!Error.Code) {
         unsigned int mapBytesRequired = BITMAP_NUM_BYTES(Part_Info[ptn].Len);
         unsigned int mapBytesRecorded = U_endian32(BMD->N_Bytes);
-        printf("  Partition is %d blocks long, requiring %u bytes.\n",
+        printf("  Partition is %u blocks long, requiring %u bytes.\n",
                Part_Info[ptn].Len, mapBytesRequired);
         if (U_endian32(BMD->N_Bits) != Part_Info[ptn].Len) {
-          printf("**Partition is %d blocks long and is described by %d bits.\n",
+          printf("**Partition is %u blocks long but is described by %u bits.\n",
                  Part_Info[ptn].Len, U_endian32(BMD->N_Bits));
         }
         if (BITMAP_NUM_BYTES(U_endian32(BMD->N_Bits)) != mapBytesRecorded) {
-          printf("**Bitmap descriptor requires %d bytes to hold %d bits.\n",
+          printf("**Bitmap descriptor requires %u bytes to hold %u bits.\n",
                  mapBytesRecorded, U_endian32(BMD->N_Bits));
         }
         if (Part_Info[ptn].SpMap && (mapBytesRecorded < Part_Info[ptn].SpLen)) {
@@ -47,7 +47,7 @@ static int ReadSpaceBitmap(UINT16 ptn)
           // Mask out bits for blocks beyond end of partition
           Part_Info[ptn].SpMap[mapBytesRequired-1] &= Part_Info[ptn].FinalMapByteMask;
 
-          printf("  Read the space bitmap for partition reference %d.\n", ptn);
+          printf("  Read the space bitmap for partition reference %u.\n", ptn);
         }
       } else {
         DumpError();
@@ -72,7 +72,7 @@ static void ReadSpaceTable(UINT16 ptn)
     BOOL   bWarnedUnsorted = FALSE;
     const UINT32 maxExtentLength = 0x3FFFFFFF & ~(blocksize - 1);
 
-    printf("\n--Reading Unallocated Space Entries for partition reference %d.\n", ptn);
+    printf("\n--Reading Unallocated Space Entries for partition reference %u.\n", ptn);
     while (nextUSELocation != -1) {
       struct short_ad *sad;
       UINT32 L_AD;

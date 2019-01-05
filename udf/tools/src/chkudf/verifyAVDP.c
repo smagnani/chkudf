@@ -19,7 +19,7 @@ void VerifyAVDP(void)
     printf("\n--Verifying the Anchor Volume Descriptor Pointers.\n");
     
     for (i = 0; front_avdp[i] != -1; i++) {
-      printf("  Checking %d: ", lastSessionStartLBA + front_avdp[i]);
+      printf("  Checking %u: ", lastSessionStartLBA + front_avdp[i]);
       result = ReadSectors(AVDPtr, lastSessionStartLBA + front_avdp[i], 1);
       if (!result) {
         result = CheckTag((struct tag *)AVDPtr, lastSessionStartLBA + front_avdp[i], TAGID_ANCHOR, 
@@ -57,7 +57,7 @@ void VerifyAVDP(void)
 
     /* Check the end referenced AVDPs */
     for (i = 0; back_avdp[i] != -1; i++) {
-      printf("  Checking %d (n - %d): ", LastSector - back_avdp[i], back_avdp[i]);
+      printf("  Checking %u (n - %d): ", LastSector - back_avdp[i], back_avdp[i]);
       result = ReadSectors(AVDPtr, LastSector - back_avdp[i], 1);
       if (!result) {
         result = CheckTag((struct tag *)AVDPtr, LastSector - back_avdp[i], 
@@ -124,7 +124,7 @@ void VerifyAVDP(void)
 //      }  /* If sector is read */
 //    }
     if (avdp_count) {
-      printf("%sFound %u Anchor Volume Descriptor Pointer%s.\n", 
+      printf("%sFound %d Anchor Volume Descriptor Pointer%s.\n",
              avdp_count > 1 ? "  " : "**", avdp_count,
              avdp_count == 1 ? "" : "s");
       printf("%sMain Volume Descriptor Sequence is at %u, %u bytes long.\n",

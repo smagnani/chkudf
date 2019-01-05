@@ -1,8 +1,6 @@
 // Uncomment one of the following:
 
 
-// #define DOS
-// #define WIN16
 // #define WIN32
 // #define OS2
 #define LINUX
@@ -64,71 +62,26 @@
  *           more for efficiency (i.e. system native int size)
  */
 
-#ifdef DOS
-typedef int            BOOL;
-
-typedef char           INT8;
-typedef unsigned char  UINT8;
-typedef int            INT16;
-typedef unsigned int   UINT16;
-typedef long           INT32;
-typedef unsigned long  UINT32;
-typedef struct __uint64 {
-   unsigned long       loword;
-   unsigned long       hiword;
-} UINT64;
-
-typedef int            MINT8;
-typedef unsigned int   MUINT8;
-typedef int            MINT16;
-typedef unsigned int   MUINT16;
-typedef long           MINT32;
-typedef unsigned long  MUINT32;
-
-#endif
-
-#ifdef WIN16
-typedef int            BOOL;
-
-typedef char           INT8;
-typedef unsigned char  UINT8;
-typedef int            INT16;
-typedef unsigned int   UINT16;
-typedef long           INT32;
-typedef unsigned long  UINT32;
-typedef struct __uint64 {
-   unsigned long       loword;
-   unsigned long       hiword;
-} UINT64;
-
-typedef int            MINT8;
-typedef unsigned int   MUINT8;
-typedef int            MINT16;
-typedef unsigned int   MUINT16;
-typedef long           MINT32;
-typedef unsigned long  MUINT32;
-#endif
-
 #ifdef WIN32
 typedef int            BOOL;
 
 typedef char           INT8;
 typedef unsigned char  UINT8;
-typedef int            INT16;
-typedef unsigned int   UINT16;
-typedef long           INT32;
-typedef unsigned long  UINT32;
+typedef short          INT16;
+typedef unsigned short UINT16;
+typedef int            INT32;
+typedef unsigned int   UINT32;
 typedef struct __uint64 {
-   unsigned long       loword;
-   unsigned long       hiword;
+   unsigned int        loword;
+   unsigned int        hiword;
 } UINT64;
 
 typedef int            MINT8;
 typedef unsigned int   MUINT8;
 typedef int            MINT16;
 typedef unsigned int   MUINT16;
-typedef long           MINT32;
-typedef unsigned long  MUINT32;
+typedef int            MINT32;
+typedef unsigned int   MUINT32;
 #endif
 
 #ifdef OS2

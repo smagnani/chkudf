@@ -41,14 +41,14 @@ void SetSectorSize(void)
         if ((buffer[0] & 0x1f) == 5) {	//Test for CD/DVD
           isType5 = TRUE;
           secsize = 2048;
-          printf("  Setting sector size to %d for CD/DVD device.\n", secsize);
+          printf("  Setting sector size to %u for CD/DVD device.\n", secsize);
         } else {
           memset(cdb, 0, 12);
           cdb[0] = 0x25;
           result = do_scsi(cdb, 10, buffer, 8, 0, sensedata, sensebufsize);
           if (!result) {
             secsize = S_endian32(*(UINT32 *)(buffer + 4));
-            printf("  READ CAPACITY reports a sector size of %d (0x%x).\n", secsize, secsize);
+            printf("  READ CAPACITY reports a sector size of %u (0x%x).\n", secsize, secsize);
           }
           if (!secsize) {
             scsi_modesense10(cdb, 0, 0, 0, 0);		//Get block descriptor
@@ -63,7 +63,7 @@ void SetSectorSize(void)
                  */
                 secsize = *(int *)(buffer + 12);
                 secsize = S_endian32(secsize) & 0x00ffffff;
-                printf("  Mode Sense shows %d (0x%x) byte sectors.\n", secsize, secsize);
+                printf("  Mode Sense shows %u (0x%x) byte sectors.\n", secsize, secsize);
               }  //if (block descriptor)
             }  //if (mode sense worked)
           }
@@ -98,7 +98,7 @@ void SetSectorSize(void)
         }
       }
       if (found) {
-        printf("  Guessing revealed %d byte sector size.\n", secsize);
+        printf("  Guessing revealed %u byte sector size.\n", secsize);
       } else {
         secsize = 0;
       }
@@ -106,7 +106,7 @@ void SetSectorSize(void)
     }
     if (secsize == 0) {
       secsize = 0x800;
-      printf("**Guessing failed - assuming %d byte sector size.\n", secsize);
+      printf("**Guessing failed - assuming %u byte sector size.\n", secsize);
     }
   }
 

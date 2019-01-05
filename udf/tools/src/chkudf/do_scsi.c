@@ -44,7 +44,7 @@ BOOL do_scsi(UINT8 *command, int cmd_len, UINT8 *buffer, UINT32 in_len,
       if (result == 0x28000000) {
         memcpy(sense, scsibuf + 8, sense_len);
         printf("**SCSI error %x/%02x/%02x**", sense[2] & 0xf, 
-               (int)sense[12], (int)sense[13]);
+               (unsigned int)sense[12], (unsigned int)sense[13]);
       } else if (result == 0x25040000) {
         printf("SCSI error - can't talk to drive.\n");
       } else if (result < 0) {
@@ -53,7 +53,7 @@ BOOL do_scsi(UINT8 *command, int cmd_len, UINT8 *buffer, UINT32 in_len,
         else
           printf("ioctl error %d.\n", -result);
       } else {
-        printf("Unknown ioctl error 0x%08x.\n", result);
+        printf("Unknown ioctl error 0x%08x.\n", (unsigned int) result);
       }
     }
   } //if scsibuf allocated

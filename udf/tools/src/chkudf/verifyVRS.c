@@ -17,7 +17,7 @@ int ReadVRD (UINT8 *VRD, int i)
   count = 2048 >> sdivshift;
   if (count == 0) count = 1;
   sector = (32768 >> sdivshift) + i * count + lastSessionStartLBA;
-  printf("  VRS %d (sector %d): ", i, sector);
+  printf("  VRS %d (sector %u): ", i, sector);
   return ReadSectors(VRD, sector, count);
 }
 
@@ -49,7 +49,7 @@ int VerifyVRS(void)
             case 2: printf("ISO 9660 Supplementary Volume Descriptor\n"); break;
             case 3: printf("ISO 9660 Volume Partition Descriptor\n"); break;
             case 255: printf("ISO 9660 Volume Descriptor Set Terminator\n"); break;
-            default: printf("9660 VRS (code %u)\n", (int)*VRS);
+            default: printf("9660 VRS (code %u)\n", VRS[0]);
           }
           i++;
         }
@@ -58,7 +58,7 @@ int VerifyVRS(void)
       }
     }
     if (i) {
-      printf(" %d ISO 9660 descriptors found.\n", i);
+      printf(" %u ISO 9660 descriptors found.\n", i);
       if (!Term) {
         printf("**However, it was not terminated!\n");
       }
@@ -69,7 +69,7 @@ int VerifyVRS(void)
     /* Process ISO 13346 */
     Term = 0;  //No terminating descriptor yet
     if (!error) {
-      printf("  VRS %d            : ", i);
+      printf("  VRS %u            : ", i);
       VRS_OK = !strncmp(VRS+1, VRS_ISO13346_BEGIN, 5);
       if (VRS_OK) {
         BEA_Found = 1;
@@ -87,7 +87,7 @@ int VerifyVRS(void)
           if (NSR_Found) {
             UDF_Version = VRS[5] & 0x0f;
             Version_OK = TRUE;
-            printf("NSR0%d descriptor found.\n", UDF_Version);
+            printf("NSR0%u descriptor found.\n", UDF_Version);
           }
         } else {
           if (!strncmp(VRS+1, VRS_ISO13346_NSR, 4)) {

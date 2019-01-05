@@ -168,10 +168,10 @@ extern MUINT32        ICBlist_alloc;
 extern UINT32         ID_Dirs;
 extern UINT32         ID_Files;
 extern UINT32         ID_UID;
-extern UINT32         Num_Dirs;
-extern UINT32         Num_Files;
-extern UINT32         Num_Type_Err;
-extern UINT32         FID_Loc_Wrong;
+extern unsigned int   Num_Dirs;
+extern unsigned int   Num_Files;
+extern unsigned int   Num_Type_Err;
+extern unsigned int   FID_Loc_Wrong;
 
 
 /*****************************************************************************

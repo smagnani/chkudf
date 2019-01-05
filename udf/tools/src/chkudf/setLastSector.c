@@ -136,9 +136,9 @@ BOOL Get_Last_RTI()
           trackstart = S_endian32(ip[2]);
           tracklength = S_endian32(ip[6]);
           freeblocks = S_endian32(ip[4]);
-          printf("  start %d, length %d, freeblocks %d.\n", trackstart, tracklength, freeblocks);
+          printf("  start %u, length %u, freeblocks %u.\n", trackstart, tracklength, freeblocks);
           if (buffer[6] & 0x10) {
-            printf("  Packet size %d.\n", S_endian32(ip[5]));
+            printf("  Packet size %u.\n", S_endian32(ip[5]));
             LastSector = trackstart + tracklength - 1;
           } else {
             printf("  Variable packet written track.\n");
@@ -285,6 +285,6 @@ void SetLastSectorAccurate(void)
     printf("**Couldn't allocate memory for setting last block accurately.\n");
   }
   if (found) {
-    printf("  Adjusted last sector to %d.\n", LastSector);
+    printf("  Adjusted last sector to %u.\n", LastSector);
   }
 }

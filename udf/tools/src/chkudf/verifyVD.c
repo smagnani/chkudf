@@ -226,9 +226,9 @@ int checkPD(struct PartDesc *mPD, struct PartDesc *rPD)
   error = CheckTag((struct tag *)mPD, U_endian32(mPD->sTag.uTagLoc), TAGID_PD, 496, 496);
   DumpError();
   if (error < CHECKTAG_OK_LIMIT) {
-    printf("  (M) Partition number %d.\n", U_endian16(mPD->uPartNumber));
+    printf("  (M) Partition number %u.\n", U_endian16(mPD->uPartNumber));
     if (RVDS_Len && (U_endian16(mPD->uPartNumber) != U_endian16(rPD->uPartNumber))) {
-      printf("**(R) Partition number %d.\n", U_endian16(rPD->uPartNumber));
+      printf("**(R) Partition number %u.\n", U_endian16(rPD->uPartNumber));
     }
 
     printf("  (M) Partition flags: %04x (Space %sAllocated)\n", U_endian16(mPD->uPartFlags),
@@ -244,7 +244,7 @@ int checkPD(struct PartDesc *mPD, struct PartDesc *rPD)
       printf("\n");
     }
     if (*((UINT8 *)(&mPD->sPartContents) + 6) - '0' != UDF_Version) {
-      printf("**(M) NSR version is %d, partition claims %d.  Changing.\n", UDF_Version,
+      printf("**(M) NSR version is %u, partition claims %u.  Changing.\n", UDF_Version,
              *((UINT8 *)(&mPD->sPartContents) + 6) - '0');
       UDF_Version = *((UINT8 *)(&mPD->sPartContents) + 6) - '0';
       Version_OK = TRUE;
@@ -282,14 +282,14 @@ int checkPD(struct PartDesc *mPD, struct PartDesc *rPD)
       }
     }
 
-    printf("  (M) Partition starts at sector %d.\n", U_endian32(mPD->uPartStartingLoc));
+    printf("  (M) Partition starts at sector %u.\n", U_endian32(mPD->uPartStartingLoc));
     if (RVDS_Len && (U_endian32(mPD->uPartStartingLoc) != U_endian32(rPD->uPartStartingLoc))) {
-      printf("**(R) Partition starts at sector %d.\n", U_endian32(rPD->uPartStartingLoc));
+      printf("**(R) Partition starts at sector %u.\n", U_endian32(rPD->uPartStartingLoc));
     }
 
-    printf("  (M) Partition length is %d sectors.\n", U_endian32(mPD->uPartLength));
+    printf("  (M) Partition length is %u sectors.\n", U_endian32(mPD->uPartLength));
     if (RVDS_Len && (U_endian32(mPD->uPartLength) != U_endian32(rPD->uPartLength))) {
-      printf("**(R) Partition Length is %d sectors.\n", U_endian32(rPD->uPartLength));
+      printf("**(R) Partition Length is %u sectors.\n", U_endian32(rPD->uPartLength));
     }
 
     track_volspace(U_endian32(mPD->uPartStartingLoc), U_endian32(mPD->uPartLength), "A partition");
@@ -380,7 +380,7 @@ int checkPD(struct PartDesc *mPD, struct PartDesc *rPD)
       }
     }
     if (hit != 1) {
-      printf("  (M) partition %d was referenced by %d maps.\n", U_endian16(mPD->uPartNumber),
+      printf("  (M) partition %u was referenced by %d maps.\n", U_endian16(mPD->uPartNumber),
              hit);
     }
   } else {
@@ -427,7 +427,7 @@ int checkLVD(struct LogVolDesc *mLVD, struct LogVolDesc *rLVD)
 
     blocksize = U_endian32(mLVD->uLogBlkSize);
     if (blocksize < secsize) {
-      printf("**(M) Block size of %d is less than sector size of %d!.\n",
+      printf("**(M) Block size of %u is less than sector size of %u!.\n",
              blocksize, secsize);
       Fatal = TRUE;
     } else {
@@ -437,10 +437,10 @@ int checkLVD(struct LogVolDesc *mLVD, struct LogVolDesc *rLVD)
       s_per_b = blocksize / secsize;
     }
     if (blocksize != secsize) {
-      printf("**(M) Block size is %d, sector size is %d.\n", blocksize, secsize);
+      printf("**(M) Block size is %u, sector size is %u.\n", blocksize, secsize);
     }
     if (RVDS_Len && (U_endian32(rLVD->uLogBlkSize) != blocksize)) {
-      printf("**(R) Block size is %d.\n", rLVD->uLogBlkSize);
+      printf("**(R) Block size is %u.\n", rLVD->uLogBlkSize);
     }
 
     if (CheckRegid((struct udfEntityId *)&mLVD->sDomainID, UDF_DOMAIN_ID)) {
@@ -487,10 +487,10 @@ int checkLVD(struct LogVolDesc *mLVD, struct LogVolDesc *rLVD)
       Part_Info[i].MyMap = NULL;
     }
 
-    printf("  (M) There %s %d partition map entr%s.\n", U_endian32(mLVD->uNumPartMaps) == 1 ? "is" : "are", 
+    printf("  (M) There %s %u partition map entr%s.\n", U_endian32(mLVD->uNumPartMaps) == 1 ? "is" : "are",
             U_endian32(mLVD->uNumPartMaps), U_endian32(mLVD->uNumPartMaps) == 1 ? "y" : "ies");
     if (RVDS_Len && (U_endian32(mLVD->uNumPartMaps) != U_endian32(rLVD->uNumPartMaps))) {
-      printf("**(R) There %s %d partition map entr%s.\n", U_endian32(rLVD->uNumPartMaps) == 1 ? "is" : "are",
+      printf("**(R) There %s %u partition map entr%s.\n", U_endian32(rLVD->uNumPartMaps) == 1 ? "is" : "are",
               U_endian32(rLVD->uNumPartMaps), U_endian32(rLVD->uNumPartMaps) == 1 ? "y" : "ies");
     }
     if (U_endian32(mLVD->uNumPartMaps) > NUM_PARTS) {
@@ -514,21 +514,21 @@ int checkLVD(struct LogVolDesc *mLVD, struct LogVolDesc *rLVD)
           case 1:
               Part_Info[i].type = PTN_TYP_REAL;
               Part_Info[i].Num  = U_endian16(sPartMap1->uPartNum);
-              printf("type 1 (real) and references partition %d.\n", Part_Info[i].Num);
+              printf("type 1 (real) and references partition %u.\n", Part_Info[i].Num);
             break;
 
           case 2:
               if (!strncmp(E_REGID_CD_VP, sPartMapVAT->sVATIdentifier.aID, strlen(E_REGID_CD_VP))) {
                 Part_Info[i].type = PTN_TYP_VIRTUAL;
                 Part_Info[i].Num  = U_endian16(sPartMapVAT->uPartNum);
-                printf("type 2 (virtual) and references partition %d.\n", Part_Info[i].Num);
+                printf("type 2 (virtual) and references partition %u.\n", Part_Info[i].Num);
               } else if (!strncmp(E_REGID_CD_SP, sPartMapVAT->sVATIdentifier.aID, strlen(E_REGID_CD_SP))) {
                 Part_Info[i].type = PTN_TYP_SPARE;
                 Part_Info[i].Num  = U_endian16(sPartMapSP->uPartNum);
-                printf("type 2 (sparable) and references partition %d.\n", Part_Info[i].Num);
+                printf("type 2 (sparable) and references partition %u.\n", Part_Info[i].Num);
                 Part_Info[i].Extra = malloc(sizeof(struct _sST_desc));
                 if ((struct _sST_desc *)Part_Info[i].Extra) {
-                  printf("  (M) %d sparing map(s), %d bytes long, mapping %d sectors each.\n",
+                  printf("  (M) %u sparing map(s), %u bytes long, mapping %u sectors each.\n",
                           sPartMapSP->N_ST, U_endian32(sPartMapSP->SpareSize), U_endian16(sPartMapSP->uPacketLength));
                   ((struct _sST_desc *)Part_Info[i].Extra)->Size = U_endian32(sPartMapSP->SpareSize);
                   ((struct _sST_desc *)Part_Info[i].Extra)->Count = sPartMapSP->N_ST;
@@ -545,26 +545,26 @@ int checkLVD(struct LogVolDesc *mLVD, struct LogVolDesc *rLVD)
             break;
           default:
               Part_Info[i].type = PTN_TYP_NONE;
-              printf("illegal type (%d).\n", sPartMap1->uPartMapType);
+              printf("illegal type (%u).\n", sPartMap1->uPartMapType);
         }
         offset += sPartMap1->uPartMapLen;
       }
     }
     offset -= sizeof(struct LogVolDesc);
     if (offset != U_endian32(mLVD->uMapTabLen)) {
-      printf("**(M) Found %d bytes of map entries, LVD claims %d.\n", offset,
+      printf("**(M) Found %d bytes of map entries, LVD claims %u.\n", offset,
              U_endian32(mLVD->uMapTabLen));
     }
     if (RVDS_Len && (offset != U_endian32(rLVD->uMapTabLen))) {
-      printf("**(R) Found %d bytes of map entries, LVD claims %d.\n", offset,
+      printf("**(R) Found %d bytes of map entries, LVD claims %u.\n", offset,
              U_endian32(rLVD->uMapTabLen));
     }
 
-    printf("  (M) Integrity Sequence is %d bytes at %d.\n", 
+    printf("  (M) Integrity Sequence is %u bytes at %u.\n",
            U_endian32(mLVD->integritySeqExtent.Length), U_endian32(mLVD->integritySeqExtent.Location));
     if (RVDS_Len && memcmp(&mLVD->integritySeqExtent, &rLVD->integritySeqExtent, 
                sizeof(struct extent_ad))) {
-      printf("**(R) Integrity Sequence is %d bytes at %d.\n", 
+      printf("**(R) Integrity Sequence is %u bytes at %u.\n",
              U_endian32(rLVD->integritySeqExtent.Length), U_endian32(rLVD->integritySeqExtent.Location));
     }
     track_volspace(U_endian32(mLVD->integritySeqExtent.Location), U_endian32(mLVD->integritySeqExtent.Length) >> sdivshift, 
@@ -590,16 +590,16 @@ int checkUSD(struct UnallocSpDesHead *mUSD, struct UnallocSpDesHead *rUSD)
   error = CheckTag((struct tag *)mUSD, U_endian32(mUSD->sTag.uTagLoc), TAGID_USD, 8, secsize);
   DumpError();
   if (error < CHECKTAG_OK_LIMIT) {
-    printf("  (M) Number of Allocation Descriptors: %d\n", U_endian32(mUSD->uNumAllocationDes));
+    printf("  (M) Number of Allocation Descriptors: %u\n", U_endian32(mUSD->uNumAllocationDes));
     if (RVDS_Len && (U_endian32(mUSD->uNumAllocationDes) != U_endian32(rUSD->uNumAllocationDes))) {
-      printf("**(R) Number of Allocation Descriptors: %d\n", U_endian32(rUSD->uNumAllocationDes));
+      printf("**(R) Number of Allocation Descriptors: %u\n", U_endian32(rUSD->uNumAllocationDes));
     }
 
     if (U_endian32(mUSD->uNumAllocationDes) > 0) {
       printf("  (M) Space allocation descriptors:\n");
     }
     for (i = 0; i < U_endian32(mUSD->uNumAllocationDes); i++) {
-      printf("    %d bytes (%d blocks) @ %d\n",
+      printf("    %u bytes (%u blocks) @ %u\n",
                U_endian32(*((UINT32 *) ((UINT8 *)mUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)))),
                U_endian32(*((UINT32 *) ((UINT8 *)mUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)))) >> sdivshift,
                U_endian32(*((UINT32 *) ((UINT8 *)mUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)) + 1)));
@@ -613,7 +613,7 @@ int checkUSD(struct UnallocSpDesHead *mUSD, struct UnallocSpDesHead *rUSD)
                (U_endian32(mUSD->uNumAllocationDes) != U_endian32(rUSD->uNumAllocationDes)))) {
       printf("**(R) Space allocation descriptors:\n");
       for (i = 0; i < U_endian32(rUSD->uNumAllocationDes); i++) {
-        printf("    %d bytes (%d blocks) @ %d\n", 
+        printf("    %u bytes (%u blocks) @ %u\n",
                U_endian32(*((UINT32 *) ((UINT8 *)rUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)))),
                U_endian32(*((UINT32 *) ((UINT8 *)rUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)))) >> sdivshift,
                U_endian32(*((UINT32 *) ((UINT8 *)rUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)) + 1)));

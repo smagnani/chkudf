@@ -39,7 +39,7 @@ int main(int argc, char **argv)
         fstat(device, &fileinfo);
         LastSector = (fileinfo.st_size >> sdivshift) - 1;
       }
-      printf("  Last Sector = %d (0x%x) and is%s accurate\n", LastSector, 
+      printf("  Last Sector = %u (0x%x) and is%s accurate\n", LastSector,
              LastSector, LastSectorAccurate ? "" : " not");
       if (!LastSectorAccurate) {
         SetLastSectorAccurate();

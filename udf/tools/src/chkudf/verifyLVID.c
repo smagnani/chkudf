@@ -39,14 +39,14 @@ int verifyLVID(UINT32 loc, UINT32 len)
                    printf(" [Close]\n");
                    break;
           default:
-                   printf(" Illegal! (%d)\n", U_endian32(LVID->integrityType));
+                   printf(" Illegal! (%u)\n", U_endian32(LVID->integrityType));
                    break;
         }
         ID_UID = U_endian32(LVID->UniqueIdL);
         LVIDIU = (struct LVIDImplUse *)(buffer + 80 + U_endian32(LVID->N_P) * 8);
         ID_Files = U_endian32(LVIDIU->numFiles);
         ID_Dirs = U_endian32(LVIDIU->numDirectories);
-        printf("  %d directories, %d files, highest UniqueID is %d.\n",
+        printf("  %u directories, %u files, highest UniqueID is %u.\n",
                ID_Dirs, ID_Files, ID_UID);
         printf("  Min read ver. %x, min write ver. %x, max write ver %x.\n",
                U_endian16(LVIDIU->MinUDFRead), U_endian16(LVIDIU->MinUDFWrite), U_endian16(LVIDIU->MaxUDFWrite));
@@ -54,16 +54,16 @@ int verifyLVID(UINT32 loc, UINT32 len)
         DisplayImplID(&(LVIDIU->implementationID));
         Table = (UINT32 *)(buffer + 80);
         for (j = 0; j < U_endian32(LVID->N_P); j++) {
-          printf("  Partition reference %d has %d of %d blocks available.\n",
+          printf("  Partition reference %u has %u of %u blocks available.\n",
                  j, U_endian32(Table[j]), U_endian32(Table[j + U_endian32(LVID->N_P)]));
         }
-        printf("%sLength of Implementation use is %d.\n", U_endian32(LVID->L_IU) == 
+        printf("%sLength of Implementation use is %u.\n", U_endian32(LVID->L_IU) ==
                46 ? "  " : "**", U_endian32(LVID->L_IU));
         if (U_endian32(LVID->nextIntegrityExtent.Length)) {
           len = U_endian32(LVID->nextIntegrityExtent.Length);
           loc = U_endian32(LVID->nextIntegrityExtent.Location);
           i = -1;
-          printf("  Next extent is %d bytes at %d.\n", len, loc);
+          printf("  Next extent is %u bytes at %u.\n", len, loc);
           track_volspace(loc, len >> sdivshift, "Integrity Sequence Extension");
         }
       } else {

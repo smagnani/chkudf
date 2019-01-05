@@ -10,7 +10,7 @@ int TestLinkCount(void)
 
   for (i = 0; i < ICBlist_len; i++) {
     if (ICBlist[i].Link != ICBlist[i].LinkRec) {
-      printf("**ICB at %04x:%08x has a link count of %d, found %d link%s.\n",
+      printf("**ICB at %04x:%08x has a link count of %u, found %u link%s.\n",
              ICBlist[i].Ptn, ICBlist[i].LBN, ICBlist[i].LinkRec, 
              ICBlist[i].Link, ICBlist[i].Link == 1 ? "" : "s");
     }

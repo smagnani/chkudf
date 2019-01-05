@@ -16,7 +16,7 @@ int ReadSectors(void *buffer, UINT32 address, UINT32 Count)
   int readOK, result, numsecs, i;
   void *curbuffer;
 
-  //printf("  Reading sector %d.\n", address);
+  //printf("  Reading sector %u.\n", address);
   readOK = FALSE;
 
   /* Search cache for existing bits */
@@ -64,7 +64,7 @@ int ReadSectors(void *buffer, UINT32 address, UINT32 Count)
         if (result != -1) {
           result = read(device, Cache[bufno].Buffer, secsize * Count);
           if (result == -1) {
-            printf("**Read error #%d in %d\n", errno, address);
+            printf("**Read error #%d in %u\n", errno, address);
             readOK = 0;
             Cache[bufno].Count = 0;
           } else {
@@ -300,7 +300,7 @@ int ReadFileData(void *buffer, struct FE_or_EFE *xfe, UINT16 part, int offset_0,
     
         case ADNONE:
           if ((L_AD != U_endian32(xfe->InfoLengthL)) && !offset) {
-            printf("**Embedded data error: L_AD = %d, Information Length = %d\n",
+            printf("**Embedded data error: L_AD = %u, Information Length = %u\n",
                    L_AD, U_endian32(xfe->InfoLengthL));
           }
           ADlength = MAX(L_AD, U_endian32(xfe->InfoLengthL));

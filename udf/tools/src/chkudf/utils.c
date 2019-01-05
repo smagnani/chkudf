@@ -182,11 +182,11 @@ void printTimestamp( struct timestamp Time)
 
 
 
-    printf("%4.4d/%2.2d/%2.2d ",
+    printf("%4.4u/%2.2u/%2.2u ",
            U_endian16(Time.iYear), Time.uMonth, Time.uDay);
-    printf("%2.2d:%2.2d:%2.2d.",
+    printf("%2.2u:%2.2u:%2.2u.",
            Time.uHour, Time.uMinute, Time.uSecond);
-    printf("%2.2d%2.2d%2.2d",
+    printf("%2.2u%2.2u%2.2u",
            Time.uCentiseconds,Time.uHundredMicroseconds,Time.uMicroseconds);
     printf(" (%s)",
            (tp == 0 ? "CUT" :
@@ -203,7 +203,7 @@ void printTimestamp( struct timestamp Time)
 /********************************************************************/
 void printLongAd(struct long_ad *longad)
 {
-  printf("%d bytes @ %d:%d\n", U_endian32(longad->ExtentLength.Length32) & 0x3FFFFFFF, 
+  printf("%u bytes @ %u:%u\n", U_endian32(longad->ExtentLength.Length32) & 0x3FFFFFFF,
          U_endian16(longad->Location_PartNo), U_endian32(longad->Location_LBN));
 }
 

@@ -30,7 +30,7 @@ BOOL Get_First_RTI()
     if (!result) {
       first_track = buffer[3];
       track_no = buffer[5];
-      printf("  Generic Read Disc Info worked; first track in last session is %d.\n", track_no);
+      printf("  Generic Read Disc Info worked; first track in last session is %u.\n", track_no);
       memset(cdb, 0, 12);
       cdb[0] = 0x52;       /* Read Track Information          */
       cdb[1] = 1;          /* For a track number              */
@@ -44,7 +44,7 @@ BOOL Get_First_RTI()
            */
           target_session = buffer[3] - 1;
           if (target_session > 0) {
-            printf("Session %d is blank; going back to Session %d.\n", 
+            printf("Session %u is blank; going back to Session %u.\n",
                    target_session + 1, target_session);
             while ((track_no > first_track) && (buffer[3] >= target_session)) {
               track_no--;            
@@ -52,7 +52,7 @@ BOOL Get_First_RTI()
               result = do_scsi(cdb, 10, buffer, 36, 0, sensedata, sensebufsize);
               if (!result && (buffer[3] == target_session)) {
                 lastSessionStartLBA = S_endian32(ip[2]);
-                printf("  Generic RDI/RTI:  Session %d, track %d, start %d.\n",
+                printf("  Generic RDI/RTI:  Session %u, track %u, start %u.\n",
                        buffer[3], track_no, lastSessionStartLBA);
                 success = TRUE;
               }
@@ -63,7 +63,7 @@ BOOL Get_First_RTI()
            * Track is recorded.  Use it.
            */
           lastSessionStartLBA = S_endian32(ip[2]);
-          printf("  Generic RDI/RTI worked.  Last session starts at %d.\n", lastSessionStartLBA);
+          printf("  Generic RDI/RTI worked.  Last session starts at %u.\n", lastSessionStartLBA);
           success = TRUE;
         }
       }

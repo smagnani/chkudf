@@ -87,12 +87,12 @@ int ReadVDS(UINT8 *buf, char *name, UINT32 loc, UINT32 len)
                         printf("\n**A PVD that doesn't match the previous one was found.\n");
                       } else {
                         if (U_endian32(PVDt->uVolDescSeqNum) > PVD->uVolDescSeqNum) {
-                          printf("Replaced PVD seq. %d with %d.\n",
+                          printf("Replaced PVD seq. %u with %u.\n",
 				 U_endian32(PVD->uVolDescSeqNum),
                                  U_endian32(PVDt->uVolDescSeqNum));
                           memcpy(PVD, PVDt, secsize);
                         } else {
-                          printf("Not replacing PVD seq. %d with %d.\n", PVD->uVolDescSeqNum,
+                          printf("Not replacing PVD seq. %u with %u.\n", PVD->uVolDescSeqNum,
                                  PVDt->uVolDescSeqNum);
                         }
                       }
@@ -119,11 +119,11 @@ int ReadVDS(UINT8 *buf, char *name, UINT32 loc, UINT32 len)
                          * A IUVD already exists.  Replace if OK
                          */
                         if (U_endian32(IUVDt->uVolDescSeqNum) > U_endian32(IUVD->uVolDescSeqNum)) {
-                          printf("Replaced IUVD seq. %d with %d.\n", U_endian32(IUVD->uVolDescSeqNum),
+                          printf("Replaced IUVD seq. %u with %u.\n", U_endian32(IUVD->uVolDescSeqNum),
                                  U_endian32(IUVDt->uVolDescSeqNum));
                           memcpy(IUVD, IUVDt, secsize);
                         } else {
-                          printf("Not replacing IUVD seq. %d with %d.\n",
+                          printf("Not replacing IUVD seq. %u with %u.\n",
 				 U_endian32(IUVD->uVolDescSeqNum),
                                  U_endian32(IUVDt->uVolDescSeqNum));
                         }
@@ -144,12 +144,12 @@ int ReadVDS(UINT8 *buf, char *name, UINT32 loc, UINT32 len)
                                "Only one partition allowed per volume.\n");
                       } else {
                         if (U_endian32(PDt->uVolDescSeqNum) > U_endian32(PD->uVolDescSeqNum)) {
-                          printf("Replaced PD seq. %d with %d.\n", 
+                          printf("Replaced PD seq. %u with %u.\n",
 				 U_endian32(PD->uVolDescSeqNum),
                                  U_endian32(PDt->uVolDescSeqNum));
                           memcpy(PD, PDt, secsize);
                         } else {
-                          printf("Not replacing PD seq. %d with %d.\n",
+                          printf("Not replacing PD seq. %u with %u.\n",
 				 U_endian32(PD->uVolDescSeqNum),
                                  U_endian32(PDt->uVolDescSeqNum));
                         }
@@ -170,12 +170,12 @@ int ReadVDS(UINT8 *buf, char *name, UINT32 loc, UINT32 len)
                         printf("\n**A LVD that doesn't match the previous one was found.\n");
                       } else {
                         if (U_endian32(LVDt->uVolDescSeqNum) > U_endian32(LVD->uVolDescSeqNum)) {
-                          printf("Replaced LVD seq. %d with %d.\n",
+                          printf("Replaced LVD seq. %u with %u.\n",
 				 U_endian32(LVD->uVolDescSeqNum),
                                  U_endian32(LVDt->uVolDescSeqNum));
                           memcpy(LVD, LVDt, secsize);
                         } else {
-                          printf("Not replacing LVD seq. %d with %d.\n",
+                          printf("Not replacing LVD seq. %u with %u.\n",
 				 U_endian32(LVD->uVolDescSeqNum),
                                  U_endian32(LVDt->uVolDescSeqNum));
                         }
@@ -192,12 +192,12 @@ int ReadVDS(UINT8 *buf, char *name, UINT32 loc, UINT32 len)
                        * A USD already exists.  Replace if OK
                        */
                       if (U_endian32(PVDt->uVolDescSeqNum) > U_endian32(PVD->uVolDescSeqNum)) {
-                        printf("Replaced PVD seq. %d with %d.\n", 
+                        printf("Replaced PVD seq. %u with %u.\n",
 			       U_endian32(PVD->uVolDescSeqNum),
                                U_endian32(PVDt->uVolDescSeqNum));
                         memcpy(PVD, PVDt, secsize);
                       } else {
-                        printf("Not replacing PVD seq. %d with %d.\n",
+                        printf("Not replacing PVD seq. %u with %u.\n",
 			       U_endian32(PVD->uVolDescSeqNum),
 			       U_endian32(PVDt->uVolDescSeqNum));
                       }
@@ -213,7 +213,7 @@ int ReadVDS(UINT8 *buf, char *name, UINT32 loc, UINT32 len)
                     break;
 
           default:
-                    printf("\n**Unknown Tag (%d) found in VDS!\n", 
+                    printf("\n**Unknown Tag (%u) found in VDS!\n",
                            U_endian16(vdtag->uTagID));
         }
       } else {
@@ -321,7 +321,7 @@ int VerifyVDS()
     if (!Fatal) {
       printf("\n--Volume space report:\n");
       for (i = 0; i < VolSpaceListLen; i++) {
-        printf("  %8d : %8d - %s\n", VolSpace[i].Location, 
+        printf("  %8u : %8u - %s\n", VolSpace[i].Location,
                VolSpace[i].Location + VolSpace[i].Length - 1, VolSpace[i].Name);
       }
     } 
