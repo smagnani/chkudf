@@ -44,10 +44,10 @@ int VerifyVRS(void)
         if (VRS_OK) {
           Term = VRS[0] == 0xff;
           switch (VRS[0]) {
-            case 0: printf("ISO 9660 Boot Record\n"); break;
-            case 1: printf("ISO 9660 Primary Volume Descriptor\n"); break;
-            case 2: printf("ISO 9660 Supplementary Volume Descriptor\n"); break;
-            case 3: printf("ISO 9660 Volume Partition Descriptor\n"); break;
+            case 0: printf("ISO 9660 Boot Record\n");                        break;
+            case 1: printf("ISO 9660 Primary Volume Descriptor\n");          break;
+            case 2: printf("ISO 9660 Supplementary Volume Descriptor\n");    break;
+            case 3: printf("ISO 9660 Volume Partition Descriptor\n");        break;
             case 255: printf("ISO 9660 Volume Descriptor Set Terminator\n"); break;
             default: printf("9660 VRS (code %u)\n", VRS[0]);
           }

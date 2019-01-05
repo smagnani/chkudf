@@ -74,63 +74,63 @@ void printDstring( char *start, UINT8 fieldLen)
 /*********************************************************************/
 void printDchars( char *start, UINT8 length)
 {
-    /* Some (one) local variable(s) */
-    UINT16 i;                       /* Index  */
-    UINT16 unichar;                 /* Unicode character */
+  /* Some (one) local variable(s) */
+  UINT16 i;                       /* Index  */
+  UINT16 unichar;                 /* Unicode character */
 
-    char tbuff[257];                /* Buffer for non-unicode */
+  char tbuff[257];                /* Buffer for non-unicode */
 
-    UINT8 dispLen = length;
+  UINT8 dispLen = length;
 
-    /* First, grab the Compressed Algorithm Number. */
-    UINT8 alg = start[0];
+  /* First, grab the Compressed Algorithm Number. */
+  UINT8 alg = start[0];
 
-    /* Throw out the algorithm byte, if any, and print out compression
-       algorithm */
-    switch (alg) {
+  /* Throw out the algorithm byte, if any, and print out compression
+     algorithm */
+  switch (alg) {
     case 16:
-        /* 16-bit Unicode, but ignore the first byte */
-        start++;
-        dispLen--;
-        break;
+      /* 16-bit Unicode, but ignore the first byte */
+      start++;
+      dispLen--;
+      break;
     case 8:
-        /* ASCII, but ignore the first byte */
-        start++;
-        dispLen--;
-        break;
+      /* ASCII, but ignore the first byte */
+      start++;
+      dispLen--;
+      break;
     default:
-        /* ASCII, including the first byte */
-        break;
-    }
+      /* ASCII, including the first byte */
+      break;
+  }
 
-    /* Print out the characters. */
-    if ( alg == 16 ) {
-        printf("\"");
-        for (i=0;i<dispLen;i++,i++) {
-            unichar = *(start + i) << 8;
-            unichar |= (UINT8)*(start + i + 1);
-            if ((unichar > 31) && (unichar < 127)) {
-              printf("%c", (UINT8)unichar);
-            } else {
-              printf("[%4x]", unichar);
-            }
-        }
-        printf("\"");
-    } else {
-        /* Now make a copy of all the bytes, to make sure we have a null
-           termination */
-        strncpy( tbuff, start, dispLen); /* copy over just enough characters */
-        tbuff[dispLen]=0;           /* null terminate the string */
-        printf("'%s'", tbuff);    /* print it out */
+  /* Print out the characters. */
+  if ( alg == 16 ) {
+    printf("\"");
+    for (i=0;i<dispLen;i++,i++) {
+      unichar = *(start + i) << 8;
+      unichar |= (UINT8)*(start + i + 1);
+      if ((unichar > 31) && (unichar < 127)) {
+        printf("%c", (UINT8)unichar);
+      } else {
+        printf("[%4x]", unichar);
+      }
     }
-    return;
+    printf("\"");
+  } else {
+    /* Now make a copy of all the bytes, to make sure we have a null
+       termination */
+    strncpy( tbuff, start, dispLen); /* copy over just enough characters */
+    tbuff[dispLen]=0;           /* null terminate the string */
+    printf("'%s'", tbuff);    /* print it out */
+  }
+  return;
 }
 
 void printExtentAD(struct extent_ad extent)
 {
   printf("%u [0x%08x] @ %u [0x%08x]\n",
-	 U_endian32(extent.Length), U_endian32(extent.Length),
-	 U_endian32(extent.Location), U_endian32(extent.Location));
+         U_endian32(extent.Length), U_endian32(extent.Length),
+         U_endian32(extent.Location), U_endian32(extent.Location));
 }
 
 void printCharSpec(struct charspec chars)
@@ -175,27 +175,25 @@ int Is_Charspec(struct charspec chars)
 /********************************************************************/
 void printTimestamp( struct timestamp Time)
 {
-    /* assumes character is positioned, ends with newline */
+  /* assumes character is positioned, ends with newline */
 
-    int tp = GetTSTP(U_endian16(Time.uTypeAndTimeZone));
-    int tz = GetTSTZ(U_endian16(Time.uTypeAndTimeZone));
+  int tp = GetTSTP(U_endian16(Time.uTypeAndTimeZone));
+  int tz = GetTSTZ(U_endian16(Time.uTypeAndTimeZone));
 
-
-
-    printf("%4.4u/%2.2u/%2.2u ",
-           U_endian16(Time.iYear), Time.uMonth, Time.uDay);
-    printf("%2.2u:%2.2u:%2.2u.",
-           Time.uHour, Time.uMinute, Time.uSecond);
-    printf("%2.2u%2.2u%2.2u",
-           Time.uCentiseconds,Time.uHundredMicroseconds,Time.uMicroseconds);
-    printf(" (%s)",
-           (tp == 0 ? "UTC" :
-            (tp == 1 ? "Local" :
-             "Non-ISO")));
-    printf(", %d %s\n",
-           tz,(tz == -2047 ? "(No timezone specified)" :
-               (tz <= 1440 && tz >= -1440 ? "min. from UTC" :
-                "(***INVALID timezone value***)")));
+  printf("%4.4u/%2.2u/%2.2u ",
+         U_endian16(Time.iYear), Time.uMonth, Time.uDay);
+  printf("%2.2u:%2.2u:%2.2u.",
+         Time.uHour, Time.uMinute, Time.uSecond);
+  printf("%2.2u%2.2u%2.2u",
+         Time.uCentiseconds,Time.uHundredMicroseconds,Time.uMicroseconds);
+  printf(" (%s)",
+         (tp == 0 ? "UTC" :
+          (tp == 1 ? "Local" :
+           "Non-ISO")));
+  printf(", %d %s\n",
+         tz,(tz == -2047 ? "(No timezone specified)" :
+             (tz <= 1440 && tz >= -1440 ? "min. from UTC" :
+              "(***INVALID timezone value***)")));
 }
 
 /********************************************************************/

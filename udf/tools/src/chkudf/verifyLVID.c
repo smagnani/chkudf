@@ -33,14 +33,14 @@ int verifyLVID(UINT32 loc, UINT32 len)
         printTimestamp(LVID->sRecordingTime);
         switch (U_endian32(LVID->integrityType)) {
           case 0:
-                   printf(" [Open]\n");
-                   break;
+            printf(" [Open]\n");
+            break;
           case 1:
-                   printf(" [Close]\n");
-                   break;
+            printf(" [Close]\n");
+            break;
           default:
-                   printf(" Illegal! (%u)\n", U_endian32(LVID->integrityType));
-                   break;
+            printf(" Illegal! (%u)\n", U_endian32(LVID->integrityType));
+            break;
         }
         ID_UID = U_endian32(LVID->UniqueIdL);
         LVIDIU = (struct LVIDImplUse *)(buffer + 80 + U_endian32(LVID->N_P) * 8);
@@ -49,7 +49,8 @@ int verifyLVID(UINT32 loc, UINT32 len)
         printf("  %u directories, %u files, highest UniqueID is %u.\n",
                ID_Dirs, ID_Files, ID_UID);
         printf("  Min read ver. %x, min write ver. %x, max write ver %x.\n",
-               U_endian16(LVIDIU->MinUDFRead), U_endian16(LVIDIU->MinUDFWrite), U_endian16(LVIDIU->MaxUDFWrite));
+               U_endian16(LVIDIU->MinUDFRead), U_endian16(LVIDIU->MinUDFWrite),
+               U_endian16(LVIDIU->MaxUDFWrite));
         printf("  Recorded by: ");
         DisplayImplID(&(LVIDIU->implementationID));
         Table = (UINT32 *)(buffer + 80);

@@ -25,11 +25,11 @@ int checkICB(struct FE_or_EFE *xfe, struct long_ad FE, int dir)
     }
 
     if (dir && xfe->sICBTag.FileType != FILE_TYPE_DIRECTORY) {
-       printf("[Type: %u] ", xfe->sICBTag.FileType);
+      printf("[Type: %u] ", xfe->sICBTag.FileType);
     }
 
     if (!dir && xfe->sICBTag.FileType != FILE_TYPE_RAW) {
-       printf("[Type: %u] ", xfe->sICBTag.FileType);
+      printf("[Type: %u] ", xfe->sICBTag.FileType);
     }
   } else {
     Error.Code = ERR_READ;

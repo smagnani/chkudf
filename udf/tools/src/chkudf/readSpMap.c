@@ -20,7 +20,7 @@ static int ReadSpaceBitmap(UINT16 ptn)
       track_filespace(ptn, Part_Info[ptn].Space, Part_Info[ptn].SpLen);
 
       CheckTag((struct tag *)BMD, Part_Info[ptn].Space, TAGID_SPACE_BMAP,
-                   0, Part_Info[ptn].SpLen);
+               0, Part_Info[ptn].SpLen);
       if (Error.Code == ERR_TAGID) {
         printf("**Not a space bitmap descriptor.\n");
       } else {
@@ -88,7 +88,7 @@ static void ReadSpaceTable(UINT16 ptn)
       track_filespace(ptn, curUSELocation, blocksize);
 
       CheckTag((struct tag *)USE, curUSELocation, TAGID_UNALLOC_SP_ENTRY,
-                   0, curUSESize);
+               0, curUSESize);
       if (Error.Code == ERR_TAGID) {
         printf("    **Not a space entry descriptor.\n");
         break;

@@ -33,57 +33,57 @@ int CheckRegid(struct udfEntityId *reg, char *ID)
 /********************************************************************/
 void DisplayRegIDID( struct regid *RegIDp)
 {
-    /* assumes character is positioned */
-    /* Make a null-terminated version of the Identifier field. */
-    char id[24];
-    memcpy(id,RegIDp->aRegisteredID,23);
-    id[23] = '\000';
+  /* assumes character is positioned */
+  /* Make a null-terminated version of the Identifier field. */
+  char id[24];
+  memcpy(id,RegIDp->aRegisteredID,23);
+  id[23] = '\000';
 
-    if ( RegIDp->uFlags & DIRTYREGID )
-        printf("(Dirty **NON-UDF**)     ");
-    if ( RegIDp->uFlags & PROTECTREGID )
-        printf("(Protected **NON-UDF**) ");
+  if ( RegIDp->uFlags & DIRTYREGID )
+    printf("(Dirty **NON-UDF**)     ");
+  if ( RegIDp->uFlags & PROTECTREGID )
+    printf("(Protected **NON-UDF**) ");
 
-    printf("'%.23s'",id);
+  printf("'%.23s'",id);
 }
 
 void printOSInfo( UINT8 osClass, UINT8 osIdentifier )
 {
-    printf(" OS: %u,%u",
-           osClass,osIdentifier);
-    switch (osClass) {
-    case OSCLASS_UNDEF: printf(" (Undefined)"); break;
-    case OSCLASS_DOS:   printf(" (DOS)");       break;
-    case OSCLASS_OS2:   printf(" (OS/2)");      break;
-    case OSCLASS_MAC:   printf(" (Macintosh)"); break;
-    case OSCLASS_UNIX:  printf(" (UNIX)");      break;
+  printf(" OS: %u,%u",
+         osClass,osIdentifier);
+  switch (osClass) {
+    case OSCLASS_UNDEF: printf(" (Undefined)");  break;
+    case OSCLASS_DOS:   printf(" (DOS)");        break;
+    case OSCLASS_OS2:   printf(" (OS/2)");       break;
+    case OSCLASS_MAC:   printf(" (Macintosh)");  break;
+    case OSCLASS_UNIX:  printf(" (UNIX)");       break;
     case OSCLASS_WIN95: printf(" (Windows 9x)"); break;
     case OSCLASS_WINNT: printf(" (Windows NT)"); break;
     default:            printf(" (Illegal) ** NON-UDF 1.50 **");
-    }
+  }
 
-    if (osClass == OSCLASS_UNIX) {
-        switch (osIdentifier) {
-        case OSID_GENERIC:     printf(" (Undefined)"); break;
-        case OSID_IBM_AIX:     printf(" AIX");       break;
-        case OSID_SUN_SOLARIS: printf(" Solaris");      break;
-        case OSID_HPUX:        printf(" HPUX"); break;
-        case OSID_SGI_IRIX:    printf(" SGI_Irix");      break;
-	case OSID_LINUX:       printf(" Linux"); break;
-	case OSID_MKLINUX:     printf(" MkLinux"); break;
-	case OSID_FREEBSD:     printf(" FreeBSD"); break;
-        default:               printf(" (Unknown) ** NON-UDF1.50 **");
-        }
-    } else if (osClass == OSCLASS_WIN95) {
-        switch (osIdentifier) {
-          case 0:              printf(" (95)"); break;
-          case 1:              printf(" (98)"); break;
-          default:             printf(" (Unknown)"); break;
-        }
-    } else {
-        if (osIdentifier != 0)
-            printf("\n  ** NON-UDF **");
+  if (osClass == OSCLASS_UNIX) {
+    switch (osIdentifier) {
+      case OSID_GENERIC:     printf(" (Undefined)"); break;
+      case OSID_IBM_AIX:     printf(" AIX");         break;
+      case OSID_SUN_SOLARIS: printf(" Solaris");     break;
+      case OSID_HPUX:        printf(" HPUX");        break;
+      case OSID_SGI_IRIX:    printf(" SGI_Irix");    break;
+      case OSID_LINUX:       printf(" Linux");       break;
+      case OSID_MKLINUX:     printf(" MkLinux");     break;
+      case OSID_FREEBSD:     printf(" FreeBSD");     break;
+      default:               printf(" (Unknown) ** NON-UDF1.50 **");
     }
+  } else if (osClass == OSCLASS_WIN95) {
+    switch (osIdentifier) {
+      case 0:              printf(" (95)");      break;
+      case 1:              printf(" (98)");      break;
+      default:             printf(" (Unknown)"); break;
+    }
+  } else {
+    if (osIdentifier != 0)
+      printf("\n  ** NON-UDF **");
+  }
 }
 
 /**************************/

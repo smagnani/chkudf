@@ -36,7 +36,7 @@ BOOL do_pkt(UINT8 *command, int cmd_len, UINT8 *buffer, UINT32 in_len,
     cgc.data_direction = CGC_DATA_WRITE;
   else if (out_len)
     cgc.data_direction = CGC_DATA_READ;
- else
+  else
     cgc.data_direction = CGC_DATA_NONE;
   ret = ioctl(device, CDROM_SEND_PACKET, &cgc);
   printf("ret=%d\n", ret);
@@ -44,9 +44,9 @@ BOOL do_pkt(UINT8 *command, int cmd_len, UINT8 *buffer, UINT32 in_len,
   {
     memcpy(sense, &rs, sense_len);
     printf("sense: valid=%u, error_code=%u, segment_num=%u, ili=%u, sense_key=%u, information=%x, add_sense_len=%u, command_info=%x\n",
-      rs.valid, rs.error_code, rs.segment_number, rs.ili, rs.sense_key, *(unsigned int *)rs.information, rs.add_sense_len, *(unsigned int *)rs.command_info);
-    printf("**PKT error %x/%02x/%02x**", sense[2] & 0xf, 
-      (int)sense[12], (int)sense[13]);
+           rs.valid, rs.error_code, rs.segment_number, rs.ili, rs.sense_key,
+           *(unsigned int *)rs.information, rs.add_sense_len, *(unsigned int *)rs.command_info);
+    printf("**PKT error %x/%02x/%02x**", sense[2] & 0xf, (int)sense[12], (int)sense[13]);
     return TRUE;
   }
   else

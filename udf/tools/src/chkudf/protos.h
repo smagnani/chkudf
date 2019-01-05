@@ -34,7 +34,7 @@ char *scsi_read10(char *buffer, int LBA, int length, int sectorsize,
  ****************************************************************************/
 
 int CheckTag(struct tag *TagPtr, UINT32 uTagLoc, UINT16 TagID,
-               int crc_min, int crc_max);
+             int crc_min, int crc_max);
 
 /*****************************************************************************
  * chkudf.c
@@ -153,7 +153,7 @@ extern BOOL        Fatal;
 extern UINT32      VDS_Loc, VDS_Len, RVDS_Loc, RVDS_Len;
 extern sPart_Info  Part_Info[];
 extern UINT16      PTN_no;
-extern dstring     LogVolID[];      //The logical volume ID
+extern dstring     LogVolID[];      // The logical volume ID
 extern MUINT32     VolSpaceListLen;
 extern struct extent_ad_name VolSpace[];
 extern UINT32      *VAT;

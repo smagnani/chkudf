@@ -35,10 +35,10 @@ void SetSectorSize(void)
         /*
          * INQUIRY worked
          */
-        scsi = 1;		//SCSI commands work on this device
+        scsi = 1;       // SCSI commands work on this device
         buffer[36] = 0;
         printf("  Device is: '%s' (type %d)\n", buffer + 8, buffer[0] & 0x1f);
-        if ((buffer[0] & 0x1f) == 5) {	//Test for CD/DVD
+        if ((buffer[0] & 0x1f) == 5) {  // Test for CD/DVD
           isType5 = TRUE;
           secsize = 2048;
           printf("  Setting sector size to %u for CD/DVD device.\n", secsize);
@@ -51,7 +51,7 @@ void SetSectorSize(void)
             printf("  READ CAPACITY reports a sector size of %u (0x%x).\n", secsize, secsize);
           }
           if (!secsize) {
-            scsi_modesense10(cdb, 0, 0, 0, 0);		//Get block descriptor
+            scsi_modesense10(cdb, 0, 0, 0, 0);      // Get block descriptor
             result = do_scsi(cdb, 10, buffer, 16, 0, sensedata, sensebufsize);
             if (!result) {
               /*

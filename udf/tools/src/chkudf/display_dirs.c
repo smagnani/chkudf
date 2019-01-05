@@ -19,10 +19,12 @@ int GetRootDir(void)
   error = ERR_NO_FSD;
   FSDPtr = (struct FileSetDesc *)malloc(blocksize);
   if (FSDPtr) {
-    track_filespace(U_endian16(FSD.Location_PartNo), U_endian32(FSD.Location_LBN), U_endian32(FSD.ExtentLength.Length32) & 0x3FFFFFFF);
+    track_filespace(U_endian16(FSD.Location_PartNo), U_endian32(FSD.Location_LBN),
+                    U_endian32(FSD.ExtentLength.Length32) & 0x3FFFFFFF);
+
     for (i = 0; i < (U_endian32(FSD.ExtentLength.Length32) & 0x3FFFFFFF) >> bdivshift; i++) {
       result = ReadLBlocks(FSDPtr, U_endian32(FSD.Location_LBN) + i, 
-                U_endian16(FSD.Location_PartNo), 1);
+                           U_endian16(FSD.Location_PartNo), 1);
       if (!result) {
         result = CheckTag((struct tag *)FSDPtr, U_endian32(FSD.Location_LBN) + i, 
                           TAGID_FSD, 496, 496);
@@ -34,8 +36,9 @@ int GetRootDir(void)
             // @todo Real traversal of stream directory
             // Code below is a hack to avoid reporting space table mismatch
             // on filesystems having a stub stream directory
-       	    track_filespace(U_endian16(StreamDirICB.Location_PartNo), U_endian32(StreamDirICB.Location_LBN),
-       	                    U_endian32(StreamDirICB.ExtentLength.Length32) & 0x3FFFFFFF);
+            track_filespace(U_endian16(StreamDirICB.Location_PartNo),
+                            U_endian32(StreamDirICB.Location_LBN),
+                            U_endian32(StreamDirICB.ExtentLength.Length32) & 0x3FFFFFFF);
           }
           error = 0;
           if (U_endian32(FSDPtr->sNextExtent.ExtentLength.Length32) & 0x3FFFFFFF) {
@@ -196,7 +199,7 @@ int GetFID(struct FileIDDesc *FID, struct FE_or_EFE *fe, UINT16 part, int offset
     CheckTag((struct tag *)FID, location, TAGID_FILE_ID, 0, blocksize - 16);
     if (Error.Code == ERR_TAGLOC) {
       printf("** Wrong Tag Location. Expected %lld, Found %lld (%u)\n",
-         Error.Expected, Error.Found, location);
+             Error.Expected, Error.Found, location);
       FID_Loc_Wrong++;
       Error.Code = 0;
     }

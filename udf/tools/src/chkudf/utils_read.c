@@ -47,7 +47,7 @@ int ReadSectors(void *buffer, UINT32 address, UINT32 Count)
         for (i = 0; i < Count; i++) {
           scsi_read10(cdb, address + i, 1, secsize, 0, 0, 0);
           result = do_scsi(cdb, 10, Cache[bufno].Buffer + i * secsize,
-                   secsize, 0, sensedata, sensebufsize);
+                           secsize, 0, sensedata, sensebufsize);
           if (result) {
             readOK = FALSE;
           }
@@ -163,7 +163,8 @@ int ReadLBlocks(void *buffer, UINT32 address, UINT16 p_ref, UINT32 Count)
 /*
  * The offset and count are specified in bytes.  
  */
-int ReadFileData(void *buffer, struct FE_or_EFE *xfe, UINT16 part, int offset_0, int count_0, UINT32 *data_start_loc)
+int ReadFileData(void *buffer, struct FE_or_EFE *xfe, UINT16 part, int offset_0,
+                 int count_0, UINT32 *data_start_loc)
 {
   struct short_ad  *exts_ptr, *exts_end;
   struct long_ad   *extl_ptr, *extl_end;
@@ -263,9 +264,11 @@ int ReadFileData(void *buffer, struct FE_or_EFE *xfe, UINT16 part, int offset_0,
                 AED = (struct AllocationExtentDesc *)malloc(blocksize);
               }
               if (AED) {
-                error = ReadLBlocks(AED, U_endian32(extl_ptr->Location_LBN), U_endian16(extl_ptr->Location_PartNo), 1);
+                error = ReadLBlocks(AED, U_endian32(extl_ptr->Location_LBN),
+                                    U_endian16(extl_ptr->Location_PartNo), 1);
                 if (!error) {
-                  error = CheckTag((struct tag *)AED, U_endian32(extl_ptr->Location_LBN), TAGID_ALLOC_EXTENT, 8, blocksize - 16);
+                  error = CheckTag((struct tag *)AED, U_endian32(extl_ptr->Location_LBN),
+                                   TAGID_ALLOC_EXTENT, 8, blocksize - 16);
                 }
               } else {
                 error = 1;

@@ -44,7 +44,6 @@ int track_freespace(UINT16 ptn, UINT32 addr, UINT32 extent)
 }
 
 int track_filespace(UINT16 ptn, UINT32 addr, UINT32 extent)
-
 {
   UINT32 bytep, bitp;
   if (ptn < PTN_no) {
@@ -129,7 +128,7 @@ int check_filespace(void)
               }
               ++numReported;
               printf("  **At byte %d, (sectors %d-%d), recorded mask is %02x, mapped is %02x (mismatch %02x)\n",
-                   j, j * 8, j* 8 + 7, Part_Info[i].SpMap[j], Part_Info[i].MyMap[j], mismatchBits);
+                     j, j * 8, j* 8 + 7, Part_Info[i].SpMap[j], Part_Info[i].MyMap[j], mismatchBits);
 
               if (askForMore && ((numReported % askForMore) == 0)) {
                 char ans;
@@ -185,8 +184,8 @@ int check_uniqueid(void)
     for (j = i + 1; j < ICBlist_len; j++) {
       if (ICBlist[i].UniqueID_L == ICBlist[j].UniqueID_L) {
         printf("ICBs at %04x:%08x and %04x:%08x have a Unique ID of %u.\n",
-          ICBlist[i].Ptn, ICBlist[i].LBN, ICBlist[j].Ptn, ICBlist[j].LBN,
-          ICBlist[i].UniqueID_L);
+               ICBlist[i].Ptn, ICBlist[i].LBN, ICBlist[j].Ptn, ICBlist[j].LBN,
+               ICBlist[i].UniqueID_L);
       }
     }
   }

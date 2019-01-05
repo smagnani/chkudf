@@ -31,11 +31,10 @@ BOOL Get_Last_BGS()
   BOOL     success = FALSE;
 
   result = ioctl(device, BLKGETSIZE, &buffer);
-  if (!result)
-  {
-      LastSector = (buffer * 512) / secsize - 1;
-      LastSectorAccurate = TRUE;
-      success = TRUE;
+  if (!result) {
+    LastSector = (buffer * 512) / secsize - 1;
+    LastSectorAccurate = TRUE;
+    success = TRUE;
   }
   return success;
 }

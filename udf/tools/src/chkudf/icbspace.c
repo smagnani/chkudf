@@ -59,121 +59,121 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
   switch(U_endian16(xFE->sICBTag.Flags) & ADTYPEMASK) {
     case ADSHORT:
     case ADLONG:
-             isLAD = (U_endian16(xFE->sICBTag.Flags) & ADTYPEMASK) == ADLONG;
-             sizeAD = isLAD ?  sizeof(struct long_ad) : sizeof(struct short_ad);
-             file_length = 0;
-             ad_start = ((UINT8 *) xFE) + xfe_hdr_sz + L_EA;
-             printf("\n  [type=%s, ad_start=%p, ADlength=%u, info_length=%llu]  ",
-				isLAD ? "LONG" : "SHORT", ad_start, ADlength, infoLength);
-             while (ad_offset < ADlength) {
-               sad = (struct short_ad *)(ad_start + ad_offset);
-               lad = (struct long_ad *)(ad_start + ad_offset);
-               if (isLAD) {
-                  ptn = U_endian16(lad->Location_PartNo);
-               }
-               printf("\n    [ad_offset=%u, atype=%d, loc=%u, len=%u, file_length=%llu]  ",
-                      ad_offset,
-                      U_endian32(sad->ExtentLength.Length32) >> 30,
-                      U_endian32(sad->Location),
-                      U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF,
-                      file_length);
-               if (U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF) {
-                 switch(U_endian32(sad->ExtentLength.Length32) >> 30) {
-                   case E_RECORDED:
-                   case E_ALLOCATED:
-                                   track_filespace(ptn, U_endian32(sad->Location), U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF);
-                                   if ((ptn == Next_ptn) && (U_endian32(sad->Location) == Next_LBN) && 
-                                       ((U_endian32(sad->ExtentLength.Length32) >> 30) == Prev_Typ)) {
-                                     Error.Code = ERR_SEQ_ALLOC;
-                                     Error.Sector = xFE->sTag.uTagLoc;
-                                     Error.Expected = Next_LBN;
-                                     DumpError();
-                                   }
-                                   Next_ptn = ptn;
-                                   Next_LBN = U_endian32(sad->Location) + ((U_endian32(sad->ExtentLength.Length32) && 0x3FFFFFFF) >> bdivshift);
-                                   Prev_Typ = U_endian32(sad->ExtentLength.Length32) >> 30;
-                                   if (file_length >= infoLength) {
-                                     printf(" (Tail)");
-                                   } else {
-                                     file_length += U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF;
-                                   }
-                                   ad_offset += sizeAD;
-                                   break;
-                   case E_UNALLOCATED:
-                                   if (file_length >= infoLength) {
-                                     printf(" (ILLEGAL TAIL)");
-                                   } else {
-                                     file_length += U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF;
-                                   }
-                                   ad_offset += sizeAD;
-                                   printf(" --Unallocated Extent--");
-                                   break;
-                   case E_ALLOCEXTENT:
-                                   track_filespace(ptn, U_endian32(sad->Location), U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF);
-                                   if (!AED) {
-                                     AED = (struct AllocationExtentDesc *)malloc(blocksize);
-                                   }
-                                   if (AED) {
-                                     Location_AEDP = U_endian32(sad->Location);
-                                     error = ReadLBlocks(AED, Location_AEDP, ptn, 1);
-                                     if (!error) {
-                                       error = CheckTag((struct tag *)AED, Location_AEDP, TAGID_ALLOC_EXTENT, 8, blocksize - 16);
-                                     }
-                                   } else {
-                                     error = 1;
-                                   }
-									if (error)
-									{
-										printf("Error=%d, Error.Code=%d\n", error, Error.Code);
-										DumpError();
-									}
-                                   if (error == 2) {
-                                     if (U_endian32(AED->sTag.uTagLoc) == 0xffffffff) {
-                                       error = 0;
-                                       Error.Code = 0;
-                                     } else {
-                                       DumpError();
-                                       error = 0;
-                                     }
-                                   }
-                                   if (!error) {
-                                     ad_start = (UINT8 *)(AED + 1);
-                                     ADlength = U_endian32(AED->L_AD);
-                                     ad_offset = 0;
-                                   } else {
-                                     ad_offset = ADlength;
-                                   }
-                                   printf("\n      [NEW ad_start=%p, ADlength=%u]  ",
-                                          ad_start, ADlength);
-                                   break;
-                 }
-               } else {
-                 ad_offset = ADlength;
-               }
-             }
-             printf("  [file_length=%llu]  ", file_length);
-             if (file_length != infoLength) {
-               if (((infoLength + blocksize - 1) & ~(blocksize - 1)) ==
-                   file_length) {
-                 printf(" **ADs rounded up");
-               } else {
-                 Error.Code = ERR_BAD_AD;
-                 Error.Sector = U_endian32(xFE->sTag.uTagLoc);
-                 Error.Expected = infoLength;
-                 Error.Found = file_length;
-               }
-             }
-             free (AED);
-             break;
+      isLAD = (U_endian16(xFE->sICBTag.Flags) & ADTYPEMASK) == ADLONG;
+      sizeAD = isLAD ?  sizeof(struct long_ad) : sizeof(struct short_ad);
+      file_length = 0;
+      ad_start = ((UINT8 *) xFE) + xfe_hdr_sz + L_EA;
+      printf("\n  [type=%s, ad_start=%p, ADlength=%u, info_length=%llu]  ",
+             isLAD ? "LONG" : "SHORT", ad_start, ADlength, infoLength);
+      while (ad_offset < ADlength) {
+        sad = (struct short_ad *)(ad_start + ad_offset);
+        lad = (struct long_ad *)(ad_start + ad_offset);
+        if (isLAD) {
+          ptn = U_endian16(lad->Location_PartNo);
+        }
+        printf("\n    [ad_offset=%u, atype=%d, loc=%u, len=%u, file_length=%llu]  ",
+               ad_offset,
+               U_endian32(sad->ExtentLength.Length32) >> 30,
+               U_endian32(sad->Location),
+               U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF,
+               file_length);
+        if (U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF) {
+          switch(U_endian32(sad->ExtentLength.Length32) >> 30) {
+            case E_RECORDED:
+            case E_ALLOCATED:
+              track_filespace(ptn, U_endian32(sad->Location), U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF);
+              if ((ptn == Next_ptn) && (U_endian32(sad->Location) == Next_LBN) &&
+                  ((U_endian32(sad->ExtentLength.Length32) >> 30) == Prev_Typ)) {
+                Error.Code = ERR_SEQ_ALLOC;
+                Error.Sector = xFE->sTag.uTagLoc;
+                Error.Expected = Next_LBN;
+                DumpError();
+              }
+              Next_ptn = ptn;
+              Next_LBN = U_endian32(sad->Location) + ((U_endian32(sad->ExtentLength.Length32) && 0x3FFFFFFF) >> bdivshift);
+              Prev_Typ = U_endian32(sad->ExtentLength.Length32) >> 30;
+              if (file_length >= infoLength) {
+                printf(" (Tail)");
+              } else {
+                file_length += U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF;
+              }
+              ad_offset += sizeAD;
+              break;
+
+            case E_UNALLOCATED:
+              if (file_length >= infoLength) {
+                printf(" (ILLEGAL TAIL)");
+              } else {
+                file_length += U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF;
+              }
+              ad_offset += sizeAD;
+              printf(" --Unallocated Extent--");
+              break;
+
+            case E_ALLOCEXTENT:
+              track_filespace(ptn, U_endian32(sad->Location), U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF);
+              if (!AED) {
+                AED = (struct AllocationExtentDesc *)malloc(blocksize);
+              }
+              if (AED) {
+                Location_AEDP = U_endian32(sad->Location);
+                error = ReadLBlocks(AED, Location_AEDP, ptn, 1);
+                if (!error) {
+                  error = CheckTag((struct tag *)AED, Location_AEDP, TAGID_ALLOC_EXTENT, 8, blocksize - 16);
+                }
+              } else {
+                error = 1;
+              }
+              if (error) {
+                printf("Error=%d, Error.Code=%d\n", error, Error.Code);
+                DumpError();
+              }
+              if (error == 2) {
+                if (U_endian32(AED->sTag.uTagLoc) == 0xffffffff) {
+                  error = 0;
+                  Error.Code = 0;
+                } else {
+                  DumpError();
+                  error = 0;
+                }
+              }
+              if (!error) {
+                ad_start = (UINT8 *)(AED + 1);
+                ADlength = U_endian32(AED->L_AD);
+                ad_offset = 0;
+              } else {
+                ad_offset = ADlength;
+              }
+              printf("\n      [NEW ad_start=%p, ADlength=%u]  ",
+                     ad_start, ADlength);
+              break;
+          }
+        } else {
+          ad_offset = ADlength;
+        }
+      }
+      printf("  [file_length=%llu]  ", file_length);
+      if (file_length != infoLength) {
+        if (((infoLength + blocksize - 1) & ~(blocksize - 1)) == file_length) {
+          printf(" **ADs rounded up");
+        } else {
+          Error.Code = ERR_BAD_AD;
+          Error.Sector = U_endian32(xFE->sTag.uTagLoc);
+          Error.Expected = infoLength;
+          Error.Found = file_length;
+        }
+      }
+      free (AED);
+      break;
 
     case ADNONE:
-             if (U_endian32(xFE->InfoLengthL) != L_AD) {
-               Error.Code = ERR_BAD_AD;
-               Error.Sector = U_endian32(xFE->sTag.uTagLoc);
-               Error.Expected = infoLength;
-               Error.Found = L_AD;
-             }
-             break;
+      if (U_endian32(xFE->InfoLengthL) != L_AD) {
+        Error.Code = ERR_BAD_AD;
+        Error.Sector = U_endian32(xFE->sTag.uTagLoc);
+        Error.Expected = infoLength;
+        Error.Found = L_AD;
+      }
+      break;
   }
 
   return error;
@@ -225,9 +225,9 @@ int walk_icb_hierarchy(struct FE_or_EFE *xFE, UINT16 ptn, UINT32 Location,
           ClearError();
           if (!CheckTag((struct tag *)xFE, Location + i, TAGID_INDIRECT, 16, Length)) {
             walk_icb_hierarchy(xFE, U_endian32(((struct IndirectEntry *)xFE)->sIndirectICB.Location_LBN),
-                           U_endian16(((struct IndirectEntry *)xFE)->sIndirectICB.Location_PartNo),
-                           U_endian32(((struct IndirectEntry *)xFE)->sIndirectICB.ExtentLength.Length32) & 0x3FFFFFFF,
-                           ICB_offs);
+                               U_endian16(((struct IndirectEntry *)xFE)->sIndirectICB.Location_PartNo),
+                               U_endian32(((struct IndirectEntry *)xFE)->sIndirectICB.ExtentLength.Length32) & 0x3FFFFFFF,
+                               ICB_offs);
           } else {
             DumpError();  // Wasn't a file entry, but should have been.
           }
@@ -352,15 +352,17 @@ int read_icb(struct FE_or_EFE *xFE, UINT16 ptn, UINT32 Location, UINT32 Length,
       }
       walk_icb_hierarchy(xFE, ptn, Location, Length, ICB_offs);
       switch(xFE->sICBTag.FileType) {
-          case FILE_TYPE_UNSPECIFIED:
-                           Num_Type_Err++;
-                           break;
-          case FILE_TYPE_DIRECTORY:
-                           Num_Dirs++;
-                           break;
-          case FILE_TYPE_RAW:
-                           Num_Files++;
-                           break;
+        case FILE_TYPE_UNSPECIFIED:
+          Num_Type_Err++;
+          break;
+
+        case FILE_TYPE_DIRECTORY:
+          Num_Dirs++;
+          break;
+
+        case FILE_TYPE_RAW:
+          Num_Files++;
+          break;
       }
 
       if (U_endian16(xFE->sTag.uTagID) == TAGID_EXT_FILE_ENTRY) {
@@ -376,7 +378,7 @@ int read_icb(struct FE_or_EFE *xFE, UINT16 ptn, UINT32 Location, UINT32 Length,
             printf(" EA: [%x:%08x]", U_endian16(sExtAttrICB->Location_PartNo),
                    U_endian32(sExtAttrICB->Location_LBN));
             read_icb(EA, U_endian16(sExtAttrICB->Location_PartNo), U_endian32(sExtAttrICB->Location_LBN),
-                  U_endian32(sExtAttrICB->ExtentLength.Length32) & 0x3FFFFFFF, 0);
+                     U_endian32(sExtAttrICB->ExtentLength.Length32) & 0x3FFFFFFF, 0);
           } else {
             printf("\n**EA field contains illegal partition reference number.\n");
           }

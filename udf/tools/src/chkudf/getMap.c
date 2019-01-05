@@ -13,9 +13,9 @@
 void GetMap(void)
 {
   struct SparingTable *Spare;
-  UINT16           SP;
-  sST_desc         *PM_ST;
-  int              i, found;
+  UINT16    SP;
+  sST_desc  *PM_ST;
+  int       i, found;
 
   SP = 0;
   found = FALSE;
@@ -34,16 +34,15 @@ void GetMap(void)
 
       Spare = (struct SparingTable *)malloc(PM_ST->Size + secsize);
       if (Spare) {
-        if (!ReadSectors(Spare, PM_ST->Location[0], 
-                 (PM_ST->Size + secsize - 1) >> sdivshift)) {
-          track_volspace(PM_ST->Location[0], 
-                         (PM_ST->Size + secsize - 1) >> sdivshift,
+        UINT32 num_sectors = (PM_ST->Size + secsize - 1) >> sdivshift;
+        if (!ReadSectors(Spare, PM_ST->Location[0], num_sectors)) {
+          track_volspace(PM_ST->Location[0], num_sectors,
                          "Sparing Table");
   
           CheckTag((struct tag *)Spare, PM_ST->Location[0], TAGID_NONE, 0, 16384);
           if (!Error.Code) {
             printf("  Sparing table candidate found\n");
-            if(!CheckRegid(&Spare->sEntityId, E_REGID_SPARE)) {
+            if (!CheckRegid(&Spare->sEntityId, E_REGID_SPARE)) {
               printf("  Structure is a sparing table.\n");
               printf("  Sparing Table contains %u entries.\n", Spare->uRT_L);
               printf("  Sparing sequence %u.\n", Spare->uSequence);

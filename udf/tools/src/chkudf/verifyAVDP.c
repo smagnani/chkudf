@@ -23,7 +23,7 @@ void VerifyAVDP(void)
       result = ReadSectors(AVDPtr, lastSessionStartLBA + front_avdp[i], 1);
       if (!result) {
         result = CheckTag((struct tag *)AVDPtr, lastSessionStartLBA + front_avdp[i], TAGID_ANCHOR, 
-                      16, 496);
+                          16, 496);
         if (result < CHECKTAG_OK_LIMIT) {
           printf("AVDP present.\n");
           DumpError();
@@ -61,7 +61,7 @@ void VerifyAVDP(void)
       result = ReadSectors(AVDPtr, LastSector - back_avdp[i], 1);
       if (!result) {
         result = CheckTag((struct tag *)AVDPtr, LastSector - back_avdp[i], 
-                     TAGID_ANCHOR, 16, 496);
+                          TAGID_ANCHOR, 16, 496);
         if (result < CHECKTAG_OK_LIMIT) {
           printf("AVDP present.\n");
           DumpError();

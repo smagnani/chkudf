@@ -512,40 +512,41 @@ int checkLVD(struct LogVolDesc *mLVD, struct LogVolDesc *rLVD)
 
         switch(sPartMap1->uPartMapType) {
           case 1:
-              Part_Info[i].type = PTN_TYP_REAL;
-              Part_Info[i].Num  = U_endian16(sPartMap1->uPartNum);
-              printf("type 1 (real) and references partition %u.\n", Part_Info[i].Num);
+            Part_Info[i].type = PTN_TYP_REAL;
+            Part_Info[i].Num  = U_endian16(sPartMap1->uPartNum);
+            printf("type 1 (real) and references partition %u.\n", Part_Info[i].Num);
             break;
 
           case 2:
-              if (!strncmp(E_REGID_CD_VP, sPartMapVAT->sVATIdentifier.aID, strlen(E_REGID_CD_VP))) {
-                Part_Info[i].type = PTN_TYP_VIRTUAL;
-                Part_Info[i].Num  = U_endian16(sPartMapVAT->uPartNum);
-                printf("type 2 (virtual) and references partition %u.\n", Part_Info[i].Num);
-              } else if (!strncmp(E_REGID_CD_SP, sPartMapVAT->sVATIdentifier.aID, strlen(E_REGID_CD_SP))) {
-                Part_Info[i].type = PTN_TYP_SPARE;
-                Part_Info[i].Num  = U_endian16(sPartMapSP->uPartNum);
-                printf("type 2 (sparable) and references partition %u.\n", Part_Info[i].Num);
-                Part_Info[i].Extra = malloc(sizeof(struct _sST_desc));
-                if ((struct _sST_desc *)Part_Info[i].Extra) {
-                  printf("  (M) %u sparing map(s), %u bytes long, mapping %u sectors each.\n",
-                          sPartMapSP->N_ST, U_endian32(sPartMapSP->SpareSize), U_endian16(sPartMapSP->uPacketLength));
-                  ((struct _sST_desc *)Part_Info[i].Extra)->Size = U_endian32(sPartMapSP->SpareSize);
-                  ((struct _sST_desc *)Part_Info[i].Extra)->Count = sPartMapSP->N_ST;
-                  ((struct _sST_desc *)Part_Info[i].Extra)->Extent = U_endian16(sPartMapSP->uPacketLength);
-                  ((struct _sST_desc *)Part_Info[i].Extra)->Location[0] = U_endian32(sPartMapSP->SpareLoc[0]);
-                  ((struct _sST_desc *)Part_Info[i].Extra)->Location[1] = U_endian32(sPartMapSP->SpareLoc[1]);
-                  ((struct _sST_desc *)Part_Info[i].Extra)->Location[2] = U_endian32(sPartMapSP->SpareLoc[2]);
-                  ((struct _sST_desc *)Part_Info[i].Extra)->Location[3] = U_endian32(sPartMapSP->SpareLoc[3]);
-                }
-              } else {
-                Part_Info[i].type = PTN_TYP_NONE;
-                printf("type 2 (unknown).\n");
+            if (!strncmp(E_REGID_CD_VP, sPartMapVAT->sVATIdentifier.aID, strlen(E_REGID_CD_VP))) {
+              Part_Info[i].type = PTN_TYP_VIRTUAL;
+              Part_Info[i].Num  = U_endian16(sPartMapVAT->uPartNum);
+              printf("type 2 (virtual) and references partition %u.\n", Part_Info[i].Num);
+            } else if (!strncmp(E_REGID_CD_SP, sPartMapVAT->sVATIdentifier.aID, strlen(E_REGID_CD_SP))) {
+              Part_Info[i].type = PTN_TYP_SPARE;
+              Part_Info[i].Num  = U_endian16(sPartMapSP->uPartNum);
+              printf("type 2 (sparable) and references partition %u.\n", Part_Info[i].Num);
+              Part_Info[i].Extra = malloc(sizeof(struct _sST_desc));
+              if ((struct _sST_desc *)Part_Info[i].Extra) {
+                printf("  (M) %u sparing map(s), %u bytes long, mapping %u sectors each.\n",
+                        sPartMapSP->N_ST, U_endian32(sPartMapSP->SpareSize), U_endian16(sPartMapSP->uPacketLength));
+                ((struct _sST_desc *)Part_Info[i].Extra)->Size = U_endian32(sPartMapSP->SpareSize);
+                ((struct _sST_desc *)Part_Info[i].Extra)->Count = sPartMapSP->N_ST;
+                ((struct _sST_desc *)Part_Info[i].Extra)->Extent = U_endian16(sPartMapSP->uPacketLength);
+                ((struct _sST_desc *)Part_Info[i].Extra)->Location[0] = U_endian32(sPartMapSP->SpareLoc[0]);
+                ((struct _sST_desc *)Part_Info[i].Extra)->Location[1] = U_endian32(sPartMapSP->SpareLoc[1]);
+                ((struct _sST_desc *)Part_Info[i].Extra)->Location[2] = U_endian32(sPartMapSP->SpareLoc[2]);
+                ((struct _sST_desc *)Part_Info[i].Extra)->Location[3] = U_endian32(sPartMapSP->SpareLoc[3]);
               }
-            break;
-          default:
+            } else {
               Part_Info[i].type = PTN_TYP_NONE;
-              printf("illegal type (%u).\n", sPartMap1->uPartMapType);
+              printf("type 2 (unknown).\n");
+            }
+            break;
+
+          default:
+            Part_Info[i].type = PTN_TYP_NONE;
+            printf("illegal type (%u).\n", sPartMap1->uPartMapType);
         }
         offset += sPartMap1->uPartMapLen;
       }
@@ -562,8 +563,7 @@ int checkLVD(struct LogVolDesc *mLVD, struct LogVolDesc *rLVD)
 
     printf("  (M) Integrity Sequence is %u bytes at %u.\n",
            U_endian32(mLVD->integritySeqExtent.Length), U_endian32(mLVD->integritySeqExtent.Location));
-    if (RVDS_Len && memcmp(&mLVD->integritySeqExtent, &rLVD->integritySeqExtent, 
-               sizeof(struct extent_ad))) {
+    if (RVDS_Len && memcmp(&mLVD->integritySeqExtent, &rLVD->integritySeqExtent, sizeof(struct extent_ad))) {
       printf("**(R) Integrity Sequence is %u bytes at %u.\n",
              U_endian32(rLVD->integritySeqExtent.Length), U_endian32(rLVD->integritySeqExtent.Location));
     }
