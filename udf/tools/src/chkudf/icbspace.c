@@ -63,8 +63,8 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
       sizeAD = isLAD ?  sizeof(struct long_ad) : sizeof(struct short_ad);
       file_length = 0;
       ad_start = ((UINT8 *) xFE) + xfe_hdr_sz + L_EA;
-      printf("\n  [type=%s, ad_start=%p, ADlength=%u, info_length=%llu]  ",
-             isLAD ? "LONG" : "SHORT", ad_start, ADlength, infoLength);
+      printf("\n  [type=%s, ADlength=%u, info_length=%llu]  ",
+             isLAD ? "LONG" : "SHORT", ADlength, infoLength);
       while (ad_offset < ADlength) {
         sad = (struct short_ad *)(ad_start + ad_offset);
         lad = (struct long_ad *)(ad_start + ad_offset);
@@ -144,8 +144,7 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
               } else {
                 ad_offset = ADlength;
               }
-              printf("\n      [NEW ad_start=%p, ADlength=%u]  ",
-                     ad_start, ADlength);
+              printf("\n      [NEW ADlength=%u]  ", ADlength);
               break;
           }
         } else {
