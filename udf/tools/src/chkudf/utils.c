@@ -148,20 +148,20 @@ void printCharSpec(struct charspec chars)
   printf("\n");
 }
 
-int Is_Charspec(struct charspec chars)
+int Is_Charspec(const struct charspec *chars)
 {
-  int i = 0;
-  UINT8 ref[] = UDF_CHARSPEC;
+  size_t i = 0;
+  const UINT8 ref[] = UDF_CHARSPEC;
 
-  if (chars.uCharSetType) 
+  if (chars->uCharSetType)
     return 0;
   i = 0;
   while (i < 63) {
-    if (i < strlen(ref)) {
-      if (ref[i] != chars.aCharSetInfo[i])
+    if (i < (sizeof(UDF_CHARSPEC)-1)) {
+      if (ref[i] != chars->aCharSetInfo[i])
         return 0;
     } else {
-      if (chars.aCharSetInfo[i])
+      if (chars->aCharSetInfo[i])
         return 0;
     }
     i++;

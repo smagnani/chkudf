@@ -265,7 +265,7 @@ void SetLastSectorAccurate(void);
 UINT32 endian32(UINT32 toswap);
 UINT16 endian16(UINT16 toswap);
 UINT16 doCRC(UINT8 *buffer, int n);
-int Is_Charspec(struct charspec chars);
+int Is_Charspec(const struct charspec *chars);
 void printDstring( char *start, UINT8 fieldLen);
 void printDchars( char *start, UINT8 length);
 void printCharSpec(struct charspec chars);

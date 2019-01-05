@@ -89,19 +89,19 @@ int checkPVD(struct PrimaryVolDes *mPVD, struct PrimaryVolDes *rPVD)
         printf("**(R) Max. Character set list is 0x%08x.\n", U_endian32(rPVD->uMaxCharSetList));
       }
     }
-    if (!Is_Charspec(mPVD->sDesCharSet)) {
+    if (!Is_Charspec(&mPVD->sDesCharSet)) {
       printf("**(M) Description Character Set is: ");
       printCharSpec(mPVD->sDesCharSet);
     }
-    if (RVDS_Len && !Is_Charspec(rPVD->sDesCharSet)) {
+    if (RVDS_Len && !Is_Charspec(&rPVD->sDesCharSet)) {
       printf("**(R) Description Character Set is: ");
       printCharSpec(rPVD->sDesCharSet);
     }
-    if (!Is_Charspec(mPVD->sExplanatoryCharSet)) {
+    if (!Is_Charspec(&mPVD->sExplanatoryCharSet)) {
       printf("**(M) Description Character Set is: ");
       printCharSpec(mPVD->sExplanatoryCharSet);
     }
-    if (RVDS_Len && !Is_Charspec(rPVD->sExplanatoryCharSet)) {
+    if (RVDS_Len && !Is_Charspec(&rPVD->sExplanatoryCharSet)) {
       printf("**(R) Description Character Set is: ");
       printCharSpec(rPVD->sExplanatoryCharSet);
     }
@@ -159,11 +159,11 @@ int checkIUVD(struct ImpUseDesc *mIUVD, struct ImpUseDesc *rIUVD)
     mLVI = (struct LVInformation *)&(mIUVD->aReserved[0]);
     rLVI = (struct LVInformation *)&(rIUVD->aReserved[0]);
 
-    if (!Is_Charspec(mLVI->sLVICharset)) {
+    if (!Is_Charspec(&mLVI->sLVICharset)) {
       printf("**(M) Description Character Set is: ");
       printCharSpec(mLVI->sLVICharset);
     }
-    if (RVDS_Len && !Is_Charspec(rLVI->sLVICharset)) {
+    if (RVDS_Len && !Is_Charspec(&rLVI->sLVICharset)) {
       printf("**(R) Description Character Set is: ");
       printCharSpec(rLVI->sLVICharset);
     }                                                                            
@@ -407,11 +407,11 @@ int checkLVD(struct LogVolDesc *mLVD, struct LogVolDesc *rLVD)
   error = CheckTag((struct tag *)mLVD, U_endian32(mLVD->sTag.uTagLoc), TAGID_LVD, 424, secsize);
   DumpError();
   if (error < CHECKTAG_OK_LIMIT) {
-    if (!Is_Charspec(mLVD->sDesCharSet)) {
+    if (!Is_Charspec(&mLVD->sDesCharSet)) {
       printf("**(M) Description Character Set is: ");
       printCharSpec(mLVD->sDesCharSet);
     }
-    if (RVDS_Len && !Is_Charspec(rLVD->sDesCharSet)) {
+    if (RVDS_Len && !Is_Charspec(&rLVD->sDesCharSet)) {
       printf("**(R) Description Character Set is: ");
       printCharSpec(rLVD->sDesCharSet);
     }
