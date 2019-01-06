@@ -117,7 +117,7 @@ int DisplayDirs(void)
                                            U_endian32(File->ICB.Location_LBN));
             if (File->L_FI) {
               printf("ILLEGAL NAME ");
-              printDchars((char *)File + 38 + U_endian16(File->L_IU), File->L_FI);
+              printDchars((UINT8 *)File + 38 + U_endian16(File->L_IU), File->L_FI);
             } else {
               printf("NAME OK");
             }
@@ -142,9 +142,9 @@ int DisplayDirs(void)
              */
             if (File->Characteristics & DELETE_ATTR) {
               printf("[DELETED] ");
-              printDchars((char *)File + 38 + U_endian16(File->L_IU), File->L_FI);
+              printDchars((UINT8 *)File + 38 + U_endian16(File->L_IU), File->L_FI);
             } else {
-              printDchars((char *)File + 38 + U_endian16(File->L_IU), File->L_FI);
+              printDchars((UINT8 *)File + 38 + U_endian16(File->L_IU), File->L_FI);
               read_icb(ICB, U_endian16(File->ICB.Location_PartNo), U_endian32(File->ICB.Location_LBN),
                         U_endian32(File->ICB.ExtentLength.Length32) & 0x3FFFFFFF, 1);
               checkICB(ICB, File->ICB, File->Characteristics & DIR_ATTR);

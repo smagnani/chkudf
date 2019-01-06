@@ -55,10 +55,10 @@ UINT16 doCRC(UINT8 *buffer, int n)
 /* Supports OSTA Compressed Unicode, but if no Compression algorithm */
 /* supplied, will print out ASCII string.                            */
 /*********************************************************************/
-void printDstring( char *start, UINT8 fieldLen)
+void printDstring(const UINT8 *start, UINT8 fieldLen)
 {
     /* First, grab the length of the string */
-    UINT8 dstringLen = (UINT8)start[fieldLen - 1];
+    UINT8 dstringLen = start[fieldLen - 1];
 
     /* Then, hand it all off to Dchars */
     printDchars(start, dstringLen);
@@ -72,7 +72,7 @@ void printDstring( char *start, UINT8 fieldLen)
 /* Supports OSTA Compressed Unicode, but if no Compression algorithm */
 /* supplied, will print out ASCII string.                            */
 /*********************************************************************/
-void printDchars( char *start, UINT8 length)
+void printDchars(const UINT8 *start, UINT8 length)
 {
   /* Some (one) local variable(s) */
   UINT16 i;                       /* Index  */
@@ -108,7 +108,7 @@ void printDchars( char *start, UINT8 length)
     printf("\"");
     for (i=0;i<dispLen;i++,i++) {
       unichar = *(start + i) << 8;
-      unichar |= (UINT8)*(start + i + 1);
+      unichar |= *(start + i + 1);
       if ((unichar > 31) && (unichar < 127)) {
         printf("%c", (UINT8)unichar);
       } else {
@@ -119,7 +119,7 @@ void printDchars( char *start, UINT8 length)
   } else {
     /* Now make a copy of all the bytes, to make sure we have a null
        termination */
-    strncpy( tbuff, start, dispLen); /* copy over just enough characters */
+    strncpy( tbuff, (const char*) start, dispLen); /* copy over just enough characters */
     tbuff[dispLen]=0;           /* null terminate the string */
     printf("'%s'", tbuff);    /* print it out */
   }
