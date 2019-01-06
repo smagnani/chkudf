@@ -14,7 +14,7 @@ void SetSectorSize(void)
 {
   char   *buffer;
   char   *avdpbuf;
-  int    result, found, *ip;
+  int    result, found;
   struct stat fileinfo;
 
   secsize = 0;
@@ -25,7 +25,6 @@ void SetSectorSize(void)
      * The device is a block device, let's try some SCSI stuff...
      */
     buffer = malloc(128);
-    ip = (int *)buffer;
     if (buffer) {
       memset(cdb, 0, 12);
       cdb[0] = 0x12;

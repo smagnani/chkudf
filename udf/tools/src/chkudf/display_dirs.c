@@ -76,7 +76,6 @@ int DisplayDirs(void)
 
   UINT32 address;
   UINT16 partition;
-  int length;
 
   printf("\n--File Space report:\n");
 
@@ -84,7 +83,6 @@ int DisplayDirs(void)
 
   address = U_endian32(RootDirICB.Location_LBN);
   partition = U_endian16(RootDirICB.Location_PartNo);
-  length = (U_endian32(RootDirICB.ExtentLength.Length32) & 0x3FFFFFFF) >> bdivshift;
 
   printf("\nDisplaying directory hierarchy:\n%04x:%08x: \\", partition, address);
   File = (struct FileIDDesc *)malloc(blocksize * 2);
