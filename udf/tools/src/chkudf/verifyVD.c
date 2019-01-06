@@ -518,11 +518,11 @@ int checkLVD(struct LogVolDesc *mLVD, struct LogVolDesc *rLVD)
             break;
 
           case 2:
-            if (!strncmp(E_REGID_CD_VP, sPartMapVAT->sVATIdentifier.aID, strlen(E_REGID_CD_VP))) {
+            if (!strncmp(E_REGID_CD_VP, (const char*)sPartMapVAT->sVATIdentifier.aID, strlen(E_REGID_CD_VP))) {
               Part_Info[i].type = PTN_TYP_VIRTUAL;
               Part_Info[i].Num  = U_endian16(sPartMapVAT->uPartNum);
               printf("type 2 (virtual) and references partition %u.\n", Part_Info[i].Num);
-            } else if (!strncmp(E_REGID_CD_SP, sPartMapVAT->sVATIdentifier.aID, strlen(E_REGID_CD_SP))) {
+            } else if (!strncmp(E_REGID_CD_SP, (const char*)sPartMapVAT->sVATIdentifier.aID, strlen(E_REGID_CD_SP))) {
               Part_Info[i].type = PTN_TYP_SPARE;
               Part_Info[i].Num  = U_endian16(sPartMapSP->uPartNum);
               printf("type 2 (sparable) and references partition %u.\n", Part_Info[i].Num);

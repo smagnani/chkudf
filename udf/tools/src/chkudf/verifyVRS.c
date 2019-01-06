@@ -40,7 +40,7 @@ int VerifyVRS(void)
     while (VRS_OK) {
       error = ReadVRD(VRS, i);
       if (!error) {
-        VRS_OK = !strncmp(VRS+1, VRS_ISO9660, 5);
+        VRS_OK = !strncmp((const char*) VRS+1, VRS_ISO9660, 5);
         if (VRS_OK) {
           Term = VRS[0] == 0xff;
           switch (VRS[0]) {
@@ -70,7 +70,7 @@ int VerifyVRS(void)
     Term = 0;  //No terminating descriptor yet
     if (!error) {
       printf("  VRS %u            : ", i);
-      VRS_OK = !strncmp(VRS+1, VRS_ISO13346_BEGIN, 5);
+      VRS_OK = !strncmp((const char*) VRS+1, VRS_ISO13346_BEGIN, 5);
       if (VRS_OK) {
         BEA_Found = 1;
         printf("Beginning Extended Area descriptor found.\n");
@@ -83,18 +83,18 @@ int VerifyVRS(void)
       error = ReadVRD(VRS, i);
       if (!error) {
         if (!NSR_Found) {
-          NSR_Found = !strncmp(VRS+1, VRS_ISO13346_NSR, 4);
+          NSR_Found = !strncmp((const char*) VRS+1, VRS_ISO13346_NSR, 4);
           if (NSR_Found) {
             UDF_Version = VRS[5] & 0x0f;
             Version_OK = TRUE;
             printf("NSR0%u descriptor found.\n", UDF_Version);
           }
         } else {
-          if (!strncmp(VRS+1, VRS_ISO13346_NSR, 4)) {
+          if (!strncmp((const char*) VRS+1, VRS_ISO13346_NSR, 4)) {
             printf("\n**Found an extra NSR descriptor.\n");
           }
         }
-        Term = !strncmp(VRS+1, VRS_ISO13346_END, 5);
+        Term = !strncmp((const char*) VRS+1, VRS_ISO13346_END, 5);
         if (Term) {
           i++;
         }
