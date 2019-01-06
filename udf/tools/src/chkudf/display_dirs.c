@@ -115,7 +115,7 @@ int DisplayDirs(void)
                                            U_endian32(File->ICB.Location_LBN));
             if (File->L_FI) {
               printf("ILLEGAL NAME ");
-              printDchars((UINT8 *)File + 38 + U_endian16(File->L_IU), File->L_FI);
+              printDchars((UINT8 *)File + FILE_ID_DESC_CONSTANT_LEN + U_endian16(File->L_IU), File->L_FI);
             } else {
               printf("NAME OK");
             }
@@ -140,9 +140,9 @@ int DisplayDirs(void)
              */
             if (File->Characteristics & DELETE_ATTR) {
               printf("[DELETED] ");
-              printDchars((UINT8 *)File + 38 + U_endian16(File->L_IU), File->L_FI);
+              printDchars((UINT8 *)File + FILE_ID_DESC_CONSTANT_LEN + U_endian16(File->L_IU), File->L_FI);
             } else {
-              printDchars((UINT8 *)File + 38 + U_endian16(File->L_IU), File->L_FI);
+              printDchars((UINT8 *)File + FILE_ID_DESC_CONSTANT_LEN + U_endian16(File->L_IU), File->L_FI);
               read_icb(ICB, U_endian16(File->ICB.Location_PartNo), U_endian32(File->ICB.Location_LBN),
                         U_endian32(File->ICB.ExtentLength.Length32) & 0x3FFFFFFF, 1);
               checkICB(ICB, File->ICB, File->Characteristics & DIR_ATTR);
@@ -150,7 +150,7 @@ int DisplayDirs(void)
           }
           printf("\n");
           DumpError();
-          offs[depth] += (38 + File->L_FI + U_endian16(File->L_IU) + 3) & ~3;
+          offs[depth] += (FILE_ID_DESC_CONSTANT_LEN + File->L_FI + U_endian16(File->L_IU) + 3) & ~3;
           if ((File->Characteristics & DIR_ATTR) && 
               ! (File->Characteristics & PARENT_ATTR) &&
               ! (File->Characteristics & DELETE_ATTR)) {
