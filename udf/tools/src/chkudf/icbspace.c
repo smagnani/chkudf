@@ -246,7 +246,7 @@ int walk_icb_hierarchy(struct FE_or_EFE *xFE, UINT16 ptn, UINT32 Location,
  * This routine takes a partition, location, and length of an ICB extent as
  * input, marks the appropriate space as allocated in the space map, 
  * maintains a link count for the ICB, and returns the appropriate File
- * File Entry data in *FE.
+ * File Entry data in *xFE.
  *
  * If FID == 0, this is a root entry or a re-read of an ICB.  If FID == 1,
  * this is the first read of an FE from a particular FID.  Note that the FE
