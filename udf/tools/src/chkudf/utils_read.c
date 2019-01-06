@@ -161,7 +161,14 @@ int ReadLBlocks(void *buffer, UINT32 address, UINT16 p_ref, UINT32 Count)
 }
 
 /*
- * The offset and count are specified in bytes.  
+ * @param[out]   buffer           Data read from the file
+ * @param[in]    xfe              ICB describing the file
+ * @param[in]    part             Which partition the file is part of
+ * @param[in]    offset_0         # of bytes into the file at which to begin reading
+ * @param[in]    count_0          Maximum number of bytes to read
+ * @param[out]   data_start_loc   Sector in which the offset_0-th byte of the file resides
+ *
+ * @return       Number of bytes read
  */
 int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
                  int offset_0, int count_0, UINT32 *data_start_loc)
@@ -204,10 +211,9 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
           }
           exts_end = (struct short_ad *)((char *)exts_ptr + L_AD);
           // The following while loop "eats" all unneeded extents.
-          while (((offset >= (U_endian32(exts_ptr->ExtentLength.Length32) & 0x3FFFFFFF)) || 
-                 ((U_endian32(exts_ptr->ExtentLength.Length32) >> 30) == E_ALLOCEXTENT)) &&
-                 (exts_ptr < exts_end)) {
+          while (exts_ptr < exts_end) {
             if ((U_endian32(exts_ptr->ExtentLength.Length32) >> 30) == E_ALLOCEXTENT) {
+              // Chain to (next) Allocation Extent Descriptor
               if (!AED) {
                 AED = (struct AllocationExtentDesc *)malloc(blocksize);
               }
@@ -225,12 +231,16 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
               } else {
                 exts_ptr = exts_end;
               }
+            } else if (offset < (U_endian32(exts_ptr->ExtentLength.Length32) & 0x3FFFFFFF)) {
+            	// offset_0 is at "offset" bytes into the current extent
+                break;
             } else {
-              offset -= U_endian32(exts_ptr->ExtentLength.Length32) & 0x3FFFFFFF;
-              exts_ptr++;
+            	// Haven't reached the extent containing offset_0 yet
+                offset -= U_endian32(exts_ptr->ExtentLength.Length32) & 0x3FFFFFFF;
+                exts_ptr++;
             }
           }
-          //Now to read from the right extent
+          // Now to read from the right extent
           if ((exts_ptr < exts_end) && (offset < (U_endian32(exts_ptr->ExtentLength.Length32) & 0x3FFFFFFF))) {
             sector = U_endian32(exts_ptr->Location) + (offset >> bdivshift);
             error = ReadLBlocks(t_buffer, sector, part, 1);
@@ -321,6 +331,7 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
           break;
       }
     } else {
+      // Attempted read beyond EOF
       error = 1;
     }
     firstpass = FALSE;
