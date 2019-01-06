@@ -48,7 +48,7 @@ void GetVAT(void)
           Part_Info[VirtPart].Extra = malloc(VATICB->InfoLengthL + blocksize);
           if (Part_Info[VirtPart].Extra) {
             printf("  Allocated %u (0x%04x) bytes for the VAT.\n", VATICB->InfoLengthL, VATICB->InfoLengthL);
-            ReadFileData(Part_Info[VirtPart].Extra, VATICB, Part_Info[VirtPart].Num,
+            ReadFileData(Part_Info[VirtPart].Extra, (struct FE_or_EFE*)VATICB, Part_Info[VirtPart].Num,
                          0, VATICB->InfoLengthL, &i);
             Part_Info[VirtPart].Len = (VATICB->InfoLengthL - 36) >> 2;
             printf("  Virtual partition is %u sectors long.\n", Part_Info[VirtPart].Len);

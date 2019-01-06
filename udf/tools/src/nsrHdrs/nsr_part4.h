@@ -323,7 +323,7 @@ struct ExtFileEntry {
 };
 
 struct FE_or_EFE {
-    struct tag sTag;        /* uTagID = 266 */
+    struct tag sTag;        /* uTagID = 261 (FE) or 266 (EFE) */
     struct ICBTag sICBTag;  /* FileType = [4-10] */
     UINT32 UID;
     UINT32 GID;
