@@ -255,7 +255,6 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
           } else {
             error = 1;
           }
-          free(AED);
           break;
 
         case ADLONG:
@@ -310,7 +309,6 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
           } else {
             error = 1;
           }
-          free(AED);
           break;
     
         case ADNONE:
@@ -338,6 +336,10 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
     }
     firstpass = FALSE;
   }
+
+  if (AED)
+    free(AED);
+
   memcpy(buffer, buffer + (offset_0 & (blocksize - 1)), count_0 - count_im);
   if (count_im < 0) count_im = 0;
   return count_im;
