@@ -163,11 +163,11 @@ int ReadLBlocks(void *buffer, UINT32 address, UINT16 p_ref, UINT32 Count)
 /*
  * The offset and count are specified in bytes.  
  */
-int ReadFileData(void *buffer, struct FE_or_EFE *xfe, UINT16 part, int offset_0,
-                 int count_0, UINT32 *data_start_loc)
+int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
+                 int offset_0, int count_0, UINT32 *data_start_loc)
 {
-  struct short_ad  *exts_ptr, *exts_end;
-  struct long_ad   *extl_ptr, *extl_end;
+  const struct short_ad  *exts_ptr, *exts_end;
+  const struct long_ad   *extl_ptr, *extl_end;
   struct AllocationExtentDesc *AED = NULL;
   UINT32           sector;
   UINT32           L_EA, L_AD;
@@ -198,9 +198,9 @@ int ReadFileData(void *buffer, struct FE_or_EFE *xfe, UINT16 part, int offset_0,
       switch(U_endian16(xfe->sICBTag.Flags) & ADTYPEMASK) {
         case ADSHORT:
           if (isEFE) {
-            exts_ptr = (struct short_ad *)((char *)xfe + sizeof(struct ExtFileEntry) + L_EA);
+            exts_ptr = (const struct short_ad *)((const char *)xfe + sizeof(struct ExtFileEntry) + L_EA);
           } else {
-            exts_ptr = (struct short_ad *)((char *)xfe + sizeof(struct FileEntry) + L_EA);
+            exts_ptr = (const struct short_ad *)((const char *)xfe + sizeof(struct FileEntry) + L_EA);
           }
           exts_end = (struct short_ad *)((char *)exts_ptr + L_AD);
           // The following while loop "eats" all unneeded extents.
@@ -220,7 +220,7 @@ int ReadFileData(void *buffer, struct FE_or_EFE *xfe, UINT16 part, int offset_0,
                 error = 1;
               }
               if (!error) {
-                exts_ptr = (struct short_ad *)(AED + 1);
+                exts_ptr = (const struct short_ad *)(AED + 1);
                 exts_end = exts_ptr + (U_endian32(AED->L_AD) >> 3);
               } else {
                 exts_ptr = exts_end;
@@ -250,11 +250,11 @@ int ReadFileData(void *buffer, struct FE_or_EFE *xfe, UINT16 part, int offset_0,
 
         case ADLONG:
           if (isEFE) {
-            extl_ptr = (struct long_ad *)((char *)xfe + sizeof(struct ExtFileEntry) + L_EA);
+            extl_ptr = (const struct long_ad *)((const char *)xfe + sizeof(struct ExtFileEntry) + L_EA);
           } else {
-            extl_ptr = (struct long_ad *)((char *)xfe + sizeof(struct FileEntry) + L_EA);
+            extl_ptr = (const struct long_ad *)((const char *)xfe + sizeof(struct FileEntry) + L_EA);
           }
-          extl_end = (struct long_ad *)((char *)extl_ptr + L_AD);
+          extl_end = (const struct long_ad *)((char *)extl_ptr + L_AD);
           // The following while loop "eats" all unneeded extents.
           while (((offset >= (U_endian32(extl_ptr->ExtentLength.Length32) & 0x3FFFFFFF)) || 
                  ((U_endian32(extl_ptr->ExtentLength.Length32) >> 30) == E_ALLOCEXTENT)) &&
@@ -308,7 +308,7 @@ int ReadFileData(void *buffer, struct FE_or_EFE *xfe, UINT16 part, int offset_0,
           }
           ADlength = MAX(L_AD, U_endian32(xfe->InfoLengthL));
           if (offset < ADlength) {
-            char *emb_data = (char *)xfe + L_EA;
+            const char *emb_data = (const char *)xfe + L_EA;
             emb_data += isEFE ? sizeof(struct ExtFileEntry)
                               : sizeof(struct FileEntry);
             *data_start_loc = U_endian32(xfe->sTag.uTagLoc);

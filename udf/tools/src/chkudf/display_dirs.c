@@ -187,7 +187,7 @@ int DisplayDirs(void)
   return 0;
 }
 
-int GetFID(struct FileIDDesc *FID, struct FE_or_EFE *fe, UINT16 part, int offset)
+int GetFID(struct FileIDDesc *FID, const struct FE_or_EFE *fe, UINT16 part, int offset)
 {
   int count;
   UINT32 location;

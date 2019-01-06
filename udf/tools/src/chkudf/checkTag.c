@@ -6,8 +6,8 @@
 #include "chkudf.h"
 #include "protos.h"
 
-int CheckTag(struct tag *TagPtr, UINT32 uTagLoc, UINT16 TagID,
-               int crc_min, int crc_max)
+int CheckTag(const struct tag *TagPtr, UINT32 uTagLoc, UINT16 TagID,
+             int crc_min, int crc_max)
 {
   UINT8 checksum;
   int i, result = CHECKTAG_TAG_GOOD;

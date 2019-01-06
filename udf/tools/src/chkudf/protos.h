@@ -33,7 +33,7 @@ UINT8 *scsi_read10(UINT8 *buffer, int LBA, int length, int sectorsize,
  * likely to be a tag but has a small problem, or is a good tag.
  ****************************************************************************/
 
-int CheckTag(struct tag *TagPtr, UINT32 uTagLoc, UINT16 TagID,
+int CheckTag(const struct tag *TagPtr, UINT32 uTagLoc, UINT16 TagID,
              int crc_min, int crc_max);
 
 /*****************************************************************************
@@ -61,7 +61,7 @@ void cleanup(void);
 
 int GetRootDir(void);
 int DisplayDirs(void);
-int GetFID(struct FileIDDesc *FID, struct FE_or_EFE *fe, UINT16 part, int offset);
+int GetFID(struct FileIDDesc *FID, const struct FE_or_EFE *fe, UINT16 part, int offset);
 
 /*****************************************************************************
  * do_scsi.c
@@ -291,7 +291,7 @@ int ReadSectors(void *buffer, UINT32 address, UINT32 Count);
 
 int ReadLBlocks(void *buffer, UINT32 address, UINT16 partition, UINT32 Count);
 
-int ReadFileData(void *buffer, struct FE_or_EFE *ICB, UINT16 part,
+int ReadFileData(void *buffer, const struct FE_or_EFE *ICB, UINT16 part,
                  int offset, int Count, UINT32 *data_start_loc);
 
 /*****************************************************************************
