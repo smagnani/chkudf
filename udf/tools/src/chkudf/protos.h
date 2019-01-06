@@ -14,11 +14,11 @@
  * The scsi_read10 command builds a read command in the preallocated
  * buffer.  It returns a pointer to the buffer.
  ****************************************************************************/ 
-char *scsi_modesense10(char *buffer, int DBD, int PC, int pagecode, 
-                  int pagelength);
+UINT8 *scsi_modesense10(UINT8 *buffer, int DBD, int PC, int pagecode,
+                        int pagelength);
 
-char *scsi_read10(char *buffer, int LBA, int length, int sectorsize,
-                  int DPO, int FUA, int RelAdr);
+UINT8 *scsi_read10(UINT8 *buffer, int LBA, int length, int sectorsize,
+                   int DPO, int FUA, int RelAdr);
 
 
 
@@ -69,7 +69,7 @@ int GetFID(struct FileIDDesc *FID, struct FE_or_EFE *fe, UINT16 part, int offset
  * This function issues SCSI commands
  ****************************************************************************/
 
-BOOL do_scsi(UINT8 *command, int cmd_len, UINT8 *buffer, UINT32 in_len,
+BOOL do_scsi(UINT8 *command, int cmd_len, void *buffer, UINT32 in_len,
              UINT32 out_len, UINT8 *sense, int sense_len);
 
 /*****************************************************************************

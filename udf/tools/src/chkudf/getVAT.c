@@ -15,7 +15,8 @@
 void GetVAT(void)
 {
   struct FileEntry *VATICB;
-  int              i, found, result;
+  int              found, result;
+  UINT32           i;
   UINT16           VirtPart;
 
   found = FALSE;

@@ -17,7 +17,7 @@
  * implementation, the device identification is a file handle kept in 
  * the "device" global.
  */
-BOOL do_scsi(UINT8 *command, int cmd_len, UINT8 *buffer, UINT32 in_len, 
+BOOL do_scsi(UINT8 *command, int cmd_len, void *buffer, UINT32 in_len,
              UINT32 out_len, UINT8 *sense, int sense_len)
 {
   UINT32   *ip;

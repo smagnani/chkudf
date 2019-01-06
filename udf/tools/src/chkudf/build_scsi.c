@@ -6,7 +6,7 @@
  * The following routine builds a MODE SENSE 10 CDB in the area pointed to
  * by buffer.
  */
-char *scsi_modesense10(char *buffer, int DBD, int PC, int pagecode, 
+UINT8 *scsi_modesense10(UINT8 *buffer, int DBD, int PC, int pagecode,
                        int pagelength)
 {
   /* 
@@ -31,7 +31,7 @@ char *scsi_modesense10(char *buffer, int DBD, int PC, int pagecode,
  * The following routine builds a READ 10 CDB in the area pointed to by
  * buffer.
  */
-char *scsi_read10(char *buffer, int LBA, int length, int sectorsize,
+UINT8 *scsi_read10(UINT8 *buffer, int LBA, int length, int sectorsize,
                   int DPO, int FUA, int RelAdr)
 {
   int  *ip;
