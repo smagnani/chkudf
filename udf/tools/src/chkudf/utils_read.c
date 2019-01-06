@@ -266,9 +266,7 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
           }
           extl_end = (const struct long_ad *)((char *)extl_ptr + L_AD);
           // The following while loop "eats" all unneeded extents.
-          while (((offset >= (U_endian32(extl_ptr->ExtentLength.Length32) & 0x3FFFFFFF)) || 
-                 ((U_endian32(extl_ptr->ExtentLength.Length32) >> 30) == E_ALLOCEXTENT)) &&
-                 (extl_ptr < extl_end)) {
+          while (extl_ptr < extl_end) {
             if ((U_endian32(extl_ptr->ExtentLength.Length32) >> 30) == E_ALLOCEXTENT) {
               if (!AED) {
                 AED = (struct AllocationExtentDesc *)malloc(blocksize);
@@ -289,7 +287,11 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
               } else {
                 extl_ptr = extl_end;
               }
+            } else if (offset < (U_endian32(extl_ptr->ExtentLength.Length32) & 0x3FFFFFFF)) {
+              // offset_0 is at "offset" bytes into the current extent
+              break;
             } else {
+              // Haven't reached the extent containing offset_0 yet
               offset -= U_endian32(extl_ptr->ExtentLength.Length32) & 0x3FFFFFFF;
               extl_ptr++;
             }
