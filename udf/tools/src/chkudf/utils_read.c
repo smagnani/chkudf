@@ -9,7 +9,9 @@
 #include "protos.h"
 
 /* Cache everything in units of packet_size.  packet_size will be filled
- * in for all media, packet or not. */
+ * in for all media, packet or not.
+ * Subtle point: the caching obviates any need for 'buffer' to have any special alignment
+ */
 
 int ReadSectors(void *buffer, UINT32 address, UINT32 Count)
 {
@@ -161,32 +163,38 @@ int ReadLBlocks(void *buffer, UINT32 address, UINT16 p_ref, UINT32 Count)
 }
 
 /*
- * @param[out]   buffer           Data read from the file
+ * @param[out]   buffer           Data read from the file.
+ *                                This buffer should have a minimum length of
+ *                                ((bytesRequested + 2 * blocksize - 2) / blocksize) blocks
+ *                                to avoid overrun for all (startOffset, bytesRequested) combinations.
+ *   FIXME: memcpy file data directly from block cache so we don't have to rely on caller overallocation to avoid overrun
+ *
  * @param[in]    xfe              ICB describing the file
  * @param[in]    part             Which partition the file is part of
- * @param[in]    offset_0         # of bytes into the file at which to begin reading
- * @param[in]    count_0          Maximum number of bytes to read
- * @param[out]   data_start_loc   Sector in which the offset_0-th byte of the file resides
+ * @param[in]    startOffset      # of bytes into the file at which to begin reading   FIXME: files >= 2 GiB
+ * @param[in]    bytesRequested   Desired number of file data bytes
+ * @param[out]   data_start_loc   Sector in which the startOffset byte of the file resides
  *
  * @return       Number of bytes read
  */
 int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
-                 int offset_0, int count_0, UINT32 *data_start_loc)
+                 int startOffset, int bytesRequested, UINT32 *data_start_loc)
 {
   const struct short_ad  *exts_ptr, *exts_end;
   const struct long_ad   *extl_ptr, *extl_end;
   struct AllocationExtentDesc *AED = NULL;
   UINT32           sector;
   UINT32           L_EA, L_AD;
-  int              ADlength, error, offset, count, offset_im, count_im, firstpass;
-  void            *t_buffer;
+  UINT32           blockBytesAvailable;
+  int              error, offset, count, curFileOffset, bytesRemaining, firstpass;
+  void            *fileData;
   BOOL             isEFE;
 
   firstpass = TRUE;
   error = 0;
-  offset_im = offset_0;
-  count_im  = count_0;
-  t_buffer = buffer;
+  curFileOffset = startOffset;
+  bytesRemaining = bytesRequested;  // TODO: This should be reduced if xfe InfoLength is too small
+  fileData = buffer;
 
   if (U_endian16(xfe->sTag.uTagID) == TAGID_EXT_FILE_ENTRY) {
     isEFE = TRUE;
@@ -197,13 +205,16 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
     L_EA = U_endian32(xfe->FE.L_EA);
     L_AD = U_endian32(xfe->FE.L_AD);
   }
+  // FIXME: L_EA and L_AD are assumed sane. At least prevent buffer overread.
 
-  while (count_im > 0 && !error) {
-    offset = offset_im;
-    count  = count_im;
+  while (bytesRemaining > 0 && !error) {
+    offset = curFileOffset;
+    count  = bytesRemaining;
+    // FIXME: files where InfoLengthH != 0
     if (offset < U_endian32(xfe->InfoLengthL)) {
       switch(U_endian16(xfe->sICBTag.Flags) & ADTYPEMASK) {
         case ADSHORT:
+          // FIXME: efficiency: don't restart from the beginning if !firstpass
           if (isEFE) {
             exts_ptr = (const struct short_ad *)((const char *)xfe + sizeof(struct ExtFileEntry) + L_EA);
           } else {
@@ -228,29 +239,37 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
               if (!error) {
                 exts_ptr = (const struct short_ad *)(AED + 1);
                 exts_end = exts_ptr + (U_endian32(AED->L_AD) >> 3);
+                // FIXME: AED->L_AD assumed sane.  At least prevent buffer overread.
               } else {
                 exts_ptr = exts_end;
               }
             } else if (offset < (U_endian32(exts_ptr->ExtentLength.Length32) & 0x3FFFFFFF)) {
-            	// offset_0 is at "offset" bytes into the current extent
+            	// curFileOffset is at "offset" bytes into the current extent
                 break;
             } else {
-            	// Haven't reached the extent containing offset_0 yet
+            	// Haven't reached the extent containing curFileOffset yet
+                // FIXME: Terminate if ExtentLength.Length32 == 0
                 offset -= U_endian32(exts_ptr->ExtentLength.Length32) & 0x3FFFFFFF;
                 exts_ptr++;
             }
           }
           // Now to read from the right extent
+          // FIXME: efficiency: process until bytesRemaining <= 0, error, exts_end, or chain
+          // FIXME: Terminate if ExtentLength.Length32 == 0
+          // FIXME: need to return all zero for blocks in extents not marked E_RECORDED
           if ((exts_ptr < exts_end) && (offset < (U_endian32(exts_ptr->ExtentLength.Length32) & 0x3FFFFFFF))) {
             sector = U_endian32(exts_ptr->Location) + (offset >> bdivshift);
-            error = ReadLBlocks(t_buffer, sector, part, 1);
+            error = ReadLBlocks(fileData, sector, part, 1);
+            // Note: misalignment [(startOffset % blocksize) != 0] is handled at the end of the function
             if (firstpass) {
               *data_start_loc = sector;
             }
             if (!error) {
-              offset_im += blocksize - (offset & (blocksize - 1));
-              count_im  -= blocksize - (offset & (blocksize - 1));
-              t_buffer += blocksize;
+              UINT32 blockStartOffset = offset & (blocksize - 1);
+              blockBytesAvailable = blocksize - blockStartOffset;  // FIXME: assumes sane ExtentLength.Length32
+              curFileOffset  += blockBytesAvailable;
+              bytesRemaining -= blockBytesAvailable;
+              fileData += blocksize;
             }
           } else {
             error = 1;
@@ -258,6 +277,7 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
           break;
 
         case ADLONG:
+          // FIXME: efficiency: don't restart from the beginning if !firstpass
           if (isEFE) {
             extl_ptr = (const struct long_ad *)((const char *)xfe + sizeof(struct ExtFileEntry) + L_EA);
           } else {
@@ -283,28 +303,37 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
               if (!error) {
                 extl_ptr = (struct long_ad *)(AED + 1);
                 extl_end = extl_ptr + (U_endian32(AED->L_AD) >> 4);
+                // FIXME: AED->L_AD assumed sane. At least prevent buffer overread.
               } else {
                 extl_ptr = extl_end;
               }
             } else if (offset < (U_endian32(extl_ptr->ExtentLength.Length32) & 0x3FFFFFFF)) {
-              // offset_0 is at "offset" bytes into the current extent
+              // curFileOffset is at "offset" bytes into the current extent
               break;
             } else {
-              // Haven't reached the extent containing offset_0 yet
+              // Haven't reached the extent containing curFileOffset yet
+              // FIXME: Terminate if ExtentLength.Length32 == 0
               offset -= U_endian32(extl_ptr->ExtentLength.Length32) & 0x3FFFFFFF;
               extl_ptr++;
             }
           }
+          // Now to read from the right extent
+          // FIXME: efficiency: process until bytesRemaining <= 0, error, extl_end, or chain
+          // FIXME: Terminate if ExtentLength.Length32 == 0
+          // FIXME: need to return all zero for blocks in extents not marked E_RECORDED
           if ((extl_ptr < extl_end) && (offset < (U_endian32(extl_ptr->ExtentLength.Length32) & 0x3FFFFFFF))) {
             sector = U_endian32(extl_ptr->Location_LBN) + (offset >> bdivshift);
-            ReadLBlocks(t_buffer, sector, U_endian16(extl_ptr->Location_PartNo), 1);
+            ReadLBlocks(fileData, sector, U_endian16(extl_ptr->Location_PartNo), 1);
+            // Note: misalignment [(startOffset % blocksize) != 0] is handled at the end of the function
             if (firstpass) {
               *data_start_loc = sector;
             }
             if (!error) {
-              offset_im += blocksize - (offset & (blocksize - 1));
-              count_im  -= blocksize - (offset & (blocksize - 1));
-              t_buffer += blocksize;
+              UINT32 blockStartOffset = offset & (blocksize - 1);
+              blockBytesAvailable = blocksize - blockStartOffset;  // FIXME: assumes sane ExtentLength.Length32
+              curFileOffset  += blockBytesAvailable;
+              bytesRemaining -= blockBytesAvailable;
+              fileData += blocksize;
             }
           } else {
             error = 1;
@@ -312,19 +341,25 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
           break;
     
         case ADNONE:
+          // @todo Why qualify with !offset?
+          // FIXME: files where InfoLengthH != 0
           if ((L_AD != U_endian32(xfe->InfoLengthL)) && !offset) {
             printf("**Embedded data error: L_AD = %u, Information Length = %u\n",
                    L_AD, U_endian32(xfe->InfoLengthL));
           }
-          ADlength = MAX(L_AD, U_endian32(xfe->InfoLengthL));
-          if (offset < ADlength) {
+          // FIXME: InfoLength assumed sane. At least prevent buffer overread.
+          // TODO: Use of MAX() here is debatable, L_AD and InfoLength should match
+          blockBytesAvailable = MAX(L_AD, U_endian32(xfe->InfoLengthL));
+          if (offset < blockBytesAvailable) {
             const char *emb_data = (const char *)xfe + L_EA;
             emb_data += isEFE ? sizeof(struct ExtFileEntry)
                               : sizeof(struct FileEntry);
             *data_start_loc = U_endian32(xfe->sTag.uTagLoc);
-            memcpy(buffer, emb_data, ADlength);
-            count_im -= ADlength - offset_im;
-            offset_im += ADlength - offset_im;
+
+            // Note: misalignment (startOffset > 0) is handled at the end of the function
+            memcpy(buffer, emb_data, blockBytesAvailable);
+            bytesRemaining -= blockBytesAvailable - curFileOffset;
+            curFileOffset += blockBytesAvailable - curFileOffset;
           } else {
             error = 1;
           }
@@ -340,8 +375,9 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
   if (AED)
     free(AED);
 
-  memcpy(buffer, buffer + (offset_0 & (blocksize - 1)), count_0 - count_im);
-  if (count_im < 0) count_im = 0;
-  return count_im;
+  // BUG: must use memmove() when src & dst overlap
+  memcpy(buffer, buffer + (startOffset & (blocksize - 1)), bytesRequested - bytesRemaining);
+  if (bytesRemaining < 0) bytesRemaining = 0;
+  return bytesRemaining;
 }
 

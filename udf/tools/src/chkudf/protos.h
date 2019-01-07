@@ -292,7 +292,7 @@ int ReadSectors(void *buffer, UINT32 address, UINT32 Count);
 int ReadLBlocks(void *buffer, UINT32 address, UINT16 partition, UINT32 Count);
 
 int ReadFileData(void *buffer, const struct FE_or_EFE *ICB, UINT16 part,
-                 int offset, int Count, UINT32 *data_start_loc);
+                 int startOffset, int bytesRequested, UINT32 *data_start_loc);
 
 /*****************************************************************************
  * verifyAVDP.c
