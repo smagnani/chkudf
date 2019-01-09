@@ -212,11 +212,24 @@ int ReadLBlocks(void *buffer, UINT32 p_address, UINT16 p_ref, UINT32 Count)
           } // else no sparing table available
           // fallthrough
         case PTN_TYP_REAL:
-        case PTN_TYP_VIRTUAL:
           cachedBuf = CachePBlocks(p_address, p_ref, Count);
           if (cachedBuf) {
             memcpy(buffer, cachedBuf, Count << bdivshift);
             error = 0;
+          }
+          break;
+
+        case PTN_TYP_VIRTUAL:
+          // Virtual blocks may not be contiguous,
+          // do each one independently
+          error = 0;
+          for (i = 0; !error && (i < Count); i++) {
+            cachedBuf = CachePBlocks(p_address + i, p_ref, 1);
+            if (cachedBuf) {
+              memcpy(buffer + (i << bdivshift), cachedBuf, blocksize);
+            } else {
+              error = 1;
+            }
           }
           break;
 
