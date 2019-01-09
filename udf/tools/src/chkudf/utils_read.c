@@ -11,9 +11,11 @@
 /* Cache everything in units of packet_size.  packet_size will be filled
  * in for all media, packet or not.
  * Subtle point: the caching obviates any need for 'buffer' to have any special alignment
+ *
+ * WARNING: pointer returned by CacheSectors() is only guaranteed valid until next
+ *          call to CacheSectors
  */
-
-int ReadSectors(void *buffer, UINT32 address, UINT32 Count)
+static const void* CacheSectors(UINT32 address, UINT32 Count)
 {
   int readOK, result, numsecs, i;
   void *curbuffer;
@@ -94,72 +96,136 @@ int ReadSectors(void *buffer, UINT32 address, UINT32 Count)
     if (readOK) {
       curbuffer = Cache[bufno].Buffer;
     } else {
-      curbuffer = 0;
+      curbuffer = NULL;
     }
   }
-  if (curbuffer) {
-    memcpy(buffer, curbuffer, Count << sdivshift);
-  }
-  return !readOK;
+
+  return curbuffer;
 }
 
-
-/* Bug: If count crosses sparing boundary... */
-
-int ReadLBlocks(void *buffer, UINT32 address, UINT16 p_ref, UINT32 Count)
+int ReadSectors(void *buffer, UINT32 address, UINT32 Count)
 {
-  sST_desc *PM_ST;
-  int error, spared;
-  UINT32 i, j;
+    const void *cachedBuf = CacheSectors(address, Count);
+    if (cachedBuf) {
+      memcpy(buffer, cachedBuf, Count << sdivshift);
+    }
 
-  error = 0;
+    return (cachedBuf == NULL);
+}
+
+/**
+ * Pull data from a range of partition logical blocks into a contiguous cache buffer.
+ *
+ * @param[in]  p_address   Partition-relative address of the first block to cache
+ * @param[in]  p_ref       Index of the partition where blocks reside
+ * @param[in]  Count       Number of logical blocks to fetch.
+ *                         Must not be larger than 1 if the partition has a Virtual
+ *                         or Sparable Partition Map because sequential partition blocks
+ *                         may reside in discontiguous media sectors.
+ *
+ * @return     NULL        Read error, or request could not be satisfied
+ *                         (see constraints spelled out under "Count")
+ * @return     non-NULL    Pointer to cached block data
+ */
+static const void* CachePBlocks(UINT32 p_address, UINT16 p_ref, UINT32 Count)
+{
+  const void *cachedBuf = NULL;
+  sST_desc *PM_ST;
+  UINT32 i;
+  UINT32 numSectors = Count * s_per_b;
+  UINT32 secaddr = (p_address * s_per_b) + Part_Info[p_ref].Offs;
+
   if (p_ref < PTN_no) {
     switch(Part_Info[p_ref].type) {
       case PTN_TYP_REAL:
-        if (address < Part_Info[p_ref].Len) {
-          error = ReadSectors(buffer, 
-                              (address * s_per_b) + Part_Info[p_ref].Offs,
-                              Count * s_per_b);
+        if (p_address < Part_Info[p_ref].Len) {
+          cachedBuf = CacheSectors(secaddr, numSectors);
         }
         break;
 
       case PTN_TYP_VIRTUAL:
-        if ((address < Part_Info[p_ref].Len) && (Count == 1)) {
-          error = ReadSectors(buffer, 
-                              (Part_Info[p_ref].Extra[address] * s_per_b) + 
-                                Part_Info[p_ref].Offs, Count * s_per_b);
+        if ((p_address < Part_Info[p_ref].Len) && (Count == 1)) {
+          secaddr =   (Part_Info[p_ref].Extra[p_address] * s_per_b)
+                    + Part_Info[p_ref].Offs;
+          cachedBuf = CacheSectors(secaddr, s_per_b);
         }
         break;
 
       case PTN_TYP_SPARE:
         PM_ST = (struct _sST_desc *)Part_Info[p_ref].Extra;
         if (PM_ST) {
-          for (j = 0; j < Count; j++) {  /* Do each block independently */
-            spared = FALSE;
+          if (Count == 1) {
+            int spared = FALSE;
             for (i = 0; (i < PM_ST->Size) && !spared; i++) {
-              if (((address + j) >= PM_ST->Map[i].Original)  &&
-                  ((address + j) < (PM_ST->Map[i].Original + PM_ST->Extent))) {
+              if ((p_address >= PM_ST->Map[i].Original)  &&
+                  (p_address < (PM_ST->Map[i].Original + PM_ST->Extent))) {
                 printf("!!Getting sector from spare area!!\n");
                 spared = TRUE;
-                error = ReadSectors(buffer + (j << bdivshift), Part_Info[p_ref].Extra[2*i+1], s_per_b);
+                secaddr = Part_Info[p_ref].Extra[2*i+1];
+                cachedBuf = CacheSectors(secaddr, s_per_b);
+                break;
               }
             }
             if (!spared) {
-              error = ReadSectors(buffer + (j << bdivshift), (address + j) * s_per_b
-                                     + Part_Info[p_ref].Offs, s_per_b);
+              cachedBuf = CacheSectors(secaddr, s_per_b);
             }
-          }
+          } // else unsupported case, since spared blocks can be discontiguous on the medium
         } else {
-          error = ReadSectors(buffer, address * s_per_b + Part_Info[p_ref].Offs, 
-                              Count * s_per_b);
+          // No sparing table available
+          cachedBuf = CacheSectors(secaddr, numSectors);
         }
         break;
 
       default:
-        return 1;
+        break;
     }
   }
-  return error;
+
+  return cachedBuf;
+}
+
+/* Bug: If count crosses sparing boundary... */
+int ReadLBlocks(void *buffer, UINT32 p_address, UINT16 p_ref, UINT32 Count)
+{
+    const void *cachedBuf = NULL;
+    sST_desc *PM_ST;
+    UINT32 i;
+    int error = 1;
+
+    if (p_ref < PTN_no) {
+      switch(Part_Info[p_ref].type) {
+        case PTN_TYP_SPARE:
+          PM_ST = (struct _sST_desc *)Part_Info[p_ref].Extra;
+          if (PM_ST) {
+            error = 0;
+            // Sparable blocks may not be contiguous,
+            // do each one independently
+            for (i = 0; !error && (i < Count); i++) {
+              cachedBuf = CachePBlocks(p_address + i, p_ref, 1);
+              if (cachedBuf) {
+                memcpy(buffer + (i << bdivshift), cachedBuf, blocksize);
+              } else {
+                error = 1;
+              }
+            }
+            break;
+          } // else no sparing table available
+          // fallthrough
+        case PTN_TYP_REAL:
+        case PTN_TYP_VIRTUAL:
+          cachedBuf = CachePBlocks(p_address, p_ref, Count);
+          if (cachedBuf) {
+            memcpy(buffer, cachedBuf, Count << bdivshift);
+            error = 0;
+          }
+          break;
+
+        default:
+          break;
+      }
+    }
+
+    return error;
 }
 
 /*
@@ -244,10 +310,10 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
                 exts_ptr = exts_end;
               }
             } else if (offset < (U_endian32(exts_ptr->ExtentLength.Length32) & 0x3FFFFFFF)) {
-            	// curFileOffset is at "offset" bytes into the current extent
+                // curFileOffset is at "offset" bytes into the current extent
                 break;
             } else {
-            	// Haven't reached the extent containing curFileOffset yet
+                // Haven't reached the extent containing curFileOffset yet
                 // FIXME: Terminate if ExtentLength.Length32 == 0
                 offset -= U_endian32(exts_ptr->ExtentLength.Length32) & 0x3FFFFFFF;
                 exts_ptr++;
