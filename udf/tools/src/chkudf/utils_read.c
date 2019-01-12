@@ -254,7 +254,7 @@ int ReadLBlocks(void *buffer, UINT32 p_address, UINT16 p_ref, UINT32 Count)
  * @param[in]    bytesRequested   Desired number of file data bytes
  * @param[out]   data_start_loc   Sector in which the startOffset byte of the file resides
  *
- * @return       Number of bytes read
+ * @return       Number of bytes requested but NOT read
  */
 int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
                  int startOffset, int bytesRequested, UINT32 *data_start_loc)

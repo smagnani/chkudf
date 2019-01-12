@@ -189,12 +189,12 @@ int DisplayDirs(void)
 
 int GetFID(struct FileIDDesc *FID, const struct FE_or_EFE *fe, UINT16 part, int offset)
 {
-  int count;
+  int bytesRead;
   UINT32 location;
   
-  count = ReadFileData(FID, fe, part, offset, blocksize, &location);
-  if (count < blocksize) {
-    CheckTag((struct tag *)FID, location, TAGID_FILE_ID, 0, blocksize - 16);
+  bytesRead = blocksize - ReadFileData(FID, fe, part, offset, blocksize, &location);
+  if (bytesRead > FILE_ID_DESC_CONSTANT_LEN) {
+    CheckTag((struct tag *)FID, location, TAGID_FILE_ID, 0, bytesRead - sizeof(struct tag));
     if (Error.Code == ERR_TAGLOC) {
       printf("** Wrong Tag Location. Expected %lld, Found %lld (%u)\n",
              Error.Expected, Error.Found, location);

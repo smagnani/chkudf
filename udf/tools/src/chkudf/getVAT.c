@@ -45,9 +45,11 @@ void GetVAT(void)
         printf("  VAT ICB candidate was found.\n");
         // We have a good ICB 
         if (VATICB->sICBTag.FileType == 0) {
+          // FIXME: nonzero InfoLengthH handling
           Part_Info[VirtPart].Extra = malloc(VATICB->InfoLengthL + blocksize);
           if (Part_Info[VirtPart].Extra) {
             printf("  Allocated %u (0x%04x) bytes for the VAT.\n", VATICB->InfoLengthL, VATICB->InfoLengthL);
+            // FIXME: short read and read error are not handled
             ReadFileData(Part_Info[VirtPart].Extra, (struct FE_or_EFE*)VATICB, Part_Info[VirtPart].Num,
                          0, VATICB->InfoLengthL, &i);
             Part_Info[VirtPart].Len = (VATICB->InfoLengthL - 36) >> 2;
