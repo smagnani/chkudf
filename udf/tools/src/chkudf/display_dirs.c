@@ -85,7 +85,7 @@ int DisplayDirs(void)
   partition = U_endian16(RootDirICB.Location_PartNo);
 
   printf("\nDisplaying directory hierarchy:\n%04x:%08x: \\", partition, address);
-  File = (struct FileIDDesc *)malloc(blocksize * 2);
+  File = (struct FileIDDesc *)malloc(blocksize);
   ICB = (struct FE_or_EFE *)malloc(blocksize);
   if (File && ICB) {
     depth = 1;

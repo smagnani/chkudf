@@ -411,22 +411,33 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
         }
       }
       // Now to read from the right extent
-      // FIXME: efficiency: process until bytesRemaining <= 0, error, exts_end, or chain
+      // FIXME: efficiency: process until bytesRemaining == 0, error, exts_end, or chain
       // FIXME: Terminate if curExtentLength == 0
       // FIXME: need to return all zero for blocks in extents not marked E_RECORDED
       if ((exts_ptr < exts_end) && (offset < curExtentLength)) {
+        const void *cacheBuf;
+
         sector = curExtentLocation + (offset >> bdivshift);
-        error = ReadLBlocks(fileData, sector, curPartitionIndex, 1);
-        // Note: misalignment [(startOffset % blocksize) != 0] is handled at the end of the function
+        cacheBuf = CachePBlocks(sector, curPartitionIndex, 1);
+
         if (firstpass) {
           *data_start_loc = sector;
         }
         if (!error) {
           UINT32 blockStartOffset = offset & (blocksize - 1);
-          blockBytesAvailable = blocksize - blockStartOffset;  // FIXME: assumes sane ExtentLength.Length32
+          blockBytesAvailable = blocksize - blockStartOffset;  // FIXME: assumes sane curExtentLength
+
+          if (blockBytesAvailable > (curExtentLength - offset))
+            blockBytesAvailable = curExtentLength - offset;
+
+          if (blockBytesAvailable > bytesRemaining)
+            blockBytesAvailable = bytesRemaining;
+
+          memcpy(fileData, cacheBuf + blockStartOffset, blockBytesAvailable);
+
           curFileOffset  += blockBytesAvailable;
           bytesRemaining -= blockBytesAvailable;
-          fileData += blocksize;
+          fileData       += blockBytesAvailable;
         }
       } else {
         error = 1;
@@ -438,9 +449,6 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
     if (AED)
       free(AED);
 
-    // BUG: must use memmove() when src & dst overlap
-    memcpy(buffer, buffer + (startOffset & (blocksize - 1)), bytesRequested - bytesRemaining);
-    if (bytesRemaining < 0) bytesRemaining = 0;
   } while (0);
 
   return bytesRemaining;
