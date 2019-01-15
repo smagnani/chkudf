@@ -192,7 +192,7 @@ int GetFID(struct FileIDDesc *FID, const struct FE_or_EFE *fe, UINT16 part, int 
   int bytesRead;
   UINT32 location;
   
-  bytesRead = blocksize - ReadFileData(FID, fe, part, offset, blocksize, &location);
+  bytesRead = ReadFileData(FID, fe, part, offset, blocksize, &location);
   if (bytesRead > FILE_ID_DESC_CONSTANT_LEN) {
     CheckTag((struct tag *)FID, location, TAGID_FILE_ID, 0, bytesRead - sizeof(struct tag));
     if (Error.Code == ERR_TAGLOC) {
