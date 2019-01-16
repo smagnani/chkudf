@@ -45,7 +45,14 @@ void GetVAT(void)
       if (result < CHECKTAG_OK_LIMIT) {
         printf("  VAT ICB candidate was found.\n");
         // We have a good ICB
-        if (VATICB->sICBTag.FileType == 0) {
+        if (VATICB->sICBTag.FileType == FILE_TYPE_VAT) {
+#if 1
+          // @todo Replace this with a real implementation when sample media is available
+          // "Found VAT ICB. Unfortunately, code to process it does not yet exist."
+          Error.Code = ERR_NOVATCODE;
+          Error.Sector = U_endian32(VATICB->sTag.uTagLoc);
+          Fatal = TRUE;
+#else     // Obsolete code for UDF1.50 VAT format. @todo Retain it in case we ever see 1.50 media?
           unsigned long long infoLength =   (((unsigned long long) U_endian32(VATICB->InfoLengthH)) << 32)
                                           | U_endian32(VATICB->InfoLengthL);
           if ((infoLength <= 0x3FFFFFFFFULL) && ((size_t) infoLength) == infoLength) {
@@ -70,6 +77,7 @@ void GetVAT(void)
             Error.Sector = LastSector - Part_Info[VirtPart].Offs;
             Fatal = TRUE;
           }
+#endif
         } else {
           Error.Code = ERR_NOVAT;
           Error.Sector = LastSector - Part_Info[VirtPart].Offs;

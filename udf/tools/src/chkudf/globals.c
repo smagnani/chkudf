@@ -73,7 +73,8 @@ char *Error_Msgs[] = {
 /* 30 */    "Expected Serial number of %lld, found %lld. (disabling reporting)",
             "Expected Extent Type %lld, found prohibited type %lld",
             "Expected AD Type %lld, found prohibited type %lld",
-            "Unallocated extents not sorted in ascending order"
+            "Unallocated extents not sorted in ascending order",
+            "Found VAT ICB. Unfortunately, code to process it does not yet exist."
 };
 
 

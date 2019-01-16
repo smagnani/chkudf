@@ -161,4 +161,5 @@ struct extent_ad_name {
 #define ERR_PROHIBITED_EXTENT_TYPE 31
 #define ERR_PROHIBITED_AD_TYPE     32
 #define ERR_UNSORTED_EXTENTS       33
+#define ERR_NOVATCODE              34
 #endif
