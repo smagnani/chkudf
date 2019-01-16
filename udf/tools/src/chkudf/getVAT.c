@@ -32,6 +32,7 @@ void GetVAT(void)
     if (VATICB) {
       printf("\n--Partition Reference %u is virtual, finding VAT ICB.\n", VirtPart);
       ReadSectors(VATICB, LastSector, 1);
+
       result = CheckTag((struct tag *)VATICB, LastSector - Part_Info[VirtPart].Offs,
                         TAGID_FILE_ENTRY, 20, blocksize);
       if (result > CHECKTAG_OK_LIMIT) {
@@ -43,20 +44,24 @@ void GetVAT(void)
       }
       if (result < CHECKTAG_OK_LIMIT) {
         printf("  VAT ICB candidate was found.\n");
-        // We have a good ICB 
+        // We have a good ICB
         if (VATICB->sICBTag.FileType == 0) {
-          // FIXME: nonzero InfoLengthH handling
-          Part_Info[VirtPart].Extra = malloc(VATICB->InfoLengthL);
+          unsigned long long infoLength =   (((unsigned long long) U_endian32(VATICB->InfoLengthH)) << 32)
+                                          | U_endian32(VATICB->InfoLengthL);
+          if ((infoLength <= 0x3FFFFFFFFULL) && ((size_t) infoLength) == infoLength) {
+            Part_Info[VirtPart].Extra = malloc(infoLength);
+          }
           if (Part_Info[VirtPart].Extra) {
-            printf("  Allocated %u (0x%04x) bytes for the VAT.\n", VATICB->InfoLengthL, VATICB->InfoLengthL);
+            printf("  Allocated %llu (0x%llx) bytes for the VAT.\n", infoLength, infoLength);
             // FIXME: short read and read error are not handled
             ReadFileData(Part_Info[VirtPart].Extra, (struct FE_or_EFE*)VATICB, Part_Info[VirtPart].Num,
-                         0, VATICB->InfoLengthL, &i);
-            Part_Info[VirtPart].Len = (VATICB->InfoLengthL - 36) >> 2;
+                         0, infoLength, &i);
+            Part_Info[VirtPart].Len = (UINT32)((infoLength - 36) >> 2);
             printf("  Virtual partition is %u sectors long.\n", Part_Info[VirtPart].Len);
-            printf("%sVAT Identifier is: ", CheckRegid((struct udfEntityId *)(Part_Info[VirtPart].Extra + (VATICB->InfoLengthL >> 2) - 9), E_REGID_VAT) ? "**" : "  ");
-            DisplayRegIDID((struct regid *)(Part_Info[VirtPart].Extra + (VATICB->InfoLengthL >> 2) - 9));
+            printf("%sVAT Identifier is: ", CheckRegid((struct udfEntityId *)(Part_Info[VirtPart].Extra + Part_Info[VirtPart].Len), E_REGID_VAT) ? "**" : "  ");
+            DisplayRegIDID((struct regid *)(Part_Info[VirtPart].Extra + Part_Info[VirtPart].Len));
             printf("\n");
+            // @todo 50 is arbitrary. Limit this detail to a verbose mode.
             for (i = 0; (i < 50) && (i < Part_Info[VirtPart].Len); i++) {
               printf("%02x: %08x\n", i, Part_Info[VirtPart].Extra[i]);
             }

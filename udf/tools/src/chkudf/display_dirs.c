@@ -189,7 +189,7 @@ int DisplayDirs(void)
 
 int GetFID(struct FileIDDesc *FID, const struct FE_or_EFE *fe, UINT16 part, int offset)
 {
-  int bytesRead;
+  unsigned int bytesRead;
   UINT32 location;
   
   bytesRead = ReadFileData(FID, fe, part, offset, blocksize, &location);

@@ -250,32 +250,39 @@ int ReadLBlocks(void *buffer, UINT32 p_address, UINT16 p_ref, UINT32 Count)
  *
  * @param[in]    xfe              ICB describing the file
  * @param[in]    part             Which partition the file is part of
- * @param[in]    startOffset      # of bytes into the file at which to begin reading   FIXME: files >= 2 GiB
+ * @param[in]    startOffset      # of bytes into the file at which to begin reading
  * @param[in]    bytesRequested   Desired number of file data bytes
  * @param[out]   data_start_loc   Sector in which the startOffset byte of the file resides
  *
  * @return       Number of bytes read
  */
-int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
-                 int startOffset, int bytesRequested, UINT32 *data_start_loc)
+unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
+                          unsigned long long startOffset, unsigned int bytesRequested,
+                          UINT32 *data_start_loc)
 {
   const char *exts_ptr, *exts_end;
   struct AllocationExtentDesc *AED = NULL;
-  UINT32           sector;
-  UINT16           curPartitionIndex = part;  // Default matches short_ad case
-  UINT32           curExtentLocation;
-  UINT32           curExtentLength;
-  UINT32           curExtentType;
-  UINT32           blockBytesAvailable;
-  int              error, offset, curFileOffset, bytesRemaining, firstpass;
-  void            *fileData;
-  const UINT16     adtype = U_endian16(xfe->sICBTag.Flags) & ADTYPEMASK;
+  UINT32             sector;    // @todo Rename - confusing b/c this is not used with ReadSectors()
+  UINT16             curPartitionIndex = part;  // Default matches short_ad case
+  UINT32             curExtentLocation;
+  UINT32             curExtentLength;
+  UINT32             curExtentType;
+  UINT32             blockBytesAvailable;
+  unsigned long long infoLength;
+  unsigned long long curFileOffset;
+  unsigned long long offset;
+  unsigned int       bytesRemaining;
+  int                error, firstpass;
+  void              *fileData;
+  const UINT16       adtype = U_endian16(xfe->sICBTag.Flags) & ADTYPEMASK;
 
   firstpass = TRUE;
   error = 0;
   curFileOffset = startOffset;
   bytesRemaining = bytesRequested;  // TODO: This should be reduced if xfe InfoLength is too small
   fileData = buffer;
+  infoLength =   (((unsigned long long) U_endian32(xfe->InfoLengthH)) << 32)
+               | U_endian32(xfe->InfoLengthL);
 
   do {
     UINT32  L_EA, L_AD;
@@ -332,13 +339,13 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
         error = 1;
         break;
       }
-      blockBytesAvailable -= startOffset;
+      blockBytesAvailable -= (UINT32) startOffset;
 
       if (bytesRequested < blockBytesAvailable) {
         blockBytesAvailable = bytesRequested;
       }
 
-      emb_data = ((const char*) xfe) + xfeHeaderSize + L_EA + startOffset;
+      emb_data = ((const char*) xfe) + xfeHeaderSize + L_EA + (UINT32) startOffset;
 
       memcpy(buffer, emb_data, blockBytesAvailable);
       bytesRemaining -= blockBytesAvailable;
@@ -352,8 +359,7 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
     while ((bytesRemaining > 0) && !error) {
       offset = curFileOffset;
 
-      // FIXME: files where InfoLengthH != 0
-      if (offset >= U_endian32(xfe->InfoLengthL)) {
+      if (offset >= infoLength) {
         // Attempted read beyond EOF
         error = 1;
         break;
@@ -417,18 +423,21 @@ int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
       if ((exts_ptr < exts_end) && (offset < curExtentLength)) {
         const void *cacheBuf;
 
-        sector = curExtentLocation + (offset >> bdivshift);
+        sector = curExtentLocation + (((UINT32) offset) >> bdivshift);
+
+        // Note, block-at-a-time in case of sparing or virtual mapping
         cacheBuf = CachePBlocks(sector, curPartitionIndex, 1);
 
         if (firstpass) {
           *data_start_loc = sector;
         }
         if (!error) {
-          UINT32 blockStartOffset = offset & (blocksize - 1);
+          const UINT32 offset32 = (UINT32) offset;   // Same value - to avoid repeated casting
+          UINT32 blockStartOffset = offset32 & (blocksize - 1);
           blockBytesAvailable = blocksize - blockStartOffset;  // FIXME: assumes sane curExtentLength
 
-          if (blockBytesAvailable > (curExtentLength - offset))
-            blockBytesAvailable = curExtentLength - offset;
+          if (blockBytesAvailable > (curExtentLength - offset32))
+            blockBytesAvailable = curExtentLength - offset32;
 
           if (blockBytesAvailable > bytesRemaining)
             blockBytesAvailable = bytesRemaining;
