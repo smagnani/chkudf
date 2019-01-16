@@ -49,6 +49,9 @@
 #define OSID_MKLINUX     6
 #define OSID_FREEBSD     7
 
+/* UDF 2.2.10 Virtual Allocation Table -------------------------*/
+#define FILE_TYPE_VAT             248  /* UDF 2.00 and later */
+
 /* UDF 2.2.11 Sparing Table for CD-RW --------------------------*/
 struct SparingTable {
     struct tag sTag;       /* uTagID = 0 */
