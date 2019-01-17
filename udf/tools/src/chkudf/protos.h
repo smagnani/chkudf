@@ -61,7 +61,8 @@ void cleanup(void);
 
 int GetRootDir(void);
 int DisplayDirs(void);
-int GetFID(struct FileIDDesc *FID, const struct FE_or_EFE *fe, UINT16 part, int offset);
+int GetFID(struct FileIDDesc *FID, const struct FE_or_EFE *fe, UINT16 part,
+           unsigned int offset);
 
 /*****************************************************************************
  * do_scsi.c

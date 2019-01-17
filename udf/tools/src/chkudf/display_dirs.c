@@ -67,9 +67,9 @@ int GetRootDir(void)
 
 int DisplayDirs(void)
 {
-  int    offs[MAX_DEPTH + 1];   // Offset into current directory data 
-  UINT32 addr[MAX_DEPTH + 1];   // Address of ICB of current dir      
-  UINT16 part[MAX_DEPTH + 1];   // Partition of ICB of current dir    
+  unsigned int offs[MAX_DEPTH + 1];   // Offset into current directory data
+  UINT32       addr[MAX_DEPTH + 1];   // Address of ICB of current dir
+  UINT16       part[MAX_DEPTH + 1];   // Partition of ICB of current dir
   int depth, i, error;
   struct FileIDDesc *File;      // Directory entry for the current file
   struct FE_or_EFE *ICB;        // ICB for current directory
@@ -187,7 +187,15 @@ int DisplayDirs(void)
   return 0;
 }
 
-int GetFID(struct FileIDDesc *FID, const struct FE_or_EFE *fe, UINT16 part, int offset)
+/**
+ * @param[out] FID       Where to put File Identifier descriptor
+ * @param[in]  fe        ICB of the directory containing the FID of interest
+ * @param[in]  part      Which partition the directory is part of
+ * @param[in]  offset    Number of bytes into the directory data where FID of interest
+ *                       begins
+ */
+int GetFID(struct FileIDDesc *FID, const struct FE_or_EFE *fe, UINT16 part,
+           unsigned int offset)
 {
   unsigned int bytesRead;
   UINT32 location;

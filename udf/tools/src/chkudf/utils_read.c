@@ -320,18 +320,17 @@ unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part
 
       *data_start_loc = U_endian32(xfe->sTag.uTagLoc);
       // @todo Why qualify with !startOffset?
-      // FIXME: files where InfoLengthH != 0
-      if ((L_AD != U_endian32(xfe->InfoLengthL)) && !startOffset) {
-        printf("**Embedded data error: L_AD = %u, Information Length = %u\n",
-               L_AD, U_endian32(xfe->InfoLengthL));
+      if ((L_AD != infoLength) && !startOffset) {
+        printf("**Embedded data error: L_AD = %u, Information Length = %llu\n",
+               L_AD, infoLength);
       }
 
       blockBytesAvailable = blocksize - xfeHeaderSize - L_EA;
       if (L_AD < blockBytesAvailable) {
           blockBytesAvailable = L_AD;
       }
-      if (U_endian32(xfe->InfoLengthL) < blockBytesAvailable) {
-        blockBytesAvailable = U_endian32(xfe->InfoLengthL);
+      if (infoLength < blockBytesAvailable) {
+        blockBytesAvailable = (UINT32) infoLength;
       }
 
       if (startOffset >= blockBytesAvailable) {
