@@ -252,7 +252,8 @@ int ReadLBlocks(void *buffer, UINT32 p_address, UINT16 p_ref, UINT32 Count)
  * @param[in]    part             Which partition the file is part of
  * @param[in]    startOffset      # of bytes into the file at which to begin reading
  * @param[in]    bytesRequested   Desired number of file data bytes
- * @param[out]   data_start_loc   Sector in which the startOffset byte of the file resides
+ * @param[out]   data_start_loc   Sector in which the startOffset byte of the file resides,
+ *                                if one has been allocated.  @todo What if not allocated?
  *
  * @return       Number of bytes read
  */
@@ -420,29 +421,36 @@ unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part
       // FIXME: Terminate if curExtentLength == 0
       // FIXME: need to return all zero for blocks in extents not marked E_RECORDED
       if ((exts_ptr < exts_end) && (offset < curExtentLength)) {
-        const void *cacheBuf;
+        const UINT32 offset32 = (UINT32) offset;   // Same value - to avoid repeated casting
+        UINT32 blockStartOffset = offset32 & (blocksize - 1);
+        blockBytesAvailable = blocksize - blockStartOffset;  // FIXME: assumes sane curExtentLength
 
+        if (blockBytesAvailable > (curExtentLength - offset32))
+          blockBytesAvailable = curExtentLength - offset32;
+
+        if (blockBytesAvailable > bytesRemaining)
+          blockBytesAvailable = bytesRemaining;
+
+        // Speculative - don't use resulting value if E_UNALLOCATED
         sector = curExtentLocation + (((UINT32) offset) >> bdivshift);
 
-        // Note, block-at-a-time in case of sparing or virtual mapping
-        cacheBuf = CachePBlocks(sector, curPartitionIndex, 1);
+        if (curExtentType == E_RECORDED) {
+          const void *cacheBuf;
 
-        if (firstpass) {
-          *data_start_loc = sector;
-        }
-        if (!error) {
-          const UINT32 offset32 = (UINT32) offset;   // Same value - to avoid repeated casting
-          UINT32 blockStartOffset = offset32 & (blocksize - 1);
-          blockBytesAvailable = blocksize - blockStartOffset;  // FIXME: assumes sane curExtentLength
-
-          if (blockBytesAvailable > (curExtentLength - offset32))
-            blockBytesAvailable = curExtentLength - offset32;
-
-          if (blockBytesAvailable > bytesRemaining)
-            blockBytesAvailable = bytesRemaining;
-
+          // Note, block-at-a-time in case of sparing or virtual mapping
+          cacheBuf = CachePBlocks(sector, curPartitionIndex, 1);
           memcpy(fileData, cacheBuf + blockStartOffset, blockBytesAvailable);
 
+        } else {
+          // Maybe allocated, but definitely unrecorded
+          memset(fileData, 0, blockBytesAvailable);
+        }
+
+        if (firstpass && (curExtentType != E_UNALLOCATED)) {
+          *data_start_loc = sector;
+        }
+
+        if (!error) {
           curFileOffset  += blockBytesAvailable;
           bytesRemaining -= blockBytesAvailable;
           fileData       += blockBytesAvailable;
