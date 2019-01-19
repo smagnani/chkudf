@@ -10,10 +10,10 @@ OBJS=chkudf.o read_udf.o errors.o utils.o verifyVRS.o verifyAVDP.o \
 all:	chkudf
 
 chkudf: $(OBJS)
-	gcc -o chkudf -g $(OBJS)
+	$(CC) -o chkudf -g $(OBJS)
 
 .c.o:
-	gcc -Wall -I$(LINUX)/include -g -c $*.c
+	$(CC) -Wall -g -c $*.c
 
 clean:
 	@-/bin/rm -f chkudf *.o *~ *.bak
