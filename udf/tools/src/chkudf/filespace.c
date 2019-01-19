@@ -4,77 +4,110 @@
 
 int bitv[8] = {1, 2, 4, 8, 16, 32, 64, 128};
 
-int track_freespace(UINT16 ptn, UINT32 addr, UINT32 extent)
+int track_freespace(UINT16 ptn, UINT32 addr, UINT32 extentNumBytes)
 {
-  UINT32 bytep, bitp;
-  if (ptn < PTN_no) {
-    // @todo this is not sufficient to prevent overrunning the array
-    // (also in track_filespace())
-    if (addr < Part_Info[ptn].Len) {
-      if (Part_Info[ptn].SpMap) {
-        while (extent > 0) {
-          bytep = addr >> 3;
-          bitp = addr & 7;
-          if ((Part_Info[ptn].SpMap[bytep] & bitv[bitp])) {
-            Error.Code = ERR_FILE_SPACE_OVERLAP;    // @todo Appropriate error?
-            Error.Sector = addr;
-          } else {
-            Part_Info[ptn].SpMap[bytep] |= bitv[bitp];
-          }
-          extent--;
-          addr++;
-        }
-      }
-    } else {
+  // @todo Decide if Error.Sector should be block address of extent's container
+  do {
+    UINT32 endAddr = addr + ((extentNumBytes + blocksize - 1) >> bdivshift);
+    if (ptn >= PTN_no) {
+      Error.Code = ERR_BAD_PTN;
+      Error.Sector = addr;
+      Error.Expected = PTN_no;
+      Error.Found = ptn;
+      break;
+    }
+    if (addr >= Part_Info[ptn].Len) {
       Error.Code = ERR_BAD_LBN;
       Error.Sector = addr;
       Error.Expected = Part_Info[ptn].Len;
       Error.Found = addr;
+      break;
     }
-  } else {
-    Error.Code = ERR_BAD_PTN;
-    Error.Sector = addr;
-    Error.Expected = PTN_no;
-    Error.Found = ptn;
-  }
+    if ((endAddr > Part_Info[ptn].Len) || (endAddr < addr)) {
+      Error.Code = ERR_BAD_LBN;
+      Error.Sector = addr;
+      Error.Expected = Part_Info[ptn].Len;
+      Error.Found = endAddr;
+      break;
+    }
+
+    if (Part_Info[ptn].SpMap) {
+      UINT32 extentNumBlocks = endAddr - addr;
+      while (extentNumBlocks > 0) {
+        UINT32 bytep, bitp;
+        bytep = addr >> 3;
+        bitp = addr & 7;
+        if (Part_Info[ptn].SpMap[bytep] & bitv[bitp]) {
+          Error.Code = ERR_FILE_SPACE_OVERLAP;    // @todo Appropriate error?
+          Error.Sector = addr;
+          // Note, by not calling DumpError() here we are choosing not to spam the user,
+          // but also not to report all overlapping sectors.
+          // @todo Compromise by printing the number of overlapping blocks in the extent?
+          //       But the Error design doesn't really support that.
+        } else {
+          Part_Info[ptn].SpMap[bytep] |= bitv[bitp];
+        }
+        extentNumBlocks--;
+        addr++;
+      }
+    }
+  } while (0);
+
   if (Error.Code) {
     DumpError();
   }
   return 0;
 }
 
-int track_filespace(UINT16 ptn, UINT32 addr, UINT32 extent)
+int track_filespace(UINT16 ptn, UINT32 addr, UINT32 extentNumBytes)
 {
-  UINT32 bytep, bitp;
-  if (ptn < PTN_no) {
-    if (addr < Part_Info[ptn].Len) {
-      if (Part_Info[ptn].MyMap) {
-        extent = (extent + blocksize - 1) >> bdivshift;
-        while (extent > 0) {
-          bytep = addr >> 3;
-          bitp = addr & 7;
-          if ((Part_Info[ptn].MyMap[bytep] & bitv[bitp]) == 0) {
-            Error.Code = ERR_FILE_SPACE_OVERLAP;
-            Error.Sector = addr;
-          } else {
-            Part_Info[ptn].MyMap[bytep] &= ~bitv[bitp];
-          }
-          extent--;
-          addr++;
-        }
-      }
-    } else {
+  // @todo Decide if Error.Sector should be block address of extent's container
+  do {
+    UINT32 endAddr = addr + ((extentNumBytes + blocksize - 1) >> bdivshift);
+    if (ptn >= PTN_no) {
+      Error.Code = ERR_BAD_PTN;
+      Error.Sector = addr;
+      Error.Expected = PTN_no;
+      Error.Found = ptn;
+      break;
+    }
+    if (addr >= Part_Info[ptn].Len) {
       Error.Code = ERR_BAD_LBN;
       Error.Sector = addr;
       Error.Expected = Part_Info[ptn].Len;
       Error.Found = addr;
+      break;
     }
-  } else {
-    Error.Code = ERR_BAD_PTN;
-    Error.Sector = addr;
-    Error.Expected = PTN_no;
-    Error.Found = ptn;
-  }
+    if ((endAddr > Part_Info[ptn].Len) || (endAddr < addr)) {
+      Error.Code = ERR_BAD_LBN;
+      Error.Sector = addr;
+      Error.Expected = Part_Info[ptn].Len;
+      Error.Found = endAddr;
+      break;
+    }
+
+    if (Part_Info[ptn].MyMap) {
+      UINT32 extentNumBlocks = endAddr - addr;
+      while (extentNumBlocks > 0) {
+        UINT32 bytep, bitp;
+        bytep = addr >> 3;
+        bitp = addr & 7;
+        if ((Part_Info[ptn].MyMap[bytep] & bitv[bitp]) == 0) {
+          Error.Code = ERR_FILE_SPACE_OVERLAP;
+          Error.Sector = addr;
+          // Note, by not calling DumpError() here we are choosing not to spam the user,
+          // but also not to report all overlapping sectors.
+          // @todo Compromise by printing the number of overlapping blocks in the extent?
+          //       But the Error design doesn't really support that.
+        } else {
+          Part_Info[ptn].MyMap[bytep] &= ~bitv[bitp];
+        }
+        extentNumBlocks--;
+        addr++;
+      }
+    }
+  } while (0);
+
   if (Error.Code) {
     DumpError();
   }

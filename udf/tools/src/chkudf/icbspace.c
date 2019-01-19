@@ -82,6 +82,8 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
             case E_RECORDED:
             case E_ALLOCATED:
               track_filespace(ptn, U_endian32(sad->Location), U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF);
+              // @todo If extent is invalid (i.e. huge length) we may continue on
+              //       for quite a bit even though we've left the tracks
               if ((ptn == Next_ptn) && (U_endian32(sad->Location) == Next_LBN) &&
                   ((U_endian32(sad->ExtentLength.Length32) >> 30) == Prev_Typ)) {
                 Error.Code = ERR_SEQ_ALLOC;
