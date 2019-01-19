@@ -38,12 +38,11 @@ int track_freespace(UINT16 ptn, UINT32 addr, UINT32 extentNumBytes)
         bytep = addr >> 3;
         bitp = addr & 7;
         if (Part_Info[ptn].SpMap[bytep] & bitv[bitp]) {
-          Error.Code = ERR_FILE_SPACE_OVERLAP;    // @todo Appropriate error?
-          Error.Sector = addr;
-          // Note, by not calling DumpError() here we are choosing not to spam the user,
-          // but also not to report all overlapping sectors.
-          // @todo Compromise by printing the number of overlapping blocks in the extent?
-          //       But the Error design doesn't really support that.
+          // Report only the first overlapping block as that is what limits the extent
+          if (!Error.Code) {
+            Error.Code = ERR_FILE_SPACE_OVERLAP;    // @todo Appropriate error?
+            Error.Sector = addr;
+          }
         } else {
           Part_Info[ptn].SpMap[bytep] |= bitv[bitp];
         }
@@ -93,12 +92,11 @@ int track_filespace(UINT16 ptn, UINT32 addr, UINT32 extentNumBytes)
         bytep = addr >> 3;
         bitp = addr & 7;
         if ((Part_Info[ptn].MyMap[bytep] & bitv[bitp]) == 0) {
-          Error.Code = ERR_FILE_SPACE_OVERLAP;
-          Error.Sector = addr;
-          // Note, by not calling DumpError() here we are choosing not to spam the user,
-          // but also not to report all overlapping sectors.
-          // @todo Compromise by printing the number of overlapping blocks in the extent?
-          //       But the Error design doesn't really support that.
+          // Report only the first overlapping block as that is what limits the extent
+          if (!Error.Code) {
+            Error.Code = ERR_FILE_SPACE_OVERLAP;
+            Error.Sector = addr;
+          }
         } else {
           Part_Info[ptn].MyMap[bytep] &= ~bitv[bitp];
         }
