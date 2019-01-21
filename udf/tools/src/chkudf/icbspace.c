@@ -66,8 +66,12 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
       printf("\n  [type=%s, ADlength=%u, info_length=%llu]  ",
              isLAD ? "LONG" : "SHORT", ADlength, infoLength);
       while (ad_offset < ADlength) {
+        UINT32 curExtentLength;
         sad = (struct short_ad *)(ad_start + ad_offset);
         lad = (struct long_ad *)(ad_start + ad_offset);
+
+        // Note, since long_ad is a superset of short_ad this is valid for both
+        curExtentLength = U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF;
         if (isLAD) {
           ptn = U_endian16(lad->Location_PartNo);
         }
@@ -75,13 +79,13 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
                ad_offset,
                U_endian32(sad->ExtentLength.Length32) >> 30,
                U_endian32(sad->Location),
-               U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF,
+               curExtentLength,
                file_length);
-        if (U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF) {
+        if (curExtentLength) {
           switch(U_endian32(sad->ExtentLength.Length32) >> 30) {
             case E_RECORDED:
             case E_ALLOCATED:
-              track_filespace(ptn, U_endian32(sad->Location), U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF);
+              track_filespace(ptn, U_endian32(sad->Location), curExtentLength);
               // @todo If extent is invalid (i.e. huge length) we may continue on
               //       for quite a bit even though we've left the tracks
               if ((ptn == Next_ptn) && (U_endian32(sad->Location) == Next_LBN) &&
@@ -92,12 +96,12 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
                 DumpError();
               }
               Next_ptn = ptn;
-              Next_LBN = U_endian32(sad->Location) + ((U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF) >> bdivshift);
+              Next_LBN = U_endian32(sad->Location) + (curExtentLength >> bdivshift);
               Prev_Typ = U_endian32(sad->ExtentLength.Length32) >> 30;
               if (file_length >= infoLength) {
                 printf(" (Tail)");
               } else {
-                file_length += U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF;
+                file_length += curExtentLength;
               }
               ad_offset += sizeAD;
               break;
@@ -106,14 +110,14 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
               if (file_length >= infoLength) {
                 printf(" (ILLEGAL TAIL)");
               } else {
-                file_length += U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF;
+                file_length += curExtentLength;
               }
               ad_offset += sizeAD;
               printf(" --Unallocated Extent--");
               break;
 
             case E_ALLOCEXTENT:
-              track_filespace(ptn, U_endian32(sad->Location), U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF);
+              track_filespace(ptn, U_endian32(sad->Location), curExtentLength);
               if (!AED) {
                 AED = (struct AllocationExtentDesc *)malloc(blocksize);
               }
