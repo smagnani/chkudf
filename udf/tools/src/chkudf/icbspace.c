@@ -92,7 +92,7 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
                 DumpError();
               }
               Next_ptn = ptn;
-              Next_LBN = U_endian32(sad->Location) + ((U_endian32(sad->ExtentLength.Length32) && 0x3FFFFFFF) >> bdivshift);
+              Next_LBN = U_endian32(sad->Location) + ((U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF) >> bdivshift);
               Prev_Typ = U_endian32(sad->ExtentLength.Length32) >> 30;
               if (file_length >= infoLength) {
                 printf(" (Tail)");
