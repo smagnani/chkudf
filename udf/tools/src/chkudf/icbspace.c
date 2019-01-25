@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <malloc.h>
+#include <string.h>
 #include "chkudf.h"
 #include "protos.h"
 
@@ -81,7 +82,10 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
                U_endian32(sad->Location),
                curExtentLength,
                file_length);
-        if (curExtentLength) {
+        if (curExtentLength == 0) {
+          // Zero-length extent - force loop exit
+          break;
+        } else {
           switch(U_endian32(sad->ExtentLength.Length32) >> 30) {
             case E_RECORDED:
             case E_ALLOCATED:
@@ -153,10 +157,8 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
               printf("\n      [NEW ADlength=%u]  ", ADlength);
               break;
           }
-        } else {
-          ad_offset = ADlength;
-        }
-      }
+        }  // curExtentLength != 0
+      }    // while (ad_offset < ADlength)
       printf("  [file_length=%llu]  ", file_length);
       if (file_length != infoLength) {
         if (((infoLength + blocksize - 1) & ~(blocksize - 1)) == file_length) {
@@ -252,7 +254,7 @@ int walk_icb_hierarchy(struct FE_or_EFE *xFE, UINT16 ptn, UINT32 Location,
  * This routine takes a partition, location, and length of an ICB extent as
  * input, marks the appropriate space as allocated in the space map, 
  * maintains a link count for the ICB, and returns the appropriate File
- * File Entry data in *xFE.
+ * Entry (or Extended File Entry) data in *xFE.
  *
  * If FID == 0, this is a root entry or a re-read of an ICB.  If FID == 1,
  * this is the first read of an FE from a particular FID.  Note that the FE
@@ -273,9 +275,12 @@ int read_icb(struct FE_or_EFE *xFE, UINT16 ptn, UINT32 Location, UINT32 Length,
 
   error = 0;
 
-  if (Length) {
+  if (Length == 0) {
+    // Nothing to track
+    memset(xFE, 0, blocksize);  // Make sure caller doesn't see garbage or stale data
+  } else {
     /*
-     * If there's something to track...
+     * Something to track...
      */
     ICB_offs = ICBlist_len >> 1; // start halfway for binary search
     temp = ICB_offs;
