@@ -173,6 +173,12 @@ static void ReadSpaceTable(UINT16 ptn)
           bWarnedUnsorted = TRUE;
         }
 
+        if (!Error.Code && (extentLength == 0)) {
+            Error.Code     = ERR_UNEXPECTED_ZERO_LEN;
+            Error.Expected = L_AD;
+            Error.Found    = ad_offset;
+        }
+
         if (Error.Code) {
           Error.Sector = curUSELocation;
           DumpError();

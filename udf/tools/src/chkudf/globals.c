@@ -75,6 +75,7 @@ char *Error_Msgs[] = {
             "Expected AD Type %lld, found prohibited type %lld",
             "Unallocated extents not sorted in ascending order",
             "Found VAT ICB. Unfortunately, code to process it does not yet exist."
+/* 35 */    "Expected AD length %lld, but found unexpected zero-length extent at offset %lld.",
 };
 
 
