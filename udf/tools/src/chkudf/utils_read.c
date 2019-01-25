@@ -246,7 +246,6 @@ int ReadLBlocks(void *buffer, UINT32 p_address, UINT16 p_ref, UINT32 Count)
  *                                This buffer should have a minimum length of
  *                                ((bytesRequested + 2 * blocksize - 2) / blocksize) blocks
  *                                to avoid overrun for all (startOffset, bytesRequested) combinations.
- *   FIXME: memcpy file data directly from block cache so we don't have to rely on caller overallocation to avoid overrun
  *
  * @param[in]    xfe              ICB describing the file
  * @param[in]    part             Which partition the file is part of
@@ -384,6 +383,14 @@ unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part
           curPartitionIndex = U_endian16(cur_ext->Location_PartNo);
         }
 
+        if (curExtentLength == 0) {
+          // ECMA-167r3 sec. 4.12: zero extent length terminates allocation descriptors
+          // @todo error if exts_ptr < exts_end "- 1"?
+          // Error will get set below the 'while' loop but it might be more informative
+          // to log that we found an unexpected zero-length extent
+          exts_ptr = exts_end;
+          break;
+        }
         if (curExtentType == E_ALLOCEXTENT) {
           // Chain to (next) Allocation Extent Descriptor
           if (!AED) {
