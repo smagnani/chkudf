@@ -32,7 +32,7 @@ int GetRootDir(void)
         if (result < CHECKTAG_OK_LIMIT) {
           RootDirICB = FSDPtr->sRootDirICB;
           StreamDirICB = FSDPtr->sStreamDirICB;
-          if ((UDF_Version == 3) && StreamDirICB.ExtentLength.Length32) {
+          if ((UDF_Version == 3) && (U_endian32(StreamDirICB.ExtentLength.Length32) & 0x3FFFFFFF)) {
             // @todo Real traversal of stream directory
             // Code below is a hack to avoid reporting space table mismatch
             // on filesystems having a stub stream directory
@@ -82,6 +82,11 @@ int DisplayDirs(void)
     UINT32 address = U_endian32(RootDirICB.Location_LBN);
     UINT16 partition = U_endian16(RootDirICB.Location_PartNo);
 
+    if (!(U_endian32(RootDirICB.ExtentLength.Length32) & 0x3FFFFFFF)) {
+      printf("  No root directory.\n");
+      break;
+    }
+
     printf("\nDisplaying directory hierarchy:\n%04x:%08x: \\", partition, address);
     File = (struct FileIDDesc *)malloc(blocksize);
     ICB = (struct FE_or_EFE *)malloc(blocksize);
@@ -104,6 +109,8 @@ int DisplayDirs(void)
         printf("++End of directory\n");
         depth--;
       } else {
+    	// @todo Consider warning if offs[depth] is less than sizeof(struct tag)
+        //     from the end of a block. See UDF2.01 sec. 2.3.4.4.
         error = GetFID(File, ICB, part[depth], offs[depth]);
         if (!error) {
           for (i = 0; i < depth; i++) printf("   ");
