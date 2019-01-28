@@ -47,10 +47,10 @@ int GetRootDir(void)
             i = -1;
           }
         } else {  /* All zeros, terminator, anything but an FSD */
-          i = U_endian32(FSD.ExtentLength.Length32) & 0x3FFFFFFF;
+          break;
         }
       } else {  /* Unreadable/blank block */
-        i = U_endian32(FSD.ExtentLength.Length32) & 0x3FFFFFFF;
+        break;
       }
     }
     free(FSDPtr);
