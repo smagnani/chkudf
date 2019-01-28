@@ -71,23 +71,25 @@ int DisplayDirs(void)
   UINT32       addr[MAX_DEPTH + 1];   // Address of ICB of current dir
   UINT16       part[MAX_DEPTH + 1];   // Partition of ICB of current dir
   int depth, i, error;
-  struct FileIDDesc *File;      // Directory entry for the current file
-  struct FE_or_EFE *ICB;        // ICB for current directory
-
-  UINT32 address;
-  UINT16 partition;
+  struct FileIDDesc *File = NULL;     // Directory entry for the current file
+  struct FE_or_EFE  *ICB  = NULL;     // ICB for current directory
 
   printf("\n--File Space report:\n");
 
   GetRootDir();
 
-  address = U_endian32(RootDirICB.Location_LBN);
-  partition = U_endian16(RootDirICB.Location_PartNo);
+  do {
+    UINT32 address = U_endian32(RootDirICB.Location_LBN);
+    UINT16 partition = U_endian16(RootDirICB.Location_PartNo);
 
-  printf("\nDisplaying directory hierarchy:\n%04x:%08x: \\", partition, address);
-  File = (struct FileIDDesc *)malloc(blocksize);
-  ICB = (struct FE_or_EFE *)malloc(blocksize);
-  if (File && ICB) {
+    printf("\nDisplaying directory hierarchy:\n%04x:%08x: \\", partition, address);
+    File = (struct FileIDDesc *)malloc(blocksize);
+    ICB = (struct FE_or_EFE *)malloc(blocksize);
+    if (!File || !ICB) {
+      printf("**Couldn't allocate space for FID buffer.\n");
+      break;
+    }
+
     depth = 1;
     offs[depth] = 0;
     addr[depth] = address;
@@ -129,7 +131,7 @@ int DisplayDirs(void)
               printf(" parent location OK");
             }
             read_icb(ICB, U_endian16(File->ICB.Location_PartNo), U_endian32(File->ICB.Location_LBN),
-                      U_endian32(File->ICB.ExtentLength.Length32) & 0x3FFFFFFF, 1);
+                     U_endian32(File->ICB.ExtentLength.Length32) & 0x3FFFFFFF, 1);
           } else {
             printf("%04x:%08x: ", U_endian16(File->ICB.Location_PartNo), U_endian32(File->ICB.Location_LBN));
             /*
@@ -179,11 +181,12 @@ int DisplayDirs(void)
         read_icb(ICB, part[depth], addr[depth], blocksize, 0);
       }
     } while (depth > 0);
-    free(File);
-    free(ICB);
-  } else { 
-    printf("**Couldn't allocate space for FID buffer.\n");
-  }
+
+  } while (0);
+
+  free(File);
+  free(ICB);
+
   return 0;
 }
 
