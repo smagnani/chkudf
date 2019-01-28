@@ -114,8 +114,8 @@ static void ReadSpaceTable(UINT16 ptn)
 
       while ((ad_offset < L_AD) && (nextUSELocation == -1)) {
         UINT32 extentLocation = U_endian32(sad->Location);
-        UINT32 extentLength   = U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF;
-        UINT32 extentType     = U_endian32(sad->ExtentLength.Length32) >> 30;
+        UINT32 extentLength   = EXTENT_LENGTH(sad->ExtentLengthAndType);
+        UINT32 extentType     = EXTENT_TYPE(sad->ExtentLengthAndType);
         if (extentLength) {
           switch (extentType) {
             case E_RECORDED:

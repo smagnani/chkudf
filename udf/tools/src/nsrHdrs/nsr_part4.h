@@ -27,23 +27,7 @@ struct lb_addr {
  * struct ext_ad: This is used for compression
  */
 
-/* [4/14.14.1.1] ------------------------------------------------------------
- *                           **** WARNING ****
- *
- * The ELENGTH type corresponds to the ExtentLength field. Note that the
- * two most-significant bits correspond to the type of extent. This is
- * compiler-dependent, so the order of the Type and Length fields may
- * need to be reversed for some compilers.
- *
- *                           **** WARNING ****
- */
-typedef union {
-    UINT32          Length32;
-    struct {
-        UINT32          Length:30;    /* length in bytes */
-        UINT32          Type:2;       /* See Extent Type Constants */
-    } bf;                             /* "bitfield" */
-} ELENGTH;
+/* [4/14.14.1.1] ------------------------------------------------------------*/
 
 /*
  * Extent Type Constants
@@ -56,25 +40,28 @@ typedef union {
 
 /* [4/14.14.1] short allocation descriptor (8 bytes) -----------------------*/
 struct short_ad {
-    ELENGTH         ExtentLength;
+    UINT32          ExtentLengthAndType;
     UINT32          Location;         /* logical block address */
 };
 
 /* [4/14.14.2] long allocation descriptor (16 bytes) -----------------------*/
 struct long_ad {
-    ELENGTH         ExtentLength;
+    UINT32          ExtentLengthAndType;
     UINT32          Location_LBN;     /* partition relative block # */
     UINT16          Location_PartNo;  /* partition number */
     UINT16          uUdfFlags;        /* See UDF1.01 2.3.10.1 */
     UINT8           aImpUse[4];
 };
 
+#define EXTENT_LENGTH(extentLengthAndType)    (U_endian32(extentLengthAndType) & 0x3FFFFFFF)
+#define EXTENT_TYPE(extentLengthAndType)      (U_endian32(extentLengthAndType) >> 30)
+
 /* udf flag definitions */
 #define EXT_ERASED ((UINT16)BITZERO) /* Only valid for ALLOCATED ADs */
 
 /* [4/14.14.3] extended allocation descriptor (20 bytes) -------------------*/
 struct ext_ad {
-    ELENGTH         ExtentLength;
+    UINT32          ExtentLengthAndType;
     UINT32          RecordedLength;   /* in bytes too... */
     UINT32          InfoLength;       /* bytes */
     UINT32          Location_LBN;     /* partition relative block # */

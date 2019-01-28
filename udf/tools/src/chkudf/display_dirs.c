@@ -20,9 +20,9 @@ int GetRootDir(void)
   FSDPtr = (struct FileSetDesc *)malloc(blocksize);
   if (FSDPtr) {
     track_filespace(U_endian16(FSD.Location_PartNo), U_endian32(FSD.Location_LBN),
-                    U_endian32(FSD.ExtentLength.Length32) & 0x3FFFFFFF);
+                    EXTENT_LENGTH(FSD.ExtentLengthAndType));
 
-    for (i = 0; i < (U_endian32(FSD.ExtentLength.Length32) & 0x3FFFFFFF) >> bdivshift; i++) {
+    for (i = 0; i < EXTENT_LENGTH(FSD.ExtentLengthAndType) >> bdivshift; i++) {
       result = ReadLBlocks(FSDPtr, U_endian32(FSD.Location_LBN) + i, 
                            U_endian16(FSD.Location_PartNo), 1);
       if (!result) {
@@ -32,16 +32,16 @@ int GetRootDir(void)
         if (result < CHECKTAG_OK_LIMIT) {
           RootDirICB = FSDPtr->sRootDirICB;
           StreamDirICB = FSDPtr->sStreamDirICB;
-          if ((UDF_Version == 3) && (U_endian32(StreamDirICB.ExtentLength.Length32) & 0x3FFFFFFF)) {
+          if ((UDF_Version == 3) && EXTENT_LENGTH(StreamDirICB.ExtentLengthAndType)) {
             // @todo Real traversal of stream directory
             // Code below is a hack to avoid reporting space table mismatch
             // on filesystems having a stub stream directory
             track_filespace(U_endian16(StreamDirICB.Location_PartNo),
                             U_endian32(StreamDirICB.Location_LBN),
-                            U_endian32(StreamDirICB.ExtentLength.Length32) & 0x3FFFFFFF);
+							EXTENT_LENGTH(StreamDirICB.ExtentLengthAndType));
           }
           error = 0;
-          if (U_endian32(FSDPtr->sNextExtent.ExtentLength.Length32) & 0x3FFFFFFF) {
+          if (EXTENT_LENGTH(FSDPtr->sNextExtent.ExtentLengthAndType)) {
             printf("  Found another FSD extent.\n");
             FSD = FSDPtr->sNextExtent;
             i = -1;
@@ -82,7 +82,7 @@ int DisplayDirs(void)
     UINT32 address = U_endian32(RootDirICB.Location_LBN);
     UINT16 partition = U_endian16(RootDirICB.Location_PartNo);
 
-    if (!(U_endian32(RootDirICB.ExtentLength.Length32) & 0x3FFFFFFF)) {
+    if (!EXTENT_LENGTH(RootDirICB.ExtentLengthAndType)) {
       printf("  No root directory.\n");
       break;
     }
@@ -99,8 +99,7 @@ int DisplayDirs(void)
     offs[depth] = 0;
     addr[depth] = address;
     part[depth] = partition;
-    read_icb(ICB, part[depth], addr[depth], U_endian32(RootDirICB.ExtentLength.Length32) & 0x3FFFFFFF, 
-             0);
+    read_icb(ICB, part[depth], addr[depth], EXTENT_LENGTH(RootDirICB.ExtentLengthAndType), 0);
     printf("\n");
     do {
       printf("ICB %x:%05x offset %4x\n", part[depth], addr[depth], offs[depth]);
@@ -138,7 +137,7 @@ int DisplayDirs(void)
               printf(" parent location OK");
             }
             read_icb(ICB, U_endian16(File->ICB.Location_PartNo), U_endian32(File->ICB.Location_LBN),
-                     U_endian32(File->ICB.ExtentLength.Length32) & 0x3FFFFFFF, 1);
+            		 EXTENT_LENGTH(File->ICB.ExtentLengthAndType), 1);
           } else {
             printf("%04x:%08x: ", U_endian16(File->ICB.Location_PartNo), U_endian32(File->ICB.Location_LBN));
             /*
@@ -153,7 +152,7 @@ int DisplayDirs(void)
             } else {
               printDchars((UINT8 *)File + FILE_ID_DESC_CONSTANT_LEN + U_endian16(File->L_IU), File->L_FI);
               read_icb(ICB, U_endian16(File->ICB.Location_PartNo), U_endian32(File->ICB.Location_LBN),
-                        U_endian32(File->ICB.ExtentLength.Length32) & 0x3FFFFFFF, 1);
+                       EXTENT_LENGTH(File->ICB.ExtentLengthAndType), 1);
               checkICB(ICB, File->ICB, File->Characteristics & DIR_ATTR);
             }
           }

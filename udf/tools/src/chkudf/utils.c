@@ -201,7 +201,7 @@ void printTimestamp( struct timestamp Time)
 /********************************************************************/
 void printLongAd(struct long_ad *longad)
 {
-  printf("%u bytes @ %u:%u\n", U_endian32(longad->ExtentLength.Length32) & 0x3FFFFFFF,
+  printf("%u bytes @ %u:%u\n", EXTENT_LENGTH(longad->ExtentLengthAndType),
          U_endian16(longad->Location_PartNo), U_endian32(longad->Location_LBN));
 }
 

@@ -72,13 +72,13 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
         lad = (struct long_ad *)(ad_start + ad_offset);
 
         // Note, since long_ad is a superset of short_ad this is valid for both
-        curExtentLength = U_endian32(sad->ExtentLength.Length32) & 0x3FFFFFFF;
+        curExtentLength = EXTENT_LENGTH(sad->ExtentLengthAndType);
         if (isLAD) {
           ptn = U_endian16(lad->Location_PartNo);
         }
         printf("\n    [ad_offset=%u, atype=%d, loc=%u, len=%u, file_length=%llu]  ",
                ad_offset,
-               U_endian32(sad->ExtentLength.Length32) >> 30,
+               EXTENT_TYPE(sad->ExtentLengthAndType),
                U_endian32(sad->Location),
                curExtentLength,
                file_length);
@@ -86,14 +86,14 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
           // Zero-length extent - force loop exit
           break;
         } else {
-          switch(U_endian32(sad->ExtentLength.Length32) >> 30) {
+          switch(EXTENT_TYPE(sad->ExtentLengthAndType)) {
             case E_RECORDED:
             case E_ALLOCATED:
               track_filespace(ptn, U_endian32(sad->Location), curExtentLength);
               // @todo If extent is invalid (i.e. huge length) we may continue on
               //       for quite a bit even though we've left the tracks
               if ((ptn == Next_ptn) && (U_endian32(sad->Location) == Next_LBN) &&
-                  ((U_endian32(sad->ExtentLength.Length32) >> 30) == Prev_Typ)) {
+                  (EXTENT_TYPE(sad->ExtentLengthAndType) == Prev_Typ)) {
                 Error.Code = ERR_SEQ_ALLOC;
                 Error.Sector = xFE->sTag.uTagLoc;
                 Error.Expected = Next_LBN;
@@ -101,7 +101,7 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
               }
               Next_ptn = ptn;
               Next_LBN = U_endian32(sad->Location) + (curExtentLength >> bdivshift);
-              Prev_Typ = U_endian32(sad->ExtentLength.Length32) >> 30;
+              Prev_Typ = EXTENT_TYPE(sad->ExtentLengthAndType);
               if (file_length >= infoLength) {
                 printf(" (Tail)");
               } else {
@@ -233,7 +233,7 @@ int walk_icb_hierarchy(struct FE_or_EFE *xFE, UINT16 ptn, UINT32 Location,
           if (!CheckTag((struct tag *)xFE, Location + i, TAGID_INDIRECT, 16, Length)) {
             walk_icb_hierarchy(xFE, U_endian32(((struct IndirectEntry *)xFE)->sIndirectICB.Location_LBN),
                                U_endian16(((struct IndirectEntry *)xFE)->sIndirectICB.Location_PartNo),
-                               U_endian32(((struct IndirectEntry *)xFE)->sIndirectICB.ExtentLength.Length32) & 0x3FFFFFFF,
+                               EXTENT_LENGTH(((struct IndirectEntry *)xFE)->sIndirectICB.ExtentLengthAndType),
                                ICB_offs);
           } else {
             DumpError();  // Wasn't a file entry, but should have been.
@@ -381,14 +381,14 @@ int read_icb(struct FE_or_EFE *xFE, UINT16 ptn, UINT32 Location, UINT32 Length,
         sExtAttrICB = &xFE->FE.sExtAttrICB;
       }
 
-      if (U_endian32(sExtAttrICB->ExtentLength.Length32) & 0x3FFFFFFF) {
+      if (EXTENT_LENGTH(sExtAttrICB->ExtentLengthAndType)) {
         EA = (struct FE_or_EFE *)malloc(blocksize);
         if (EA) {
           if (U_endian16(sExtAttrICB->Location_PartNo) < PTN_no) {
             printf(" EA: [%x:%08x]", U_endian16(sExtAttrICB->Location_PartNo),
                    U_endian32(sExtAttrICB->Location_LBN));
             read_icb(EA, U_endian16(sExtAttrICB->Location_PartNo), U_endian32(sExtAttrICB->Location_LBN),
-                     U_endian32(sExtAttrICB->ExtentLength.Length32) & 0x3FFFFFFF, 0);
+                     EXTENT_LENGTH(sExtAttrICB->ExtentLengthAndType), 0);
           } else {
             printf("\n**EA field contains illegal partition reference number.\n");
           }

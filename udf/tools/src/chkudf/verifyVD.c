@@ -328,11 +328,11 @@ int checkPD(struct PartDesc *mPD, struct PartDesc *rPD)
 
         hit++;
         PHD = (struct PartHeaderDesc *)(mPD->aPartContentsUse);
-        if (U_endian32(PHD->USB.ExtentLength.Length32)) {
+        if (U_endian32(PHD->USB.ExtentLengthAndType)) {
           /* Unallocated Space Bitmap */
           Part_Info[i].SpaceTag = TAGID_SPACE_BMAP;
           Part_Info[i].Space = U_endian32(PHD->USB.Location);
-          Part_Info[i].SpLen = U_endian32(PHD->USB.ExtentLength.Length32) & 0x3FFFFFFF;
+          Part_Info[i].SpLen = EXTENT_LENGTH(PHD->USB.ExtentLengthAndType);
           Part_Info[i].SpMap = malloc(expectedBitmapNumBytes);
           Part_Info[i].MyMap = malloc(expectedBitmapNumBytes);
           if (Part_Info[i].SpMap) {
@@ -344,11 +344,11 @@ int checkPD(struct PartDesc *mPD, struct PartDesc *rPD)
             memset(Part_Info[i].MyMap, 0xff, expectedBitmapNumBytes-1);
             Part_Info[i].MyMap[expectedBitmapNumBytes-1] = Part_Info[i].FinalMapByteMask;
           }
-        } else if (U_endian32(PHD->UST.ExtentLength.Length32)) {
+        } else if (U_endian32(PHD->UST.ExtentLengthAndType)) {
           /* Unallocated Space Table */
           Part_Info[i].SpaceTag = TAGID_UNALLOC_SP_ENTRY;
           Part_Info[i].Space = U_endian32(PHD->UST.Location);
-          Part_Info[i].SpLen = U_endian32(PHD->UST.ExtentLength.Length32) & 0x3FFFFFFF;
+          Part_Info[i].SpLen = EXTENT_LENGTH(PHD->UST.ExtentLengthAndType);
 
           // Ambiguity in the UDF and ECMA standards:
           // it's not clear whether PD references to space tables whose blocks
@@ -462,7 +462,7 @@ int checkLVD(struct LogVolDesc *mLVD, struct LogVolDesc *rLVD)
 
     memcpy(&FSD, &mLVD->uLogVolUse, 16);
 
-    if (FSD.ExtentLength.bf.Length == 0) {
+    if (EXTENT_LENGTH(FSD.ExtentLengthAndType) == 0) {
       Fatal = TRUE;
       printf("**");
     } else {

@@ -372,13 +372,13 @@ unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part
       while (exts_ptr < exts_end) {
         if (adtype == ADSHORT) {
           const struct short_ad *cur_ext = (const struct short_ad *)exts_ptr;
-          curExtentLength   = U_endian32(cur_ext->ExtentLength.Length32) & 0x3FFFFFFF;
-          curExtentType     = U_endian32(cur_ext->ExtentLength.Length32) >> 30;
+          curExtentLength   = EXTENT_LENGTH(cur_ext->ExtentLengthAndType);
+          curExtentType     = EXTENT_TYPE(cur_ext->ExtentLengthAndType);
           curExtentLocation = U_endian32(cur_ext->Location);
         } else if (adtype == ADLONG) {
           const struct long_ad *cur_ext = (const struct long_ad *)exts_ptr;
-          curExtentLength   = U_endian32(cur_ext->ExtentLength.Length32) & 0x3FFFFFFF;
-          curExtentType     = U_endian32(cur_ext->ExtentLength.Length32) >> 30;
+          curExtentLength   = EXTENT_LENGTH(cur_ext->ExtentLengthAndType);
+          curExtentType     = EXTENT_TYPE(cur_ext->ExtentLengthAndType);
           curExtentLocation = U_endian32(cur_ext->Location_LBN);
           curPartitionIndex = U_endian16(cur_ext->Location_PartNo);
         }
