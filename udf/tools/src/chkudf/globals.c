@@ -9,25 +9,25 @@
  * These are globals used when referencing the device or image file.
  ---------------------------------------------------------------------------*/
 
-UINT32  blocksize = 0;               // bytes per sector
-MUINT8  bdivshift = 0;               // log2(blocksize)
-UINT32  secsize = 0;                 // bytes per sector
-MUINT8  sdivshift = 0;               // log2(secsize)
-MUINT8  s_per_b = 1;                 // blocksize/secsize
-UINT32  packet_size;                 // blocking factor for read operations
-BOOL    scsi = FALSE;                // Boolean for command selection
-int     device = 0;                  // Device/file handle for operations
-UINT32  LastSector = 0;              // Location of the last readable sector
-BOOL    LastSectorAccurate = FALSE;  // Indication of confidence
-UINT32  lastSessionStartLBA = 0;     // Start of last session
-BOOL    isType5 = FALSE;             // Is a CD or DVD drive
-BOOL    isCDRW = FALSE;
+uint32_t       blocksize = 0;               // bytes per sector
+uint_least8_t  bdivshift = 0;               // log2(blocksize)
+uint32_t       secsize = 0;                 // bytes per sector
+uint_least8_t  sdivshift = 0;               // log2(secsize)
+uint_least8_t  s_per_b = 1;                 // blocksize/secsize
+uint32_t       packet_size;                 // blocking factor for read operations
+bool           scsi = false;                // Boolean for command selection
+int            device = 0;                  // Device/file handle for operations
+uint32_t       LastSector = 0;              // Location of the last readable sector
+bool           LastSectorAccurate = false;  // Indication of confidence
+uint32_t       lastSessionStartLBA = 0;     // Start of last session
+bool           isType5 = false;             // Is a CD or DVD drive
+bool           isCDRW = false;
 
-UINT8   *scsibuf = NULL;             // Used for scsi scratchpad
-UINT32  scsibufsize = 0;             // amount allocated for SCSI buffer
-UINT8   cdb[12];                     // command buffer
-UINT8   sensedata[18];               // Sense data buffer
-int     sensebufsize = 18;           // Sense data buffer size
+uint8_t        *scsibuf = NULL;             // Used for scsi scratchpad
+uint32_t       scsibufsize = 0;             // amount allocated for SCSI buffer
+uint8_t        cdb[12];                     // command buffer
+uint8_t        sensedata[18];               // Sense data buffer
+int            sensebufsize = 18;           // Sense data buffer size
 
 /*****************************************************************************
  * chkudf operating parameters
@@ -36,9 +36,9 @@ int     sensebufsize = 18;           // Sense data buffer size
  * directly related to the file system.
  ---------------------------------------------------------------------------*/
 
-sCacheData Cache[NUM_CACHE];
-MUINT8     bufno = 0;
-sError     Error = {0, 0, 0, 0};
+sCacheData    Cache[NUM_CACHE];
+uint_least8_t bufno = 0;
+sError        Error = {0, 0, 0, 0};
 
 char *Error_Msgs[] = {
 /*  1 */    "Expected Tag ID of %lld, found %lld",
@@ -87,11 +87,11 @@ char *Error_Msgs[] = {
  * 3 and 4.
  ---------------------------------------------------------------------------*/
 
-UINT16     UDF_Version;
-BOOL       Version_OK = FALSE;
-UINT16     Serial_No;
-BOOL       Serial_OK = FALSE;
-BOOL       Fatal = FALSE;
+uint16_t   UDF_Version;
+bool       Version_OK = false;
+uint16_t   Serial_No;
+bool       Serial_OK = false;
+bool       Fatal = false;
 
 
 /*****************************************************************************
@@ -101,14 +101,14 @@ BOOL       Fatal = FALSE;
  * to locate the file system when part 4 is checked.
  ---------------------------------------------------------------------------*/
 
-UINT32       VDS_Loc, VDS_Len, RVDS_Loc, RVDS_Len;
-sPart_Info   Part_Info[NUM_PARTS];
-UINT16       PTN_no;             // The number of partition maps in the volume
-dstring      LogVolID[128];      // The logical volume ID
-MUINT32      VolSpaceListLen = 0; 
+uint32_t       VDS_Loc, VDS_Len, RVDS_Loc, RVDS_Len;
+sPart_Info     Part_Info[NUM_PARTS];
+uint16_t       PTN_no;             // The number of partition maps in the volume
+dstring        LogVolID[128];      // The logical volume ID
+uint_least32_t VolSpaceListLen = 0; 
 struct extent_ad_name VolSpace[MAX_VOL_EXTS];
-UINT32      *VAT;
-UINT32       VATLength;
+uint32_t      *VAT;
+uint32_t       VATLength;
 
 /*****************************************************************************
  * File System information
@@ -119,11 +119,11 @@ struct long_ad FSD;
 struct long_ad RootDirICB;
 struct long_ad StreamDirICB;
 sICB_trk      *ICBlist = NULL;
-MUINT32        ICBlist_len = 0;
-MUINT32        ICBlist_alloc = 0;
-UINT32         ID_Dirs = 0;           // Number of dirs according to LVID
-UINT32         ID_Files = 0;          // Number of files according to LVID
-UINT32         ID_UID = 0;            // Highest Unique ID according to LVID
+uint_least32_t ICBlist_len = 0;
+uint_least32_t ICBlist_alloc = 0;
+uint32_t       ID_Dirs = 0;           // Number of dirs according to LVID
+uint32_t       ID_Files = 0;          // Number of files according to LVID
+uint32_t       ID_UID = 0;            // Highest Unique ID according to LVID
 unsigned int   Num_Dirs = 0;          // Number of dirs by our count
 unsigned int   Num_Files = 0;         // Number of files by our count
 unsigned int   Num_Type_Err = 0;

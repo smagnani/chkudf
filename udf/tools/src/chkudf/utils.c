@@ -12,7 +12,7 @@
 #define TITLELEN 78
 #define MAXCOLUMNS 8
 
-UINT32 endian32(UINT32 toswap)
+uint32_t endian32(uint32_t toswap)
 {
   return (toswap << 24) | 
          ((toswap << 8) & 0x00ff0000) |
@@ -20,7 +20,7 @@ UINT32 endian32(UINT32 toswap)
          (toswap >> 24);
 }
 
-UINT16 endian16(UINT16 toswap)
+uint16_t endian16(uint16_t toswap)
 {
   return (toswap << 8) | (toswap >> 8);
 }
@@ -28,11 +28,11 @@ UINT16 endian16(UINT16 toswap)
 
 #define MASK 0x1021
 
-UINT16 doCRC(UINT8 *buffer, int n)
+uint16_t doCRC(uint8_t *buffer, int n)
 {
-  UINT16 CRC = 0;
+  uint16_t CRC = 0;
   int byte, bit;
-  UINT8 bitval, msb;
+  uint8_t bitval, msb;
 
   if (n > 4080) {
     CRC = 0xffff;
@@ -55,10 +55,10 @@ UINT16 doCRC(UINT8 *buffer, int n)
 /* Supports OSTA Compressed Unicode, but if no Compression algorithm */
 /* supplied, will print out ASCII string.                            */
 /*********************************************************************/
-void printDstring(const UINT8 *start, UINT8 fieldLen)
+void printDstring(const uint8_t *start, uint8_t fieldLen)
 {
     /* First, grab the length of the string */
-    UINT8 dstringLen = start[fieldLen - 1];
+    uint8_t dstringLen = start[fieldLen - 1];
 
     /* Then, hand it all off to Dchars */
     printDchars(start, dstringLen);
@@ -72,18 +72,18 @@ void printDstring(const UINT8 *start, UINT8 fieldLen)
 /* Supports OSTA Compressed Unicode, but if no Compression algorithm */
 /* supplied, will print out ASCII string.                            */
 /*********************************************************************/
-void printDchars(const UINT8 *start, UINT8 length)
+void printDchars(const uint8_t *start, uint8_t length)
 {
   /* Some (one) local variable(s) */
-  UINT16 i;                       /* Index  */
-  UINT16 unichar;                 /* Unicode character */
+  uint16_t i;                       /* Index  */
+  uint16_t unichar;                 /* Unicode character */
 
   char tbuff[257];                /* Buffer for non-unicode */
 
-  UINT8 dispLen = length;
+  uint8_t dispLen = length;
 
   /* First, grab the Compressed Algorithm Number. */
-  UINT8 alg = start[0];
+  uint8_t alg = start[0];
 
   /* Throw out the algorithm byte, if any, and print out compression
      algorithm */
@@ -110,7 +110,7 @@ void printDchars(const UINT8 *start, UINT8 length)
       unichar = *(start + i) << 8;
       unichar |= *(start + i + 1);
       if ((unichar > 31) && (unichar < 127)) {
-        printf("%c", (UINT8)unichar);
+        printf("%c", (uint8_t)unichar);
       } else {
         printf("[%4x]", unichar);
       }
@@ -151,7 +151,7 @@ void printCharSpec(struct charspec chars)
 int Is_Charspec(const struct charspec *chars)
 {
   size_t i = 0;
-  const UINT8 ref[] = UDF_CHARSPEC;
+  const uint8_t ref[] = UDF_CHARSPEC;
 
   if (chars->uCharSetType)
     return 0;

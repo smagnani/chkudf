@@ -17,12 +17,12 @@
  * implementation, the device identification is a file handle kept in 
  * the "device" global.
  */
-BOOL do_scsi(UINT8 *command, int cmd_len, void *buffer, UINT32 in_len,
-             UINT32 out_len, UINT8 *sense, int sense_len)
+bool do_scsi(uint8_t *command, int cmd_len, void *buffer, uint32_t in_len,
+             uint32_t out_len, uint8_t *sense, int sense_len)
 {
-  UINT32   *ip;
-  UINT32   buffer_needed;
-  BOOL     fail = TRUE;
+  uint32_t   *ip;
+  uint32_t   buffer_needed;
+  bool     fail = true;
   int      result;
 
   buffer_needed = MAX(in_len, out_len) + 8 + cmd_len;
@@ -31,7 +31,7 @@ BOOL do_scsi(UINT8 *command, int cmd_len, void *buffer, UINT32 in_len,
   }
   if (scsibuf) {
     memset(scsibuf, 0, buffer_needed);
-    ip = (UINT32 *)scsibuf;
+    ip = (uint32_t *)scsibuf;
     ip[0] = out_len;
     ip[1] = in_len;
     memcpy(scsibuf + 8, command, cmd_len);
@@ -39,7 +39,7 @@ BOOL do_scsi(UINT8 *command, int cmd_len, void *buffer, UINT32 in_len,
     result = ioctl(device, 1, scsibuf);
     if (result == 0) {
       memcpy(buffer, scsibuf + 8, in_len);
-      fail = FALSE;
+      fail = false;
     } else {
       if (result == 0x28000000) {
         memcpy(sense, scsibuf + 8, sense_len);

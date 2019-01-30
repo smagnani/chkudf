@@ -15,8 +15,8 @@
  */
 
 struct lb_addr {
-    UINT32          LBN;         /* partition relative block # */
-    UINT16          PartNo;
+    uint32_t        LBN;         /* partition relative block # */
+    uint16_t        PartNo;
 };
 
 /* ==========================================================================
@@ -40,45 +40,45 @@ struct lb_addr {
 
 /* [4/14.14.1] short allocation descriptor (8 bytes) -----------------------*/
 struct short_ad {
-    UINT32          ExtentLengthAndType;
-    UINT32          Location;         /* logical block address */
+    uint32_t        ExtentLengthAndType;
+    uint32_t        Location;         /* logical block address */
 };
 
 /* [4/14.14.2] long allocation descriptor (16 bytes) -----------------------*/
 struct long_ad {
-    UINT32          ExtentLengthAndType;
-    UINT32          Location_LBN;     /* partition relative block # */
-    UINT16          Location_PartNo;  /* partition number */
-    UINT16          uUdfFlags;        /* See UDF1.01 2.3.10.1 */
-    UINT8           aImpUse[4];
+    uint32_t        ExtentLengthAndType;
+    uint32_t        Location_LBN;     /* partition relative block # */
+    uint16_t        Location_PartNo;  /* partition number */
+    uint16_t        uUdfFlags;        /* See UDF1.01 2.3.10.1 */
+    uint8_t         aImpUse[4];
 };
 
 #define EXTENT_LENGTH(extentLengthAndType)    (U_endian32(extentLengthAndType) & 0x3FFFFFFF)
 #define EXTENT_TYPE(extentLengthAndType)      (U_endian32(extentLengthAndType) >> 30)
 
 /* udf flag definitions */
-#define EXT_ERASED ((UINT16)BITZERO) /* Only valid for ALLOCATED ADs */
+#define EXT_ERASED ((uint16_t)BITZERO) /* Only valid for ALLOCATED ADs */
 
 /* [4/14.14.3] extended allocation descriptor (20 bytes) -------------------*/
 struct ext_ad {
-    UINT32          ExtentLengthAndType;
-    UINT32          RecordedLength;   /* in bytes too... */
-    UINT32          InfoLength;       /* bytes */
-    UINT32          Location_LBN;     /* partition relative block # */
-    UINT16          Location_PartNo;  /* partition number */
-    UINT8           aImpUse[2];
+    uint32_t        ExtentLengthAndType;
+    uint32_t        RecordedLength;   /* in bytes too... */
+    uint32_t        InfoLength;       /* bytes */
+    uint32_t        Location_LBN;     /* partition relative block # */
+    uint16_t        Location_PartNo;  /* partition number */
+    uint8_t         aImpUse[2];
 };
 
 /* [4/14.1] File Set Descriptor --------------------------------------------*/
 struct FileSetDesc {
     struct tag            sTag;          /* uTagID = 256 */
     struct timestamp      sRecordingTime;
-    UINT16                uInterchangeLev;
-    UINT16                uMaxInterchangeLev;
-    UINT32                uCharSetList;
-    UINT32                uMaxCharSetList;
-    UINT32                uFileSetNum;
-    UINT32                uFileSetDescNum;
+    uint16_t              uInterchangeLev;
+    uint16_t              uMaxInterchangeLev;
+    uint32_t              uCharSetList;
+    uint32_t              uMaxCharSetList;
+    uint32_t              uFileSetNum;
+    uint32_t              uFileSetDescNum;
     struct charspec       sLogVolIDCharSet;
     dstring               aLogVolID[128];
     struct charspec       sFileSetCharSet;
@@ -89,7 +89,7 @@ struct FileSetDesc {
     struct domainEntityId DomainID;
     struct long_ad        sNextExtent;
     struct long_ad        sStreamDirICB;
-    UINT8                aReserved[32];
+    uint8_t               aReserved[32];
 };
 
 /* [4/14.3] Partition Header Descriptor ------------------------------------*/
@@ -104,7 +104,7 @@ struct PartHeaderDesc {
     struct short_ad PIT;            /* partition integrity table */
     struct short_ad FST;            /* freed space table */
     struct short_ad FSB;            /* freed space bitmap */
-    UINT8 aReserved[88];
+    uint8_t aReserved[88];
 };
 
 /* [4/14.4] File Identifier Descriptor ---------------------------------------
@@ -126,11 +126,11 @@ struct PartHeaderDesc {
  */
 struct FileIDDesc {
     struct tag          sTag;   /* uTagID = 257 */
-    UINT16              VersionNum;
-    UINT8               Characteristics;
-    UINT8               L_FI;
+    uint16_t            VersionNum;
+    uint8_t             Characteristics;
+    uint8_t             L_FI;
     struct long_ad      ICB;
-    UINT16              L_IU;
+    uint16_t            L_IU;
     struct implEntityId sImplementationID;
     /* Implementation Use Falls here */
     /* File ID falls here */
@@ -139,32 +139,32 @@ struct FileIDDesc {
 
 /* File Characteristics [4/14.4.4] */
 
-#define FILE_ATTR           (UINT8) BITZERO   /* attribute for a file     */
-#define HIDDEN_ATTR         (UINT8) BITZERO   /* ... existence bit        */
-#define DIR_ATTR            (UINT8) BITONE    /* ... for a directory      */
-#define DELETE_ATTR         (UINT8) BITTWO    /* ... for a deleted file   */
-#define PARENT_ATTR         (UINT8) BITTHREE  /* ... for a parent         */
+#define FILE_ATTR           ((uint8_t) BITZERO)   /* attribute for a file     */
+#define HIDDEN_ATTR         ((uint8_t) BITZERO)   /* ... existence bit        */
+#define DIR_ATTR            ((uint8_t) BITONE)    /* ... for a directory      */
+#define DELETE_ATTR         ((uint8_t) BITTWO)    /* ... for a deleted file   */
+#define PARENT_ATTR         ((uint8_t) BITTHREE)  /* ... for a parent         */
 
 /* [4/14.5] Allocation Extent Descriptor -----------------------------------*/
 struct AllocationExtentDesc {
     struct tag sTag;         /* uTagID = 258 */
-    UINT32 prevAllocExtLoc;
-    UINT32 L_AD;
+    uint32_t   prevAllocExtLoc;
+    uint32_t   L_AD;
     /* allocation descriptors go here: ADMacros at end of file */
 };
 
 /* [4/14.6] Information Control Block Details ------------------------------*/
 struct ICBTag {
-    UINT32 PriorDirects;
-    UINT16 StrategyType;
-    UINT8  StrategyParm[2];
-    UINT16 NumberEntries;
-    UINT8  Reserved;
-    UINT8  FileType;
+    uint32_t PriorDirects;
+    uint16_t StrategyType;
+    uint8_t  StrategyParm[2];
+    uint16_t NumberEntries;
+    uint8_t  Reserved;
+    uint8_t  FileType;
     /* lb_addr   sParentICB; */
-    UINT32 sParentICB_LBN;       /* partition relative block # */
-    UINT16 sParentICB_PartNo;    /* partition number */
-    UINT16 Flags;
+    uint32_t sParentICB_LBN;       /* partition relative block # */
+    uint16_t sParentICB_PartNo;    /* partition number */
+    uint16_t Flags;
 };
 
 /* ICB file types */
@@ -185,12 +185,12 @@ struct ICBTag {
 /* ICB Flags Constants */
 
 /* Bits 0,1,2 - ADType */
-#define ADTYPEMASK     (UINT16) 0x0007    /* allocation descriptor type */
+#define ADTYPEMASK     UINT16_C(0x0007)   /* allocation descriptor type */
                                           /* mask for ICBTag flags field */
-#define ADSHORT        (UINT16) 0x00      /* Short ADs */
-#define ADLONG         (UINT16) 0x01      /* Long ADs */
-#define ADEXTENDED     (UINT16) 0x02      /* Extended ADs */
-#define ADNONE         (UINT16) 0x03      /* Data replaces ADs */
+#define ADSHORT        UINT16_C(0x00)     /* Short ADs */
+#define ADLONG         UINT16_C(0x01)     /* Long ADs */
+#define ADEXTENDED     UINT16_C(0x02)     /* Extended ADs */
+#define ADNONE         UINT16_C(0x03)     /* Data replaces ADs */
 
 /* Bits 3-9 : Miscellaneous */
 #define SORTED_DIRECTORY   0x0008 /* This should be cleared. */
@@ -222,27 +222,27 @@ struct TerminalEntry {
 struct FileEntry {
     struct tag sTag;        /* uTagID = 261 */
     struct ICBTag sICBTag;  /* FileType = [4-10] */
-    UINT32 UID;
-    UINT32 GID;
-    UINT32 Permissions;
-    UINT16 LinkCount;
-    UINT8 RecFormat;
-    UINT8 RecDisplayAttr;
-    UINT32 RecLength;
-    UINT32 InfoLengthL;
-    UINT32 InfoLengthH;
-    UINT32 LogBlocksL;
-    UINT32 LogBlocksH;
+    uint32_t UID;
+    uint32_t GID;
+    uint32_t Permissions;
+    uint16_t LinkCount;
+    uint8_t  RecFormat;
+    uint8_t  RecDisplayAttr;
+    uint32_t RecLength;
+    uint32_t InfoLengthL;
+    uint32_t InfoLengthH;
+    uint32_t LogBlocksL;
+    uint32_t LogBlocksH;
     struct timestamp sAccessTime;   /* each timestamp is 12 bytes long */
     struct timestamp sModifyTime;
     struct timestamp sAttrTime;
-    UINT32 Checkpoint;
+    uint32_t Checkpoint;
     struct long_ad sExtAttrICB;     /* 16 bytes */
     struct implEntityId sImpID;
-    UINT32 UniqueIdL;           /* for 13346 */
-    UINT32 UniqueIdH;
-    UINT32 L_EA;
-    UINT32 L_AD;
+    uint32_t UniqueIdL;           /* for 13346 */
+    uint32_t UniqueIdH;
+    uint32_t L_EA;
+    uint32_t L_AD;
     /* allocation descriptors go here: ADMacros at end of file */
 };
 
@@ -250,19 +250,19 @@ struct FileEntry {
 struct UnallocSpEntry {
     struct tag sTag;   /* uTagID = 263 */
     struct ICBTag sICBTag;  /* FileType = 1 */
-    UINT32 L_AD;
+    uint32_t L_AD;
     /* allocation descriptors go here: ADMacros at end of file */
 };
 
 /* [4/14.12] Space Bitmap Entry --------------------------------------------*/
 struct SpaceBitmapHdr {
     struct tag sTag;   /* uTagID = 264 */
-    UINT32 N_Bits;
-    UINT32 N_Bytes;
+    uint32_t   N_Bits;
+    uint32_t   N_Bytes;
 };
 struct SpaceBitmapEntry {
     struct SpaceBitmapHdr hdr;
-    UINT8  bitmap[0]; /* bitmap */
+    uint8_t  bitmap[0]; /* bitmap */
 };
 
 /* [4/14.13] Partition Integrity Entry -------------------------------------*/
@@ -270,92 +270,92 @@ struct PartIntegrityEntry {
     struct tag sTag;         /* uTagID = 265 */
     struct ICBTag sICBTag;   /* FileType = 2 */
     struct timestamp sRecordingTime;
-    UINT8  IntegrityType;
-    UINT8  reserved[175];
+    uint8_t  IntegrityType;
+    uint8_t  reserved[175];
     struct regid sImpID;
-    UINT8 aImpUse[256];
+    uint8_t  aImpUse[256];
 };
 
 /* [4/14.17] Extended File Entry -------------------------------------------*/
 struct ExtFileEntry {
     struct tag sTag;        /* uTagID = 266 */
     struct ICBTag sICBTag;  /* FileType = [4-10] */
-    UINT32 UID;
-    UINT32 GID;
-    UINT32 Permissions;
-    UINT16 LinkCount;
-    UINT8 RecFormat;
-    UINT8 RecDisplayAttr;
-    UINT32 RecLength;
-    UINT32 InfoLengthL;
-    UINT32 InfoLengthH;
-    UINT32 ObjectSizeL;
-    UINT32 ObjectSizeH;
-    UINT32 LogBlocksL;
-    UINT32 LogBlocksH;
+    uint32_t UID;
+    uint32_t GID;
+    uint32_t Permissions;
+    uint16_t LinkCount;
+    uint8_t  RecFormat;
+    uint8_t  RecDisplayAttr;
+    uint32_t RecLength;
+    uint32_t InfoLengthL;
+    uint32_t InfoLengthH;
+    uint32_t ObjectSizeL;
+    uint32_t ObjectSizeH;
+    uint32_t LogBlocksL;
+    uint32_t LogBlocksH;
     struct timestamp sAccessTime;   /* each timestamp is 12 bytes long */
     struct timestamp sModifyTime;
     struct timestamp sCreationTime;
     struct timestamp sAttrTime;
-    UINT32 Checkpoint;
-    UINT32 Reserved;
+    uint32_t Checkpoint;
+    uint32_t Reserved;
     struct long_ad sExtAttrICB;     /* 16 bytes */
     struct long_ad sStreamDirICB;   /* 16 bytes */
     struct implEntityId sImpID;
-    UINT32 UniqueIdL;           /* for 13346 */
-    UINT32 UniqueIdH;
-    UINT32 L_EA;
-    UINT32 L_AD;
+    uint32_t UniqueIdL;           /* for 13346 */
+    uint32_t UniqueIdH;
+    uint32_t L_EA;
+    uint32_t L_AD;
     /* allocation descriptors go here: ADMacros at end of file */
 };
 
 struct FE_or_EFE {
     struct tag sTag;        /* uTagID = 261 (FE) or 266 (EFE) */
     struct ICBTag sICBTag;  /* FileType = [4-10] */
-    UINT32 UID;
-    UINT32 GID;
-    UINT32 Permissions;
-    UINT16 LinkCount;
-    UINT8 RecFormat;
-    UINT8 RecDisplayAttr;
-    UINT32 RecLength;
-    UINT32 InfoLengthL;
-    UINT32 InfoLengthH;
+    uint32_t UID;
+    uint32_t GID;
+    uint32_t Permissions;
+    uint16_t LinkCount;
+    uint8_t  RecFormat;
+    uint8_t  RecDisplayAttr;
+    uint32_t RecLength;
+    uint32_t InfoLengthL;
+    uint32_t InfoLengthH;
 
     union {
       struct FE {
-        UINT32 LogBlocksL;
-        UINT32 LogBlocksH;
+        uint32_t LogBlocksL;
+        uint32_t LogBlocksH;
         struct timestamp sAccessTime;   /* each timestamp is 12 bytes long */
         struct timestamp sModifyTime;
         struct timestamp sAttrTime;
-        UINT32 Checkpoint;
+        uint32_t Checkpoint;
         struct long_ad sExtAttrICB;     /* 16 bytes */
         struct implEntityId sImpID;
-        UINT32 UniqueIdL;           /* for 13346 */
-        UINT32 UniqueIdH;
-        UINT32 L_EA;
-        UINT32 L_AD;
+        uint32_t UniqueIdL;           /* for 13346 */
+        uint32_t UniqueIdH;
+        uint32_t L_EA;
+        uint32_t L_AD;
         /* allocation descriptors go here: ADMacros at end of file */
       } FE;
       struct EFE {
-        UINT32 ObjectSizeL;
-        UINT32 ObjectSizeH;
-        UINT32 LogBlocksL;
-        UINT32 LogBlocksH;
+        uint32_t ObjectSizeL;
+        uint32_t ObjectSizeH;
+        uint32_t LogBlocksL;
+        uint32_t LogBlocksH;
         struct timestamp sAccessTime;   /* each timestamp is 12 bytes long */
         struct timestamp sModifyTime;
         struct timestamp sCreationTime;
         struct timestamp sAttrTime;
-        UINT32 Checkpoint;
-        UINT32 Reserved;
+        uint32_t Checkpoint;
+        uint32_t Reserved;
         struct long_ad sExtAttrICB;     /* 16 bytes */
         struct long_ad sStreamDirICB;   /* 16 bytes */
         struct implEntityId sImpID;
-        UINT32 UniqueIdL;           /* for 13346 */
-        UINT32 UniqueIdH;
-        UINT32 L_EA;
-        UINT32 L_AD;
+        uint32_t UniqueIdL;           /* for 13346 */
+        uint32_t UniqueIdH;
+        uint32_t L_EA;
+        uint32_t L_AD;
         /* allocation descriptors go here: ADMacros at end of file */
       } EFE;
     };
@@ -375,16 +375,16 @@ struct FE_or_EFE {
 /* [4/14.10.1] Extended Attribute Header Descriptor ------------------------*/
 struct ExtAttrHeaderDesc {
     struct tag sTag;   /* uTagID = 262 */
-    UINT32 ImpAttrLoc;
-    UINT32 AppAttrLoc;
+    uint32_t ImpAttrLoc;
+    uint32_t AppAttrLoc;
 };
 
 struct ImplUseEA {
-    UINT32 AttrType;
-    UINT8  AttrSubType;
-    UINT8  Reserved[3];
-    UINT32 AttrLen;
-    UINT32 AppUseLen;
+    uint32_t AttrType;
+    uint8_t  AttrSubType;
+    uint8_t  Reserved[3];
+    uint32_t AttrLen;
+    uint32_t AppUseLen;
     struct udfEntityId EA_ID;
 };
 #endif

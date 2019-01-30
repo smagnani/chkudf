@@ -6,7 +6,7 @@
 #include "chkudf.h"
 #include "protos.h"
 
-static int ReadSpaceBitmap(UINT16 ptn)
+static int ReadSpaceBitmap(uint16_t ptn)
 {
   struct SpaceBitmapHdr *BMD;
 
@@ -41,7 +41,7 @@ static int ReadSpaceBitmap(UINT16 ptn)
         }
         if (Part_Info[ptn].SpMap && (mapBytesRecorded < Part_Info[ptn].SpLen)) {
           memcpy(Part_Info[ptn].SpMap,
-                 (UINT8 *)BMD + sizeof(struct SpaceBitmapHdr),
+                 (uint8_t *)BMD + sizeof(struct SpaceBitmapHdr),
                  MIN(mapBytesRecorded, mapBytesRequired));
 
           // Mask out bits for blocks beyond end of partition
@@ -61,25 +61,25 @@ static int ReadSpaceBitmap(UINT16 ptn)
   return 0;
 }
 
-static void ReadSpaceTable(UINT16 ptn)
+static void ReadSpaceTable(uint16_t ptn)
 {
   struct UnallocSpEntry *USE = malloc(blocksize);
 
   if (USE) {
-    UINT32 nextUSELocation = Part_Info[ptn].Space;
-    UINT32 nextUSESize     = Part_Info[ptn].SpLen;
-    UINT32 minNextUnallocStart = 0;
-    BOOL   bWarnedUnsorted = FALSE;
-    const UINT32 maxExtentLength = 0x3FFFFFFF & ~(blocksize - 1);
+    uint32_t nextUSELocation = Part_Info[ptn].Space;
+    uint32_t nextUSESize     = Part_Info[ptn].SpLen;
+    uint32_t minNextUnallocStart = 0;
+    bool     bWarnedUnsorted = false;
+    const uint32_t maxExtentLength = 0x3FFFFFFF & ~(blocksize - 1);
 
     printf("\n--Reading Unallocated Space Entries for partition reference %u.\n", ptn);
     while (nextUSELocation != -1) {
       struct short_ad *sad;
-      UINT32 L_AD;
-      UINT32 ad_offset = 0;
+      uint32_t L_AD;
+      uint32_t ad_offset = 0;
 
-      UINT32 curUSESize     = nextUSESize;
-      UINT32 curUSELocation = nextUSELocation;
+      uint32_t curUSESize     = nextUSESize;
+      uint32_t curUSELocation = nextUSELocation;
       nextUSELocation = -1;
 
       printf("  [loc=%u, size=%u]\n", curUSELocation, curUSESize);
@@ -113,9 +113,9 @@ static void ReadSpaceTable(UINT16 ptn)
       sad = (struct short_ad *) (USE + 1);
 
       while ((ad_offset < L_AD) && (nextUSELocation == -1)) {
-        UINT32 extentLocation = U_endian32(sad->Location);
-        UINT32 extentLength   = EXTENT_LENGTH(sad->ExtentLengthAndType);
-        UINT32 extentType     = EXTENT_TYPE(sad->ExtentLengthAndType);
+        uint32_t extentLocation = U_endian32(sad->Location);
+        uint32_t extentLength   = EXTENT_LENGTH(sad->ExtentLengthAndType);
+        uint32_t extentType     = EXTENT_TYPE(sad->ExtentLengthAndType);
         if (extentLength) {
           switch (extentType) {
             case E_RECORDED:
@@ -170,7 +170,7 @@ static void ReadSpaceTable(UINT16 ptn)
           if (bWarnedUnsorted) {
             ClearError();
           }
-          bWarnedUnsorted = TRUE;
+          bWarnedUnsorted = true;
         }
 
         if (!Error.Code && (extentLength == 0)) {
@@ -210,7 +210,7 @@ static void ReadSpaceTable(UINT16 ptn)
 
 int ReadPartitionUnallocatedSpaceDescs(void)
 {
-  UINT16 i;
+  uint16_t i;
 
   for (i = 0; i < PTN_no; i++) {
     if (Part_Info[i].SpaceTag == TAGID_SPACE_BMAP) {

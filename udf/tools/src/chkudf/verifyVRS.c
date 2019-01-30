@@ -10,9 +10,9 @@
  * The VRS is not at a fixed sector number.  The following routine reads
  * descriptor (i), where i is the VRS offset from 32K.  
  */
-int ReadVRD (UINT8 *VRD, int i)
+int ReadVRD (uint8_t *VRD, int i)
 {
-  UINT32 sector, count;
+  uint32_t sector, count;
 
   count = 2048 >> sdivshift;
   if (count == 0) count = 1;
@@ -28,11 +28,12 @@ int ReadVRD (UINT8 *VRD, int i)
 int VerifyVRS(void)
 {
   int error = 0;
-  UINT32 i;
-  int Term = 0, VRS_OK = TRUE, NSR_Found = 0, BEA_Found = 0;
-  UINT8 *VRS;
+  uint32_t i;
+  int  Term = 0, NSR_Found = 0;
+  bool VRS_OK = true, BEA_Found = false;
+  uint8_t *VRS;
 
-  VRS = (UINT8 *)malloc(MAX(secsize, 2048));
+  VRS = (uint8_t *)malloc(MAX(secsize, 2048));
   if (VRS) {
     printf("\n--Verifying the Volume Recognition Sequence.\n");
     /* Process ISO9660 VRS */
@@ -54,7 +55,7 @@ int VerifyVRS(void)
           i++;
         }
       } else {
-        VRS_OK = FALSE;
+        VRS_OK = false;
       }
     }
     if (i) {
@@ -72,7 +73,7 @@ int VerifyVRS(void)
       printf("  VRS %u            : ", i);
       VRS_OK = !strncmp((const char*) VRS+1, VRS_ISO13346_BEGIN, 5);
       if (VRS_OK) {
-        BEA_Found = 1;
+        BEA_Found = true;
         printf("Beginning Extended Area descriptor found.\n");
       } else {
         printf("**BEA01 is not present, skipping remaining VRS.\n");
@@ -86,7 +87,7 @@ int VerifyVRS(void)
           NSR_Found = !strncmp((const char*) VRS+1, VRS_ISO13346_NSR, 4);
           if (NSR_Found) {
             UDF_Version = VRS[5] & 0x0f;
-            Version_OK = TRUE;
+            Version_OK = true;
             printf("NSR0%u descriptor found.\n", UDF_Version);
           }
         } else {
@@ -99,7 +100,7 @@ int VerifyVRS(void)
           i++;
         }
       } else {
-        VRS_OK = FALSE;
+        VRS_OK = false;
       }
     }
     if (BEA_Found && !NSR_Found) {

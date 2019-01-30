@@ -15,15 +15,16 @@
 void GetVAT(void)
 {
   struct FileEntry *VATICB;
-  int              found, result;
-  UINT32           i;
-  UINT16           VirtPart;
+  bool             found;
+  int              result;
+  uint32_t         i;
+  uint16_t         VirtPart;
 
-  found = FALSE;
+  found = false;
   for (i = 0; (i < PTN_no) && !found; i++) {
     if (Part_Info[i].type == PTN_TYP_VIRTUAL) {
       VirtPart = i;
-      found = TRUE;
+      found = true;
     }
   }
 
@@ -51,7 +52,7 @@ void GetVAT(void)
           // "Found VAT ICB. Unfortunately, code to process it does not yet exist."
           Error.Code = ERR_NOVATCODE;
           Error.Sector = U_endian32(VATICB->sTag.uTagLoc);
-          Fatal = TRUE;
+          Fatal = true;
 #else     // Obsolete code for UDF1.50 VAT format. @todo Retain it in case we ever see 1.50 media?
           unsigned long long infoLength =   (((unsigned long long) U_endian32(VATICB->InfoLengthH)) << 32)
                                           | U_endian32(VATICB->InfoLengthL);
@@ -63,7 +64,7 @@ void GetVAT(void)
             // FIXME: short read and read error are not handled
             ReadFileData(Part_Info[VirtPart].Extra, (struct FE_or_EFE*)VATICB, Part_Info[VirtPart].Num,
                          0, infoLength, &i);
-            Part_Info[VirtPart].Len = (UINT32)((infoLength - 36) >> 2);
+            Part_Info[VirtPart].Len = (uint32_t)((infoLength - 36) >> 2);
             printf("  Virtual partition is %u sectors long.\n", Part_Info[VirtPart].Len);
             printf("%sVAT Identifier is: ", CheckRegid((struct udfEntityId *)(Part_Info[VirtPart].Extra + Part_Info[VirtPart].Len), E_REGID_VAT) ? "**" : "  ");
             DisplayRegIDID((struct regid *)(Part_Info[VirtPart].Extra + Part_Info[VirtPart].Len));
@@ -75,29 +76,29 @@ void GetVAT(void)
           } else {
             Error.Code = ERR_NOVATMEM;
             Error.Sector = LastSector - Part_Info[VirtPart].Offs;
-            Fatal = TRUE;
+            Fatal = true;
           }
 #endif
         } else {
           Error.Code = ERR_NOVAT;
           Error.Sector = LastSector - Part_Info[VirtPart].Offs;
-          Fatal = TRUE;
+          Fatal = true;
         }
       } else {
         Error.Code = ERR_NOVAT;
         Error.Sector = LastSector - Part_Info[VirtPart].Offs;
-        Fatal = TRUE;
+        Fatal = true;
       }
       free(VATICB);
     } else {
       printf("**Can't malloc memory for VAT ICB.\n");
-      Fatal = TRUE;
+      Fatal = true;
     }
   } else {
     if (found) {
       Error.Code = ERR_NOVAT;
       Error.Sector = LastSector - Part_Info[VirtPart].Offs;
-      Fatal = TRUE;
+      Fatal = true;
     }
   }
 }

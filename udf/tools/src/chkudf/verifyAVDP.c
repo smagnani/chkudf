@@ -133,17 +133,17 @@ void VerifyAVDP(void)
                RVDS_Len < 32768 ? "**" : "  ", RVDS_Loc, RVDS_Len);
       if (!VDS_Len && !RVDS_Len) {
         printf("**Both Volume Descriptor Sequences have zero length.\n");
-        Fatal = TRUE;
+        Fatal = true;
       }
     } else {
       printf("**No Anchor Volume Descriptor Pointers found.\n");
       Error.Code = ERR_NOAVDP;
       Error.Sector = LastSector;
-      Fatal = TRUE;
+      Fatal = true;
     }
     free(AVDPtr);
   } else {
     printf("**Couldn't allocate memory for reading AVDP.\n");
-    Fatal = TRUE;
+    Fatal = true;
   }
 }

@@ -14,11 +14,11 @@
  * The scsi_read10 command builds a read command in the preallocated
  * buffer.  It returns a pointer to the buffer.
  ****************************************************************************/ 
-UINT8 *scsi_modesense10(UINT8 *buffer, int DBD, int PC, int pagecode,
-                        int pagelength);
+uint8_t *scsi_modesense10(uint8_t *buffer, int DBD, int PC, int pagecode,
+                          int pagelength);
 
-UINT8 *scsi_read10(UINT8 *buffer, int LBA, int length, int sectorsize,
-                   int DPO, int FUA, int RelAdr);
+uint8_t *scsi_read10(uint8_t *buffer, int LBA, int length, int sectorsize,
+                     int DPO, int FUA, int RelAdr);
 
 
 
@@ -33,7 +33,7 @@ UINT8 *scsi_read10(UINT8 *buffer, int LBA, int length, int sectorsize,
  * likely to be a tag but has a small problem, or is a good tag.
  ****************************************************************************/
 
-int CheckTag(const struct tag *TagPtr, UINT32 uTagLoc, UINT16 TagID,
+int CheckTag(const struct tag *TagPtr, uint32_t uTagLoc, uint16_t TagID,
              int crc_min, int crc_max);
 
 /*****************************************************************************
@@ -61,7 +61,7 @@ void cleanup(void);
 
 int GetRootDir(void);
 int DisplayDirs(void);
-int GetFID(struct FileIDDesc *FID, const struct FE_or_EFE *fe, UINT16 part,
+int GetFID(struct FileIDDesc *FID, const struct FE_or_EFE *fe, uint16_t part,
            unsigned int offset);
 
 /*****************************************************************************
@@ -70,8 +70,8 @@ int GetFID(struct FileIDDesc *FID, const struct FE_or_EFE *fe, UINT16 part,
  * This function issues SCSI commands
  ****************************************************************************/
 
-BOOL do_scsi(UINT8 *command, int cmd_len, void *buffer, UINT32 in_len,
-             UINT32 out_len, UINT8 *sense, int sense_len);
+bool do_scsi(uint8_t *command, int cmd_len, void *buffer, uint32_t in_len,
+             uint32_t out_len, uint8_t *sense, int sense_len);
 
 /*****************************************************************************
  * errors.c
@@ -90,8 +90,8 @@ void ClearError(void);
  * This routine checks file space assignments
  ****************************************************************************/
 
-int track_freespace(UINT16 ptn, UINT32 Location, UINT32 numBlocks);
-int track_filespace(UINT16 ptn, UINT32 Location, UINT32 numBytes);
+int track_freespace(uint16_t ptn, uint32_t Location, uint32_t numBlocks);
+int track_filespace(uint16_t ptn, uint32_t Location, uint32_t numBytes);
 int check_filespace(void);
 int check_uniqueid(void);
 
@@ -119,56 +119,56 @@ void GetVAT(void);
  * The following are global variables used by chkudf.
  ****************************************************************************/
 
-extern UINT32      blocksize;
-extern MUINT8      bdivshift;
-extern UINT32      secsize;
-extern MUINT8      sdivshift;
-extern MUINT8      s_per_b;
-extern UINT32      packet_size;
-extern BOOL        scsi;
-extern int         device;
-extern UINT32      LastSector;
-extern BOOL        LastSectorAccurate;
-extern UINT32      lastSessionStartLBA;
-extern BOOL        isType5;
-extern BOOL        isCDRW;
+extern uint32_t       blocksize;
+extern uint_least8_t  bdivshift;
+extern uint32_t       secsize;
+extern uint_least8_t  sdivshift;
+extern uint_least8_t  s_per_b;
+extern uint32_t       packet_size;
+extern bool           scsi;
+extern int            device;
+extern uint32_t       LastSector;
+extern bool           LastSectorAccurate;
+extern uint32_t       lastSessionStartLBA;
+extern bool           isType5;
+extern bool           isCDRW;
 
-extern UINT8       *scsibuf;
-extern UINT32      scsibufsize;
-extern UINT8       cdb[];
-extern UINT8       sensedata[];
-extern int         sensebufsize;
+extern uint8_t        *scsibuf;
+extern uint32_t       scsibufsize;
+extern uint8_t        cdb[];
+extern uint8_t        sensedata[];
+extern int            sensebufsize;
 
-extern sCacheData  Cache[];
-extern MUINT8      bufno;
-extern sError      Error;
-extern char       *Error_Msgs[];
+extern sCacheData     Cache[];
+extern uint_least8_t  bufno;
+extern sError         Error;
+extern char          *Error_Msgs[];
 
 
-extern UINT16      UDF_Version;
-extern BOOL        Version_OK;
-extern UINT16      Serial_No;
-extern BOOL        Serial_OK;
-extern BOOL        Fatal;
+extern uint16_t       UDF_Version;
+extern bool           Version_OK;
+extern uint16_t       Serial_No;
+extern bool           Serial_OK;
+extern bool           Fatal;
 
-extern UINT32      VDS_Loc, VDS_Len, RVDS_Loc, RVDS_Len;
-extern sPart_Info  Part_Info[];
-extern UINT16      PTN_no;
-extern dstring     LogVolID[];      // The logical volume ID
-extern MUINT32     VolSpaceListLen;
+extern uint32_t       VDS_Loc, VDS_Len, RVDS_Loc, RVDS_Len;
+extern sPart_Info     Part_Info[];
+extern uint16_t       PTN_no;
+extern dstring        LogVolID[];      // The logical volume ID
+extern uint_least32_t VolSpaceListLen;
 extern struct extent_ad_name VolSpace[];
-extern UINT32      *VAT;
-extern UINT32       VATLength;
+extern uint32_t      *VAT;
+extern uint32_t       VATLength;
 
 extern struct long_ad FSD;
 extern struct long_ad RootDirICB;
 extern struct long_ad StreamDirICB;
 extern sICB_trk      *ICBlist;
-extern MUINT32        ICBlist_len;
-extern MUINT32        ICBlist_alloc;
-extern UINT32         ID_Dirs;
-extern UINT32         ID_Files;
-extern UINT32         ID_UID;
+extern uint_least32_t ICBlist_len;
+extern uint_least32_t ICBlist_alloc;
+extern uint32_t       ID_Dirs;
+extern uint32_t       ID_Files;
+extern uint32_t       ID_UID;
 extern unsigned int   Num_Dirs;
 extern unsigned int   Num_Files;
 extern unsigned int   Num_Type_Err;
@@ -181,7 +181,7 @@ extern unsigned int   FID_Loc_Wrong;
  * This routine tracks ICBs, link counts, and file space
  ****************************************************************************/
 
-int read_icb(struct FE_or_EFE *FE, UINT16, UINT32 Location, UINT32 Length,
+int read_icb(struct FE_or_EFE *FE, uint16_t, uint32_t Location, uint32_t Length,
              int FID);
 
 
@@ -263,12 +263,12 @@ void SetLastSectorAccurate(void);
  * endian32 swaps a 32 bit integer from big endian to little or vice versa.
  ****************************************************************************/
 
-UINT32 endian32(UINT32 toswap);
-UINT16 endian16(UINT16 toswap);
-UINT16 doCRC(UINT8 *buffer, int n);
+uint32_t endian32(uint32_t toswap);
+uint16_t endian16(uint16_t toswap);
+uint16_t doCRC(uint8_t *buffer, int n);
 int Is_Charspec(const struct charspec *chars);
-void printDstring(const UINT8 *start, UINT8 fieldLen);
-void printDchars(const UINT8 *start, UINT8 length);
+void printDstring(const uint8_t *start, uint8_t fieldLen);
+void printDchars(const uint8_t *start, uint8_t length);
 void printCharSpec(struct charspec chars);
 void printTimestamp( struct timestamp x);
 void printExtentAD(struct extent_ad extent);
@@ -288,13 +288,13 @@ unsigned int countSetBits(unsigned int value);
  * ReadLBlocks.
  ****************************************************************************/
 
-int ReadSectors(void *buffer, UINT32 address, UINT32 Count);
+int ReadSectors(void *buffer, uint32_t address, uint32_t Count);
 
-int ReadLBlocks(void *buffer, UINT32 address, UINT16 partition, UINT32 Count);
+int ReadLBlocks(void *buffer, uint32_t address, uint16_t partition, uint32_t Count);
 
-unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *ICB, UINT16 part,
+unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *ICB, uint16_t part,
                           unsigned long long startOffset, unsigned int bytesRequested,
-                          UINT32 *data_start_loc);
+                          uint32_t *data_start_loc);
 
 /*****************************************************************************
  * verifyAVDP.c
@@ -320,7 +320,7 @@ int checkICB(struct FE_or_EFE *fe, struct long_ad FE, int dir);
  * This routine verifies an LVID sequence.
  ****************************************************************************/
 
-int verifyLVID(UINT32 loc, UINT32 len);
+int verifyLVID(uint32_t loc, uint32_t len);
 
 
 /*****************************************************************************
@@ -332,7 +332,7 @@ int CheckRegid(const struct udfEntityId *reg, const char *ID);
 void DisplayImplID(struct implEntityId * ieip);
 void DisplayUdfID(struct udfEntityId * ueip);
 void DisplayRegIDID( struct regid *RegIDp);
-//void printOSInfo( UINT8 osClass, UINT8 osIdentifier );
+//void printOSInfo( uint8_t osClass, uint8_t osIdentifier );
 
 
 /*****************************************************************************
@@ -357,7 +357,7 @@ int checkUSD(struct UnallocSpDesHead *mUSD, struct UnallocSpDesHead *rUSD);
  * The name in CheckSequence is for printing to the display.
  ****************************************************************************/
 
-int ReadVDS(UINT8 *VDS, char *name, UINT32 loc, UINT32 len);
+int ReadVDS(uint8_t *VDS, char *name, uint32_t loc, uint32_t len);
 
 int VerifyVDS(void);
 
@@ -376,4 +376,4 @@ int VerifyVRS(void);
  * This routine checks for overlapping volume space assignments
  ****************************************************************************/
 
-int track_volspace(UINT32 Location, UINT32 Length, char *Name);
+int track_volspace(uint32_t Location, uint32_t Length, char *Name);

@@ -12,7 +12,7 @@
  * allows only one of each descriptor, only one is kept.  All discarded
  * descriptors are noted.
  */
-int ReadVDS(UINT8 *buf, char *name, UINT32 loc, UINT32 len)
+int ReadVDS(uint8_t *buf, char *name, uint32_t loc, uint32_t len)
 {
   /*
    * All volume descriptors are one block in length.  This routine 
@@ -22,10 +22,10 @@ int ReadVDS(UINT8 *buf, char *name, UINT32 loc, UINT32 len)
    * sectors.  Upon return, the buffer will contain the listed descriptors
    * in the order above.
    */
-  UINT32                    i, j;
-  UINT8*                    buffer;
+  uint32_t                  i, j;
+  uint8_t*                  buffer;
   struct tag               *vdtag;
-  UINT8                     zerotest;
+  uint8_t                   zerotest;
   struct PrimaryVolDes     *PVD, *PVDt;
   struct LogVolDesc        *LVD, *LVDt;
   struct ImpUseDesc        *IUVD, *IUVDt;
@@ -234,7 +234,7 @@ int VerifyVDS()
   struct UnallocSpDesHead *mainUSD,  *reserveUSD;
   struct LogVolDesc       *mainLVD,  *reserveLVD;
   struct PartDesc         *mainPD,   *reservePD;
-  UINT8 *buffer_main, *buffer_reserve;
+  uint8_t *buffer_main, *buffer_reserve;
   
   printf("\n--Verifying Volume Descriptor Sequences.\n");
 

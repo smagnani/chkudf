@@ -17,8 +17,8 @@
  * implementation, the device identification is a file handle kept in 
  * the "device" global.
  */
-BOOL do_pkt(UINT8 *command, int cmd_len, UINT8 *buffer, UINT32 in_len, 
-            UINT32 out_len, UINT8 *sense, int sense_len)
+bool do_pkt(uint8_t *command, int cmd_len, uint8_t *buffer, uint32_t in_len, 
+            uint32_t out_len, uint8_t *sense, int sense_len)
 {
   struct cdrom_generic_command cgc;
   struct request_sense rs;
@@ -47,8 +47,8 @@ BOOL do_pkt(UINT8 *command, int cmd_len, UINT8 *buffer, UINT32 in_len,
            rs.valid, rs.error_code, rs.segment_number, rs.ili, rs.sense_key,
            *(unsigned int *)rs.information, rs.add_sense_len, *(unsigned int *)rs.command_info);
     printf("**PKT error %x/%02x/%02x**", sense[2] & 0xf, (int)sense[12], (int)sense[13]);
-    return TRUE;
+    return true;
   }
   else
-    return FALSE;
+    return false;
 }

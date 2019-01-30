@@ -68,8 +68,8 @@ int GetRootDir(void)
 int DisplayDirs(void)
 {
   unsigned int offs[MAX_DEPTH + 1];   // Offset into current directory data
-  UINT32       addr[MAX_DEPTH + 1];   // Address of ICB of current dir
-  UINT16       part[MAX_DEPTH + 1];   // Partition of ICB of current dir
+  uint32_t     addr[MAX_DEPTH + 1];   // Address of ICB of current dir
+  uint16_t     part[MAX_DEPTH + 1];   // Partition of ICB of current dir
   int depth, i, error;
   struct FileIDDesc *File = NULL;     // Directory entry for the current file
   struct FE_or_EFE  *ICB  = NULL;     // ICB for current directory
@@ -79,8 +79,8 @@ int DisplayDirs(void)
   GetRootDir();
 
   do {
-    UINT32 address = U_endian32(RootDirICB.Location_LBN);
-    UINT16 partition = U_endian16(RootDirICB.Location_PartNo);
+    uint32_t address = U_endian32(RootDirICB.Location_LBN);
+    uint16_t partition = U_endian16(RootDirICB.Location_PartNo);
 
     if (!EXTENT_LENGTH(RootDirICB.ExtentLengthAndType)) {
       printf("  No root directory.\n");
@@ -123,7 +123,7 @@ int DisplayDirs(void)
                                            U_endian32(File->ICB.Location_LBN));
             if (File->L_FI) {
               printf("ILLEGAL NAME ");
-              printDchars((UINT8 *)File + FILE_ID_DESC_CONSTANT_LEN + U_endian16(File->L_IU), File->L_FI);
+              printDchars((uint8_t *)File + FILE_ID_DESC_CONSTANT_LEN + U_endian16(File->L_IU), File->L_FI);
             } else {
               printf("NAME OK");
             }
@@ -148,9 +148,9 @@ int DisplayDirs(void)
              */
             if (File->Characteristics & DELETE_ATTR) {
               printf("[DELETED] ");
-              printDchars((UINT8 *)File + FILE_ID_DESC_CONSTANT_LEN + U_endian16(File->L_IU), File->L_FI);
+              printDchars((uint8_t *)File + FILE_ID_DESC_CONSTANT_LEN + U_endian16(File->L_IU), File->L_FI);
             } else {
-              printDchars((UINT8 *)File + FILE_ID_DESC_CONSTANT_LEN + U_endian16(File->L_IU), File->L_FI);
+              printDchars((uint8_t *)File + FILE_ID_DESC_CONSTANT_LEN + U_endian16(File->L_IU), File->L_FI);
               read_icb(ICB, U_endian16(File->ICB.Location_PartNo), U_endian32(File->ICB.Location_LBN),
                        EXTENT_LENGTH(File->ICB.ExtentLengthAndType), 1);
               checkICB(ICB, File->ICB, File->Characteristics & DIR_ATTR);
@@ -203,11 +203,11 @@ int DisplayDirs(void)
  * @param[in]  offset    Number of bytes into the directory data where FID of interest
  *                       begins
  */
-int GetFID(struct FileIDDesc *FID, const struct FE_or_EFE *fe, UINT16 part,
+int GetFID(struct FileIDDesc *FID, const struct FE_or_EFE *fe, uint16_t part,
            unsigned int offset)
 {
   unsigned int bytesRead;
-  UINT32 location;
+  uint32_t location;
   
   bytesRead = ReadFileData(FID, fe, part, offset, blocksize, &location);
   if (bytesRead > FILE_ID_DESC_CONSTANT_LEN) {

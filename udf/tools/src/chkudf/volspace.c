@@ -2,11 +2,12 @@
 #include "chkudf.h"
 #include "protos.h"
 
-int track_volspace(UINT32 Location, UINT32 Length, char *Name)
+int track_volspace(uint32_t Location, uint32_t Length, char *Name)
 {
-  int i, j, error;
+  int i, j;
+  bool error;
 
-  error = 0;
+  error = false;
 
   if (Length > 0) {  
     //point to the location where the new extent is >= the list member
@@ -16,7 +17,7 @@ int track_volspace(UINT32 Location, UINT32 Length, char *Name)
           (Location < (VolSpace[i-1].Location + VolSpace[i-1].Length))) {
         Error.Code = ERR_VOL_SPACE_OVERLAP;
         Error.Sector = Location;
-        error = TRUE;
+        error = true;
       }
     }
     if (i < VolSpaceListLen) {
@@ -24,7 +25,7 @@ int track_volspace(UINT32 Location, UINT32 Length, char *Name)
           (Location < (VolSpace[i].Location + VolSpace[i].Length))) {
         Error.Code = ERR_VOL_SPACE_OVERLAP;
         Error.Sector = Location;
-        error = TRUE;
+        error = true;
       }
     }
     if (VolSpaceListLen < MAX_VOL_EXTS - 1) {

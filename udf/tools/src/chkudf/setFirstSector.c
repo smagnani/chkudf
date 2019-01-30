@@ -12,13 +12,13 @@
  * the last AVDP.  This is only needed on CD media.
  */
 
-BOOL Get_First_RTI()
+bool Get_First_RTI()
 {
-  UINT8    *buffer;
+  uint8_t  *buffer;
   int      result = 0;
   int      *ip;
-  BOOL     success = FALSE;
-  UINT8    first_track, track_no, target_session;
+  bool     success = false;
+  uint8_t  first_track, track_no, target_session;
 
   buffer = malloc(128);
   ip = (int *)buffer;
@@ -54,7 +54,7 @@ BOOL Get_First_RTI()
                 lastSessionStartLBA = S_endian32(ip[2]);
                 printf("  Generic RDI/RTI:  Session %u, track %u, start %u.\n",
                        buffer[3], track_no, lastSessionStartLBA);
-                success = TRUE;
+                success = true;
               }
             }
           }
@@ -64,7 +64,7 @@ BOOL Get_First_RTI()
            */
           lastSessionStartLBA = S_endian32(ip[2]);
           printf("  Generic RDI/RTI worked.  Last session starts at %u.\n", lastSessionStartLBA);
-          success = TRUE;
+          success = true;
         }
       }
     }

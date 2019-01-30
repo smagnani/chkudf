@@ -58,32 +58,29 @@
 
 #define bitsPerByte 0x08
 
-#define FALSE 0
-#define TRUE  1
-
 /* tag id's for ISO/IEC 13346 structures */
 
-#define TAGID_NONE             (UINT16) 0   /* no tag */
-#define TAGID_PVD              (UINT16) 1   /* primary volume desc */
-#define TAGID_ANCHOR           (UINT16) 2   /* anchor desc */
-#define TAGID_POINTER          (UINT16) 3   /* pointer desc */
-#define TAGID_IUD              (UINT16) 4   /* implementation use desc */
-#define TAGID_PD               (UINT16) 5   /* volume partition desc */
-#define TAGID_LVD              (UINT16) 6   /* logical volume desc */
-#define TAGID_USD              (UINT16) 7   /* unallocated volume space desc */
-#define TAGID_TERM_DESC        (UINT16) 8   /* terminator desc */
-#define TAGID_LVID             (UINT16) 9   /* logical volume integrity desc */
-#define TAGID_FSD              (UINT16) 256  /* file set desc */
-#define TAGID_FILE_ID          (UINT16) 257  /* file identifier desc */
-#define TAGID_ALLOC_EXTENT     (UINT16) 258  /* Allocation extent desc */
-#define TAGID_INDIRECT         (UINT16) 259  /* Indirect entry */
-#define TAGID_TERM_ENTRY       (UINT16) 260  /* Terminal entry */
-#define TAGID_FILE_ENTRY       (UINT16) 261  /* File entry */
-#define TAGID_EXT_ATTR         (UINT16) 262  /* Extended attribute desc */
-#define TAGID_UNALLOC_SP_ENTRY (UINT16) 263  /* Unallocated space entry (WORM)*/
-#define TAGID_SPACE_BMAP       (UINT16) 264  /* Space bitmap desc */
-#define TAGID_PART_INTEGRITY   (UINT16) 265  /* Partition integrity desc */
-#define TAGID_EXT_FILE_ENTRY   (UINT16) 266  /* Extended File entry */
+#define TAGID_NONE             UINT16_C(0)    /* no tag */
+#define TAGID_PVD              UINT16_C(1)    /* primary volume desc */
+#define TAGID_ANCHOR           UINT16_C(2)    /* anchor desc */
+#define TAGID_POINTER          UINT16_C(3)    /* pointer desc */
+#define TAGID_IUD              UINT16_C(4)    /* implementation use desc */
+#define TAGID_PD               UINT16_C(5)    /* volume partition desc */
+#define TAGID_LVD              UINT16_C(6)    /* logical volume desc */
+#define TAGID_USD              UINT16_C(7)    /* unallocated volume space desc */
+#define TAGID_TERM_DESC        UINT16_C(8)    /* terminator desc */
+#define TAGID_LVID             UINT16_C(9)    /* logical volume integrity desc */
+#define TAGID_FSD              UINT16_C(256)  /* file set desc */
+#define TAGID_FILE_ID          UINT16_C(257)  /* file identifier desc */
+#define TAGID_ALLOC_EXTENT     UINT16_C(258)  /* Allocation extent desc */
+#define TAGID_INDIRECT         UINT16_C(259)  /* Indirect entry */
+#define TAGID_TERM_ENTRY       UINT16_C(260)  /* Terminal entry */
+#define TAGID_FILE_ENTRY       UINT16_C(261)  /* File entry */
+#define TAGID_EXT_ATTR         UINT16_C(262)  /* Extended attribute desc */
+#define TAGID_UNALLOC_SP_ENTRY UINT16_C(263)  /* Unallocated space entry (WORM)*/
+#define TAGID_SPACE_BMAP       UINT16_C(264)  /* Space bitmap desc */
+#define TAGID_PART_INTEGRITY   UINT16_C(265)  /* Partition integrity desc */
+#define TAGID_EXT_FILE_ENTRY   UINT16_C(266)  /* Extended File entry */
 
 /* Stuff for display tool */
 

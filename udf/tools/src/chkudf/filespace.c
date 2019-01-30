@@ -4,11 +4,11 @@
 
 int bitv[8] = {1, 2, 4, 8, 16, 32, 64, 128};
 
-int track_freespace(UINT16 ptn, UINT32 addr, UINT32 extentNumBytes)
+int track_freespace(uint16_t ptn, uint32_t addr, uint32_t extentNumBytes)
 {
   // @todo Decide if Error.Sector should be block address of extent's container
   do {
-    UINT32 endAddr = addr + ((extentNumBytes + blocksize - 1) >> bdivshift);
+    uint32_t endAddr = addr + ((extentNumBytes + blocksize - 1) >> bdivshift);
     if (ptn >= PTN_no) {
       Error.Code = ERR_BAD_PTN;
       Error.Sector = addr;
@@ -32,9 +32,9 @@ int track_freespace(UINT16 ptn, UINT32 addr, UINT32 extentNumBytes)
     }
 
     if (Part_Info[ptn].SpMap) {
-      UINT32 extentNumBlocks = endAddr - addr;
+      uint32_t extentNumBlocks = endAddr - addr;
       while (extentNumBlocks > 0) {
-        UINT32 bytep, bitp;
+        uint32_t bytep, bitp;
         bytep = addr >> 3;
         bitp = addr & 7;
         if (Part_Info[ptn].SpMap[bytep] & bitv[bitp]) {
@@ -58,11 +58,11 @@ int track_freespace(UINT16 ptn, UINT32 addr, UINT32 extentNumBytes)
   return 0;
 }
 
-int track_filespace(UINT16 ptn, UINT32 addr, UINT32 extentNumBytes)
+int track_filespace(uint16_t ptn, uint32_t addr, uint32_t extentNumBytes)
 {
   // @todo Decide if Error.Sector should be block address of extent's container
   do {
-    UINT32 endAddr = addr + ((extentNumBytes + blocksize - 1) >> bdivshift);
+    uint32_t endAddr = addr + ((extentNumBytes + blocksize - 1) >> bdivshift);
     if (ptn >= PTN_no) {
       Error.Code = ERR_BAD_PTN;
       Error.Sector = addr;
@@ -86,9 +86,9 @@ int track_filespace(UINT16 ptn, UINT32 addr, UINT32 extentNumBytes)
     }
 
     if (Part_Info[ptn].MyMap) {
-      UINT32 extentNumBlocks = endAddr - addr;
+      uint32_t extentNumBlocks = endAddr - addr;
       while (extentNumBlocks > 0) {
-        UINT32 bytep, bitp;
+        uint32_t bytep, bitp;
         bytep = addr >> 3;
         bitp = addr & 7;
         if ((Part_Info[ptn].MyMap[bytep] & bitv[bitp]) == 0) {
@@ -127,12 +127,12 @@ int check_filespace(void)
         int numSuppressed = 0;
         int numReported = 0;
         int askForMore = 24;
-        BOOL bSuppress = FALSE;
+        bool bSuppress = false;
 
         for (j = 0; j < numMapBytes; j++) {
           if (Part_Info[i].SpMap[j] != Part_Info[i].MyMap[j]) {
             // See if the mismatch is for the current pass
-            UINT8 mismatchBits = Part_Info[i].SpMap[j] ^ Part_Info[i].MyMap[j];
+            uint8_t mismatchBits = Part_Info[i].SpMap[j] ^ Part_Info[i].MyMap[j];
             if (pass == 1) {
               // In-use, but marked free?
               mismatchBits &= ~Part_Info[i].MyMap[j];
@@ -167,7 +167,7 @@ int check_filespace(void)
                 fflush(stdout);
                 ans = getchar();
                 if ((ans == 'n') || (ans == 'N')) {
-                  bSuppress = TRUE;
+                  bSuppress = true;
                 } else if ((ans == 'a') || (ans == 'A')) {
                   askForMore = 0;
                 }
@@ -205,7 +205,7 @@ int check_filespace(void)
 int check_uniqueid(void)
 {
   int i, j;
-  UINT32 Max;
+  uint32_t Max;
 
   Max = 0;
   printf("\n--Checking Unique ID list.\n");

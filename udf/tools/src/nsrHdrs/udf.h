@@ -56,9 +56,9 @@
 struct SparingTable {
     struct tag sTag;       /* uTagID = 0 */
     struct udfEntityId sEntityId;
-    UINT16 uRT_L;
-    UINT8  Reserved[2];
-    UINT32 uSequence;
+    uint16_t uRT_L;
+    uint8_t  Reserved[2];
+    uint32_t uSequence;
 };
 
 

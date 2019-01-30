@@ -1,7 +1,7 @@
 #ifndef __NSRPART1H__
 #define __NSRPART1H__
 
-typedef UINT8 dstring;
+typedef uint8_t dstring;
 
 /*
  * ----------- Definitions for basic structures ------------------
@@ -9,8 +9,8 @@ typedef UINT8 dstring;
 
 /* [1/7.2.1] -----------------------------------------------------*/
 struct charspec {
-    UINT8 uCharSetType;
-    UINT8 aCharSetInfo[63];
+    uint8_t uCharSetType;
+    uint8_t aCharSetInfo[63];
 };
 /* uCharSetType is one of: */
 #define NSR_CS0  0
@@ -25,16 +25,16 @@ struct charspec {
 
 /* [1/7.3] -------------------------------------------------------*/
 struct timestamp {
-    INT16 uTypeAndTimeZone;
-    INT16  iYear;
-    UINT8 uMonth;
-    UINT8 uDay;
-    UINT8 uHour;
-    UINT8 uMinute;
-    UINT8 uSecond;
-    UINT8 uCentiseconds;
-    UINT8 uHundredMicroseconds;
-    UINT8 uMicroseconds;
+    int16_t uTypeAndTimeZone;
+    int16_t  iYear;
+    uint8_t uMonth;
+    uint8_t uDay;
+    uint8_t uHour;
+    uint8_t uMinute;
+    uint8_t uSecond;
+    uint8_t uCentiseconds;
+    uint8_t uHundredMicroseconds;
+    uint8_t uMicroseconds;
 };
 /* CUT = Coordinated Universal Time; LOCAL = local time; BA = By agreement */
 #define TIMETYPE_CUT   0
@@ -50,16 +50,16 @@ struct timestamp {
 #define TZSignExt 0xf000
 
 #define GetTSTP(ttz) (ttz>>TPShift)
-#define GetTSTZ(ttz) ((INT16)((ttz&TZSignBit)?(ttz|TZSignExt):(ttz&TZMask)))
+#define GetTSTZ(ttz) ((int16_t)((ttz&TZSignBit)?(ttz|TZSignExt):(ttz&TZMask)))
 #define SetTSTP(ttz,tp) ((tp<<TPShift) | (ttz&TZMask))
 #define SetTSTZ(ttz,tz) ((ttz&TPMask) | (tz&TZMask))
 
 
 /* [1/7.4] ISO-definition of regid -------------------------------*/
 struct regid {
-    UINT8 uFlags;
-    UINT8 aRegisteredID[23];
-    UINT8 aIDSuffix[8];
+    uint8_t uFlags;
+    uint8_t aRegisteredID[23];
+    uint8_t aIDSuffix[8];
 };
 
 #define REGID_FLAGS_DIRTY     0x01
@@ -73,11 +73,11 @@ struct regid {
  * uDomainFlags usually = 0.
  */
 struct domainEntityId {
-    UINT8 uFlags;
-    UINT8 aID[23];
-    UINT16 uUDFRevision;
-    UINT8 uDomainFlags;
-    UINT8 aReserved[5];
+    uint8_t  uFlags;
+    uint8_t  aID[23];
+    uint16_t uUDFRevision;
+    uint8_t  uDomainFlags;
+    uint8_t  aReserved[5];
 };
 
 /*
@@ -88,12 +88,12 @@ struct domainEntityId {
  * uOSIdentifier is defined in constants in nsr.h.
  */
 struct udfEntityId {
-    UINT8 uFlags;
-    UINT8 aID[23];
-    UINT16 uUDFRevision;
-    UINT8 uOSClass;
-    UINT8 uOSIdentifier;
-    UINT8 aReserved[4];
+    uint8_t  uFlags;
+    uint8_t  aID[23];
+    uint16_t uUDFRevision;
+    uint8_t  uOSClass;
+    uint8_t  uOSIdentifier;
+    uint8_t  aReserved[4];
 };
 
 /* 
@@ -103,11 +103,11 @@ struct udfEntityId {
  */
 
 struct implEntityId {
-    UINT8 uFlags        ;
-    UINT8 aID[23]       ;
-    UINT8 uOSClass      ;
-    UINT8 uOSIdentifier ;
-    UINT8 uImplUse[6]   ;
+    uint8_t uFlags        ;
+    uint8_t aID[23]       ;
+    uint8_t uOSClass      ;
+    uint8_t uOSIdentifier ;
+    uint8_t uImplUse[6]   ;
 };
 
 /* 
@@ -117,15 +117,15 @@ struct implEntityId {
  */
 
 struct HPimplEntityId {
-    UINT8 uFlags        ;
-    UINT8 aID[23]       ;
-    UINT8 uOSClass      ;
-    UINT8 uOSIdentifier ;
-    UINT8 uDescVersion  ;
-    UINT8 uLibrVersion  ;
-    UINT16 uImplRegNo   ;
-    UINT8 uImplVersion  ;
-    UINT8 uImplRevision ;
+    uint8_t  uFlags        ;
+    uint8_t  aID[23]       ;
+    uint8_t  uOSClass      ;
+    uint8_t  uOSIdentifier ;
+    uint8_t  uDescVersion  ;
+    uint8_t  uLibrVersion  ;
+    uint16_t uImplRegNo   ;
+    uint8_t  uImplVersion  ;
+    uint8_t  uImplRevision ;
 };
 
 

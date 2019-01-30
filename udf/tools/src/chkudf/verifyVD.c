@@ -23,10 +23,10 @@
  * The following routine checks the PVD.  It looks for legal values in most
  * fields and verifies that the main and reserve PVD are equivalent.  A few
  * fields are not checked or displayed:
- *   UINT8 aImplementationUse[64];
- *   UINT32 uPredecessorVDSLoc;
- *   UINT16 uFlags;
- *   UINT8 aReserved[22];
+ *   uint8_t  aImplementationUse[64];
+ *   uint32_t uPredecessorVDSLoc;
+ *   uint16_t uFlags;
+ *   uint8_t  aReserved[22];
  */
 int checkPVD(struct PrimaryVolDes *mPVD, struct PrimaryVolDes *rPVD)
 {
@@ -138,7 +138,7 @@ int checkPVD(struct PrimaryVolDes *mPVD, struct PrimaryVolDes *rPVD)
  * The following routine checks the IUVD.  It looks for legal values in most
  * fields and verifies that the main and reserve IUVD are equivalent.  A few
  * fields are not checked or displayed:
- *   UINT8 aImplementationUse[128];
+ *   uint8_t aImplementationUse[128];
  */
 int checkIUVD(struct ImpUseDesc *mIUVD, struct ImpUseDesc *rIUVD)
 {
@@ -214,9 +214,9 @@ int checkIUVD(struct ImpUseDesc *mIUVD, struct ImpUseDesc *rIUVD)
  * The following routine checks the PD.  It looks for legal values in most
  * fields and verifies that the main and reserve PD are equivalent.  A few
  * fields are not checked or displayed:
- *   UINT8  aPartContentsUse[128];
- *   UINT8  aImplementationUse[128];
- *   UINT8  aReserved[156];
+ *   uint8_t  aPartContentsUse[128];
+ *   uint8_t  aImplementationUse[128];
+ *   uint8_t  aReserved[156];
  */
 int checkPD(struct PartDesc *mPD, struct PartDesc *rPD)
 {
@@ -238,18 +238,18 @@ int checkPD(struct PartDesc *mPD, struct PartDesc *rPD)
               U_endian16(rPD->uPartFlags) & PARTITION_ALLOCATED ? "" : "NOT ");
     }
 
-    if (memcmp((UINT8 *)&mPD->sPartContents +1, E_REGID_NSR, 5)) {
+    if (memcmp((uint8_t *)&mPD->sPartContents +1, E_REGID_NSR, 5)) {
       printf("**(M) Illegal partition contents identifier\n      ");
       DisplayRegIDID(&mPD->sPartContents);
       printf("\n");
     }
-    if (*((UINT8 *)(&mPD->sPartContents) + 6) - '0' != UDF_Version) {
+    if (*((uint8_t *)(&mPD->sPartContents) + 6) - '0' != UDF_Version) {
       printf("**(M) NSR version is %u, partition claims %u.  Changing.\n", UDF_Version,
-             *((UINT8 *)(&mPD->sPartContents) + 6) - '0');
-      UDF_Version = *((UINT8 *)(&mPD->sPartContents) + 6) - '0';
-      Version_OK = TRUE;
+             *((uint8_t *)(&mPD->sPartContents) + 6) - '0');
+      UDF_Version = *((uint8_t *)(&mPD->sPartContents) + 6) - '0';
+      Version_OK = true;
     }
-    if (RVDS_Len && memcmp((UINT8 *)&mPD->sPartContents, (UINT8 *)&rPD->sPartContents, sizeof(struct regid))) {
+    if (RVDS_Len && memcmp((uint8_t *)&mPD->sPartContents, (uint8_t *)&rPD->sPartContents, sizeof(struct regid))) {
       printf("**(R) Reserve sequence partition contents identifier\n      ");
       DisplayRegIDID(&rPD->sPartContents);
       printf("\n");
@@ -297,7 +297,7 @@ int checkPD(struct PartDesc *mPD, struct PartDesc *rPD)
     hit = 0;
     for (i = 0; i < PTN_no; i++) {
       if (Part_Info[i].Num == U_endian16(mPD->uPartNumber)) {
-        UINT32 expectedBitmapNumBytes;    // Expected/maximum
+        uint32_t expectedBitmapNumBytes;    // Expected/maximum
         Part_Info[i].Offs = U_endian32(mPD->uPartStartingLoc);
         Part_Info[i].Len = U_endian32(mPD->uPartLength);
         expectedBitmapNumBytes = BITMAP_NUM_BYTES(Part_Info[i].Len);    // Expected/maximum
@@ -384,7 +384,7 @@ int checkPD(struct PartDesc *mPD, struct PartDesc *rPD)
              hit);
     }
   } else {
-    Fatal = TRUE;
+    Fatal = true;
   }
   DumpError();
   return 0;
@@ -395,7 +395,7 @@ int checkPD(struct PartDesc *mPD, struct PartDesc *rPD)
  * The following routine checks the LVD.  It looks for legal values in most
  * fields and verifies that the main and reserve LVD are equivalent.  A few
  * fields are not checked or displayed:
- *   UINT8 aImplementationUse[128];
+ *   uint8_t aImplementationUse[128];
  */
 int checkLVD(struct LogVolDesc *mLVD, struct LogVolDesc *rLVD)
 {
@@ -429,7 +429,7 @@ int checkLVD(struct LogVolDesc *mLVD, struct LogVolDesc *rLVD)
     if (blocksize < secsize) {
       printf("**(M) Block size of %u is less than sector size of %u!.\n",
              blocksize, secsize);
-      Fatal = TRUE;
+      Fatal = true;
     } else {
       while (!((1 << bdivshift) & blocksize)) {
         bdivshift++;
@@ -463,7 +463,7 @@ int checkLVD(struct LogVolDesc *mLVD, struct LogVolDesc *rLVD)
     memcpy(&FSD, &mLVD->uLogVolUse, 16);
 
     if (EXTENT_LENGTH(FSD.ExtentLengthAndType) == 0) {
-      Fatal = TRUE;
+      Fatal = true;
       printf("**");
     } else {
       printf("  ");
@@ -496,17 +496,17 @@ int checkLVD(struct LogVolDesc *mLVD, struct LogVolDesc *rLVD)
     if (U_endian32(mLVD->uNumPartMaps) > NUM_PARTS) {
       Error.Code = ERR_TOO_MANY_PARTS;
       DumpError();
-      Fatal = TRUE;
+      Fatal = true;
     } else {
       PTN_no = U_endian32(mLVD->uNumPartMaps);
       if (PTN_no == 0) {
         printf("**No Partition Map Entries.\n");
-        Fatal = TRUE;
+        Fatal = true;
       }
       offset = sizeof(struct LogVolDesc);
       for (i = 0; i < PTN_no; i++) {
         printf("  (M) Partition map entry %d is ", i);
-        sPartMap1 = (struct PartMap1 *)((UINT8 *)mLVD + offset);
+        sPartMap1 = (struct PartMap1 *)((uint8_t *)mLVD + offset);
         sPartMapVAT = (struct PartMapVAT *)sPartMap1;
         sPartMapSP = (struct PartMapSP *)sPartMap1;
 
@@ -572,7 +572,7 @@ int checkLVD(struct LogVolDesc *mLVD, struct LogVolDesc *rLVD)
 
     verifyLVID(U_endian32(mLVD->integritySeqExtent.Location), U_endian32(mLVD->integritySeqExtent.Length));
   } else {
-    Fatal = TRUE;
+    Fatal = true;
   }
   DumpError();
   return Error.Code;
@@ -600,25 +600,25 @@ int checkUSD(struct UnallocSpDesHead *mUSD, struct UnallocSpDesHead *rUSD)
     }
     for (i = 0; i < U_endian32(mUSD->uNumAllocationDes); i++) {
       printf("    %u bytes (%u blocks) @ %u\n",
-               U_endian32(*((UINT32 *) ((UINT8 *)mUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)))),
-               U_endian32(*((UINT32 *) ((UINT8 *)mUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)))) >> sdivshift,
-               U_endian32(*((UINT32 *) ((UINT8 *)mUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)) + 1)));
-      track_volspace(U_endian32(*((UINT32 *)((UINT8 *)mUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)) + 1)),
-                     U_endian32(*((UINT32 *)((UINT8 *)mUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)))) >> sdivshift,
+             U_endian32(*((uint32_t *) ((uint8_t *)mUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)))),
+             U_endian32(*((uint32_t *) ((uint8_t *)mUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)))) >> sdivshift,
+             U_endian32(*((uint32_t *) ((uint8_t *)mUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)) + 1)));
+      track_volspace(U_endian32(*((uint32_t *)((uint8_t *)mUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)) + 1)),
+                     U_endian32(*((uint32_t *)((uint8_t *)mUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)))) >> sdivshift,
                      "Unallocated Space");
     }
-    if (RVDS_Len && (memcmp((UINT8 *)mUSD + sizeof(struct UnallocSpDesHead), 
-               (UINT8 *)rUSD + sizeof(struct UnallocSpDesHead), 
+    if (RVDS_Len && (memcmp((uint8_t *)mUSD + sizeof(struct UnallocSpDesHead), 
+               (uint8_t *)rUSD + sizeof(struct UnallocSpDesHead), 
                U_endian32(mUSD->uNumAllocationDes) * sizeof(struct extent_ad)) || 
                (U_endian32(mUSD->uNumAllocationDes) != U_endian32(rUSD->uNumAllocationDes)))) {
       printf("**(R) Space allocation descriptors:\n");
       for (i = 0; i < U_endian32(rUSD->uNumAllocationDes); i++) {
         printf("    %u bytes (%u blocks) @ %u\n",
-               U_endian32(*((UINT32 *) ((UINT8 *)rUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)))),
-               U_endian32(*((UINT32 *) ((UINT8 *)rUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)))) >> sdivshift,
-               U_endian32(*((UINT32 *) ((UINT8 *)rUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)) + 1)));
-      track_volspace(*((UINT32 *)((UINT8 *)rUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)) + 1),
-                     *((UINT32 *)((UINT8 *)rUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad))) >> sdivshift,
+               U_endian32(*((uint32_t *) ((uint8_t *)rUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)))),
+               U_endian32(*((uint32_t *) ((uint8_t *)rUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)))) >> sdivshift,
+               U_endian32(*((uint32_t *) ((uint8_t *)rUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)) + 1)));
+      track_volspace(*((uint32_t *)((uint8_t *)rUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad)) + 1),
+                     *((uint32_t *)((uint8_t *)rUSD + sizeof(struct UnallocSpDesHead) + i * sizeof(struct extent_ad))) >> sdivshift,
                      "Unallocated Space from Reserve USD");
       }
     }

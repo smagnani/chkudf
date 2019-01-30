@@ -10,11 +10,11 @@
  * The following routine verifies the Logical Volume Integrity Descriptor
  * sequence.
  */
-int verifyLVID(UINT32 loc, UINT32 len)
+int verifyLVID(uint32_t loc, uint32_t len)
 {
-  UINT32                             i, j;
-  UINT32                            *Table;
-  UINT8                             *buffer;
+  uint32_t                           i, j;
+  uint32_t                          *Table;
+  uint8_t                           *buffer;
   struct LogicalVolumeIntegrityDesc *LVID;
   struct LVIDImplUse                 *LVIDIU;
 
@@ -53,7 +53,7 @@ int verifyLVID(UINT32 loc, UINT32 len)
                U_endian16(LVIDIU->MaxUDFWrite));
         printf("  Recorded by: ");
         DisplayImplID(&(LVIDIU->implementationID));
-        Table = (UINT32 *)(buffer + 80);
+        Table = (uint32_t *)(buffer + 80);
         for (j = 0; j < U_endian32(LVID->N_P); j++) {
           printf("  Partition reference %u has %u of %u blocks available.\n",
                  j, U_endian32(Table[j]), U_endian32(Table[j + U_endian32(LVID->N_P)]));

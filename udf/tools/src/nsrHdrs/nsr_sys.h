@@ -1,3 +1,6 @@
+#include <stdbool.h>
+#include <stdint.h>
+
 // Uncomment one of the following:
 
 
@@ -48,81 +51,4 @@
 #define U_endian32(x) endian32(x)
 #define U_endian16(x) endian16(x)
 
-#endif
-
-/* Shouldn't have to touch anything below here. */
-
-/*
- * Each type below is OS and compiler specific.  
- *  INTn values must be signed and have exactly n bits.
- *  UINTn values must be unsigned and have exactly n bits.
- *  MINTn values must be signed and have at least n bits, but may have
- *           more for efficiency (i.e. system native int size)
- *  MUINTn values must be unsigned and have at least n bits, but may have
- *           more for efficiency (i.e. system native int size)
- */
-
-#ifdef WIN32
-typedef int            BOOL;
-
-typedef char           INT8;
-typedef unsigned char  UINT8;
-typedef short          INT16;
-typedef unsigned short UINT16;
-typedef int            INT32;
-typedef unsigned int   UINT32;
-typedef struct __uint64 {
-   unsigned int        loword;
-   unsigned int        hiword;
-} UINT64;
-
-typedef int            MINT8;
-typedef unsigned int   MUINT8;
-typedef int            MINT16;
-typedef unsigned int   MUINT16;
-typedef int            MINT32;
-typedef unsigned int   MUINT32;
-#endif
-
-#ifdef OS2
-typedef int            BOOL;
-
-typedef char           INT8;
-typedef unsigned char  UINT8;
-typedef short          INT16;
-typedef unsigned short UINT16;
-typedef int            INT32;
-typedef unsigned int   UINT32;
-typedef struct __uint64 {
-   unsigned long       loword;
-   unsigned long       hiword;
-} UINT64;
-
-typedef int            MINT8;
-typedef unsigned int   MUINT8;
-typedef int            MINT16;
-typedef unsigned int   MUINT16;
-typedef int            MINT32;
-typedef unsigned int   MUINT32;
-#endif
- 
-#if defined(LINUX) || defined(SOLARIS)
-typedef int            BOOL;
-
-typedef char           INT8;
-typedef unsigned char  UINT8;
-typedef short          INT16;
-typedef unsigned short UINT16;
-typedef int            INT32;
-typedef unsigned int   UINT32;
-typedef struct __uint64 {
-   long long       loword;
-} UINT64;
-
-typedef int            MINT8;
-typedef unsigned int   MUINT8;
-typedef int            MINT16;
-typedef unsigned int   MUINT16;
-typedef int            MINT32;
-typedef unsigned int   MUINT32;
 #endif

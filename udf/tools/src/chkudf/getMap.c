@@ -13,16 +13,16 @@
 void GetMap(void)
 {
   struct SparingTable *Spare;
-  UINT16    SP;
+  uint16_t  SP;
   sST_desc  *PM_ST;
   int       i, found;
 
   SP = 0;
-  found = FALSE;
+  found = false;
   for (i = 0; (i < PTN_no) && !found; i++) {
     if (Part_Info[i].type == PTN_TYP_SPARE) {
       SP = i;
-      found = TRUE;
+      found = true;
     }
   }
 
@@ -34,7 +34,7 @@ void GetMap(void)
 
       Spare = (struct SparingTable *)malloc(PM_ST->Size + secsize);
       if (Spare) {
-        UINT32 num_sectors = (PM_ST->Size + secsize - 1) >> sdivshift;
+        uint32_t num_sectors = (PM_ST->Size + secsize - 1) >> sdivshift;
         if (!ReadSectors(Spare, PM_ST->Location[0], num_sectors)) {
           track_volspace(PM_ST->Location[0], num_sectors,
                          "Sparing Table");

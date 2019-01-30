@@ -15,13 +15,13 @@
  * WARNING: pointer returned by CacheSectors() is only guaranteed valid until next
  *          call to CacheSectors
  */
-static const void* CacheSectors(UINT32 address, UINT32 Count)
+static const void* CacheSectors(uint32_t address, uint32_t Count)
 {
   int readOK, result, numsecs, i;
   void *curbuffer;
 
   //printf("  Reading sector %u.\n", address);
-  readOK = FALSE;
+  readOK = false;
 
   /* Search cache for existing bits */
   for (i = 0; i < NUM_CACHE; i++) {
@@ -47,13 +47,13 @@ static const void* CacheSectors(UINT32 address, UINT32 Count)
     }
     if (Cache[bufno].Buffer) {
       if (scsi) {
-        readOK = TRUE;
+        readOK = true;
         for (i = 0; i < Count; i++) {
           scsi_read10(cdb, address + i, 1, secsize, 0, 0, 0);
           result = do_scsi(cdb, 10, Cache[bufno].Buffer + i * secsize,
                            secsize, 0, sensedata, sensebufsize);
           if (result) {
-            readOK = FALSE;
+            readOK = false;
           }
         }
         if (readOK) {
@@ -103,7 +103,7 @@ static const void* CacheSectors(UINT32 address, UINT32 Count)
   return curbuffer;
 }
 
-int ReadSectors(void *buffer, UINT32 address, UINT32 Count)
+int ReadSectors(void *buffer, uint32_t address, uint32_t Count)
 {
     const void *cachedBuf = CacheSectors(address, Count);
     if (cachedBuf) {
@@ -127,13 +127,13 @@ int ReadSectors(void *buffer, UINT32 address, UINT32 Count)
  *                         (see constraints spelled out under "Count")
  * @return     non-NULL    Pointer to cached block data
  */
-static const void* CachePBlocks(UINT32 p_address, UINT16 p_ref, UINT32 Count)
+static const void* CachePBlocks(uint32_t p_address, uint16_t p_ref, uint32_t Count)
 {
   const void *cachedBuf = NULL;
   sST_desc *PM_ST;
-  UINT32 i;
-  UINT32 numSectors = Count * s_per_b;
-  UINT32 secaddr = (p_address * s_per_b) + Part_Info[p_ref].Offs;
+  uint32_t i;
+  uint32_t numSectors = Count * s_per_b;
+  uint32_t secaddr = (p_address * s_per_b) + Part_Info[p_ref].Offs;
 
   if (p_ref < PTN_no) {
     switch(Part_Info[p_ref].type) {
@@ -155,12 +155,12 @@ static const void* CachePBlocks(UINT32 p_address, UINT16 p_ref, UINT32 Count)
         PM_ST = (struct _sST_desc *)Part_Info[p_ref].Extra;
         if (PM_ST) {
           if (Count == 1) {
-            int spared = FALSE;
+            bool spared = false;
             for (i = 0; (i < PM_ST->Size) && !spared; i++) {
               if ((p_address >= PM_ST->Map[i].Original)  &&
                   (p_address < (PM_ST->Map[i].Original + PM_ST->Extent))) {
                 printf("!!Getting sector from spare area!!\n");
-                spared = TRUE;
+                spared = true;
                 secaddr = Part_Info[p_ref].Extra[2*i+1];
                 cachedBuf = CacheSectors(secaddr, s_per_b);
                 break;
@@ -185,11 +185,11 @@ static const void* CachePBlocks(UINT32 p_address, UINT16 p_ref, UINT32 Count)
 }
 
 /* Bug: If count crosses sparing boundary... */
-int ReadLBlocks(void *buffer, UINT32 p_address, UINT16 p_ref, UINT32 Count)
+int ReadLBlocks(void *buffer, uint32_t p_address, uint16_t p_ref, uint32_t Count)
 {
     const void *cachedBuf = NULL;
     sST_desc *PM_ST;
-    UINT32 i;
+    uint32_t i;
     int error = 1;
 
     if (p_ref < PTN_no) {
@@ -256,27 +256,28 @@ int ReadLBlocks(void *buffer, UINT32 p_address, UINT16 p_ref, UINT32 Count)
  *
  * @return       Number of bytes read
  */
-unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part,
+unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, uint16_t part,
                           unsigned long long startOffset, unsigned int bytesRequested,
-                          UINT32 *data_start_loc)
+                          uint32_t *data_start_loc)
 {
   const char *exts_ptr, *exts_end;
   struct AllocationExtentDesc *AED = NULL;
-  UINT32             sector;    // @todo Rename - confusing b/c this is not used with ReadSectors()
-  UINT16             curPartitionIndex = part;  // Default matches short_ad case
-  UINT32             curExtentLocation;
-  UINT32             curExtentLength;
-  UINT32             curExtentType;
-  UINT32             blockBytesAvailable;
+  uint32_t           sector;    // @todo Rename - confusing b/c this is not used with ReadSectors()
+  uint16_t           curPartitionIndex = part;  // Default matches short_ad case
+  uint32_t           curExtentLocation;
+  uint32_t           curExtentLength;
+  uint32_t           curExtentType;
+  uint32_t           blockBytesAvailable;
   unsigned long long infoLength;
   unsigned long long curFileOffset;
   unsigned long long offset;
   unsigned int       bytesRemaining;
-  int                error, firstpass;
+  int                error;
+  bool               firstpass;
   void              *fileData;
-  const UINT16       adtype = U_endian16(xfe->sICBTag.Flags) & ADTYPEMASK;
+  const uint16_t     adtype = U_endian16(xfe->sICBTag.Flags) & ADTYPEMASK;
 
-  firstpass = TRUE;
+  firstpass = true;
   error = 0;
   curFileOffset = startOffset;
   bytesRemaining = bytesRequested;  // TODO: This should be reduced if xfe InfoLength is too small
@@ -285,7 +286,7 @@ unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part
                | U_endian32(xfe->InfoLengthL);
 
   do {
-    UINT32  L_EA, L_AD;
+    uint32_t  L_EA, L_AD;
     size_t  xfeHeaderSize;
 
     if (U_endian16(xfe->sTag.uTagID) == TAGID_EXT_FILE_ENTRY) {
@@ -330,7 +331,7 @@ unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part
           blockBytesAvailable = L_AD;
       }
       if (infoLength < blockBytesAvailable) {
-        blockBytesAvailable = (UINT32) infoLength;
+        blockBytesAvailable = (uint32_t) infoLength;
       }
 
       if (startOffset >= blockBytesAvailable) {
@@ -338,13 +339,13 @@ unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part
         error = 1;
         break;
       }
-      blockBytesAvailable -= (UINT32) startOffset;
+      blockBytesAvailable -= (uint32_t) startOffset;
 
       if (bytesRequested < blockBytesAvailable) {
         blockBytesAvailable = bytesRequested;
       }
 
-      emb_data = ((const char*) xfe) + xfeHeaderSize + L_EA + (UINT32) startOffset;
+      emb_data = ((const char*) xfe) + xfeHeaderSize + L_EA + (uint32_t) startOffset;
 
       memcpy(buffer, emb_data, blockBytesAvailable);
       bytesRemaining -= blockBytesAvailable;
@@ -428,8 +429,8 @@ unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part
       // FIXME: Terminate if curExtentLength == 0
       // FIXME: need to return all zero for blocks in extents not marked E_RECORDED
       if ((exts_ptr < exts_end) && (offset < curExtentLength)) {
-        const UINT32 offset32 = (UINT32) offset;   // Same value - to avoid repeated casting
-        UINT32 blockStartOffset = offset32 & (blocksize - 1);
+        const uint32_t offset32 = (uint32_t) offset;   // Same value - to avoid repeated casting
+        uint32_t blockStartOffset = offset32 & (blocksize - 1);
         blockBytesAvailable = blocksize - blockStartOffset;  // FIXME: assumes sane curExtentLength
 
         if (blockBytesAvailable > (curExtentLength - offset32))
@@ -439,7 +440,7 @@ unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part
           blockBytesAvailable = bytesRemaining;
 
         // Speculative - don't use resulting value if E_UNALLOCATED
-        sector = curExtentLocation + (((UINT32) offset) >> bdivshift);
+        sector = curExtentLocation + (((uint32_t) offset) >> bdivshift);
 
         if (curExtentType == E_RECORDED) {
           const void *cacheBuf;
@@ -466,7 +467,7 @@ unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, UINT16 part
         error = 1;
       }
 
-      firstpass = FALSE;
+      firstpass = false;
     }
 
     if (AED)

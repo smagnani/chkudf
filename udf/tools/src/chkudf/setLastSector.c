@@ -24,17 +24,17 @@ int AVDP_Places[] = {-2, -258, 0, -256, -152, -150, -408, -406};
 int End_Places[]  = {-2,   -2, 0,    0, -152, -150, -152, -150};
 int Num_Places = 8;
 
-BOOL Get_Last_BGS()
+bool Get_Last_BGS()
 {
   unsigned long buffer;
   int      result;
-  BOOL     success = FALSE;
+  bool     success = false;
 
   result = ioctl(device, BLKGETSIZE, &buffer);
   if (!result) {
     LastSector = (buffer * 512) / secsize - 1;
-    LastSectorAccurate = TRUE;
-    success = TRUE;
+    LastSectorAccurate = true;
+    success = true;
   }
   return success;
 }
@@ -45,14 +45,14 @@ BOOL Get_Last_BGS()
  * where the first track is numbered other than 1.
  */
 
-BOOL Get_Last_PRTI()
+bool Get_Last_PRTI()
 {
   char     *buffer;
   int      result = 0;
   int      *ip;
   int      track_no;
-  BOOL     success = FALSE;
-  UINT32   trackstart, tracklength, freeblocks;
+  bool     success = false;
+  uint32_t trackstart, tracklength, freeblocks;
 
   buffer = malloc(128);
   ip = (int *)buffer;
@@ -68,8 +68,8 @@ BOOL Get_Last_PRTI()
       cdb[5] = track_no;
       result = do_scsi(cdb, 10, buffer, 20, 0, sensedata, sensebufsize);
       if (!result) {
-        trackstart = S_endian32(*(UINT32 *)(buffer + 2));
-        tracklength = S_endian32(*(UINT32 *)(buffer + 6));
+        trackstart  = S_endian32(*(uint32_t *)(buffer + 2));
+        tracklength = S_endian32(*(uint32_t *)(buffer + 6));
         freeblocks = S_endian32(ip[3]);
         /*
          * Track length includes two run-outs and link 
@@ -83,9 +83,9 @@ BOOL Get_Last_PRTI()
            */
           LastSector = LastSector - freeblocks - 6;
         }
-        LastSectorAccurate = TRUE;
+        LastSectorAccurate = true;
         printf("  Proprietary RTI (e5) worked.\n");
-        success = TRUE;
+        success = true;
       }
     }
     free(buffer);
@@ -98,14 +98,14 @@ BOOL Get_Last_PRTI()
  * MMC READ DISC INFORMATION and READ TRACK INFORMATION Commands.  This 
  * works on most newer CD-R/RW drives.
  */
-BOOL Get_Last_RTI()
+bool Get_Last_RTI()
 {
   char     *buffer;
   int      result = 0;
   int      *ip;
   int      track_no;
-  BOOL     success = FALSE;
-  UINT32   trackstart, tracklength, freeblocks;
+  bool     success = false;
+  uint32_t trackstart, tracklength, freeblocks;
 
   buffer = malloc(128);
   ip = (int *)buffer;
@@ -146,9 +146,9 @@ BOOL Get_Last_RTI()
               LastSector = LastSector - freeblocks - 7;
             }
           }
-          LastSectorAccurate = TRUE;
+          LastSectorAccurate = true;
           printf("  Generic RDI/RTI worked.\n");
-          success = TRUE;
+          success = true;
         }
       }
     }
@@ -157,11 +157,11 @@ BOOL Get_Last_RTI()
   return success;
 }
 
-BOOL Get_Last_ReadCap()
+bool Get_Last_ReadCap()
 {
   char     *buffer;
   int      result;
-  BOOL     success = FALSE;
+  bool     success = false;
 
   buffer = malloc(128);
   if (buffer) {
@@ -169,20 +169,20 @@ BOOL Get_Last_ReadCap()
     cdb[0] = 0x25;
     result = do_scsi(cdb, 10, buffer, 8, 0, sensedata, sensebufsize);
     if (!result) {
-      LastSector = S_endian32(*(UINT32 *)buffer);
-      LastSectorAccurate = TRUE;
-      success = TRUE;
+      LastSector = S_endian32(*(uint32_t *)buffer);
+      LastSectorAccurate = true;
+      success = true;
     }
     free(buffer);
   }
   return success;
 }
 
-BOOL Get_Last_ReadTOC()
+bool Get_Last_ReadTOC()
 {
   char     *buffer;
   int      result;
-  BOOL     success = FALSE;
+  bool     success = false;
   struct cdrom_tocentry *toc;
 
   buffer = malloc(128);
@@ -194,7 +194,7 @@ BOOL Get_Last_ReadTOC()
     result = ioctl(device, CDROMREADTOCENTRY, buffer);
     if (!result) {
       LastSector = toc->cdte_addr.lba - 1;
-      success = TRUE;
+      success = true;
     }
     free(buffer);
   }
@@ -205,7 +205,7 @@ BOOL Get_Last_ReadTOC()
 void SetLastSector(void)
 {
   LastSector = -1;
-  LastSectorAccurate = FALSE;
+  LastSectorAccurate = false;
 
   if (scsi) {
     if (isType5) {             /* Check for CD device */
@@ -238,15 +238,15 @@ void SetLastSector(void)
 
 void SetLastSectorAccurate(void)
 {
-  UINT32   TrialAddress;
+  uint32_t TrialAddress;
   int      i, error;
-  int      found = FALSE;
+  int      found = false;
   struct tag *avdptag;
 
   avdptag = (struct tag *)malloc(secsize);
   if (avdptag) {
     /* Maybe it's CD-RW media - check first. */
-    isCDRW = FALSE;
+    isCDRW = false;
     TrialAddress = 32 * ((LastSector + 38) / 39) - 1;
     error = ReadSectors(avdptag, TrialAddress, 1);
     if (!error) {
@@ -255,7 +255,7 @@ void SetLastSectorAccurate(void)
     }
     if (found) {
       LastSector = TrialAddress;
-      isCDRW = TRUE;
+      isCDRW = true;
     } else {
       TrialAddress -= 256;
       error = ReadSectors(avdptag, TrialAddress, 1);
@@ -265,7 +265,7 @@ void SetLastSectorAccurate(void)
       }
       if (found) {
         LastSector = TrialAddress + 256;
-        isCDRW = TRUE;
+        isCDRW = true;
       }
     }
 

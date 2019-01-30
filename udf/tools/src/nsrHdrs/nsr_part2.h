@@ -5,11 +5,11 @@
 
 /* [2/9.1] [3/9.1] Volume Structure Descriptor */
 struct VolStructDesc {
-    UINT8 structType;
-    UINT8 stdIdentifier[5];
-    UINT8 structVersion;
-    UINT8 reserved;
-    UINT8 structData[2040];
+    uint8_t structType;
+    uint8_t stdIdentifier[5];
+    uint8_t structVersion;
+    uint8_t reserved;
+    uint8_t structData[2040];
 };
 
 #define VRS_ISO9660        "CD001"

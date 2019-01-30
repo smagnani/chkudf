@@ -4,7 +4,7 @@
 
 int TestLinkCount(void)
 {
-  UINT32 i;
+  uint32_t i;
 
   printf("\n--Testing link counts.\n");
 

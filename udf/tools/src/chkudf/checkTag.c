@@ -6,16 +6,16 @@
 #include "chkudf.h"
 #include "protos.h"
 
-int CheckTag(const struct tag *TagPtr, UINT32 uTagLoc, UINT16 TagID,
+int CheckTag(const struct tag *TagPtr, uint32_t uTagLoc, uint16_t TagID,
              int crc_min, int crc_max)
 {
-  UINT8 checksum;
+  uint8_t checksum;
   int i, result = CHECKTAG_TAG_GOOD;
-  UINT16 CRC;
+  uint16_t CRC;
 
   checksum = 0;
-  for (i=0; i<4; i++) checksum += *((UINT8 *)TagPtr + i);
-  for (i=5; i<16; i++) checksum += *((UINT8 *)TagPtr + i);
+  for (i=0; i<4; i++) checksum += *((uint8_t *)TagPtr + i);
+  for (i=5; i<16; i++) checksum += *((uint8_t *)TagPtr + i);
   if (TagPtr->uTagChecksum != checksum) {
     Error.Code = ERR_TAGCHECKSUM;
     Error.Sector = uTagLoc;
@@ -25,7 +25,7 @@ int CheckTag(const struct tag *TagPtr, UINT32 uTagLoc, UINT16 TagID,
   }
 
   if (!Error.Code) {
-    if ((TagID != (UINT16)-1) && (TagID != U_endian16(TagPtr->uTagID))) {
+    if ((TagID != (uint16_t)-1) && (TagID != U_endian16(TagPtr->uTagID))) {
       Error.Code = ERR_TAGID;
       Error.Sector = uTagLoc;
       Error.Expected = TagID;
@@ -36,7 +36,7 @@ int CheckTag(const struct tag *TagPtr, UINT32 uTagLoc, UINT16 TagID,
 
   if (!Error.Code) {
     if ((U_endian16(TagPtr->uCRCLen) >= crc_min) && (U_endian16(TagPtr->uCRCLen) <= crc_max)) {
-      CRC = doCRC((UINT8 *)TagPtr + 16, U_endian16(TagPtr->uCRCLen));
+      CRC = doCRC((uint8_t *)TagPtr + 16, U_endian16(TagPtr->uCRCLen));
       if (CRC != U_endian16(TagPtr->uDescriptorCRC)) {
         Error.Code = ERR_TAGCRC;
         Error.Sector = uTagLoc;
@@ -64,7 +64,7 @@ int CheckTag(const struct tag *TagPtr, UINT32 uTagLoc, UINT16 TagID,
   }
 
   if (!Error.Code) {
-    UINT16 descriptorVersion = U_endian16(TagPtr->uDescriptorVersion);
+    uint16_t descriptorVersion = U_endian16(TagPtr->uDescriptorVersion);
     if (Version_OK && (descriptorVersion != UDF_Version)) {
       /*
        * ECMA-167r3 sec. 3/7.2.2 Descriptor Version
@@ -80,7 +80,7 @@ int CheckTag(const struct tag *TagPtr, UINT32 uTagLoc, UINT16 TagID,
        * clause implies that OS UDF drivers won't care.
        */
       if (!((UDF_Version == 3) && (descriptorVersion == 2))) {
-        Version_OK = FALSE;
+        Version_OK = false;
         Error.Code = ERR_NSR_VERSION;
         Error.Sector = uTagLoc;
         Error.Expected = UDF_Version;
@@ -92,7 +92,7 @@ int CheckTag(const struct tag *TagPtr, UINT32 uTagLoc, UINT16 TagID,
 
   if (!Error.Code) {
     if (Serial_OK && (U_endian16(TagPtr->uTagSerialNum != Serial_No))) {
-      Version_OK = FALSE;
+      Version_OK = false;
       Error.Code = ERR_SERIAL;
       Error.Sector = uTagLoc;
       Error.Expected = Serial_No;

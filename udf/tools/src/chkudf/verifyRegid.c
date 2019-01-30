@@ -44,7 +44,7 @@ void DisplayRegIDID( struct regid *RegIDp)
   printf("'%.23s'",id);
 }
 
-void printOSInfo( UINT8 osClass, UINT8 osIdentifier )
+void printOSInfo( uint8_t osClass, uint8_t osIdentifier )
 {
   printf(" OS: %u,%u",
          osClass,osIdentifier);

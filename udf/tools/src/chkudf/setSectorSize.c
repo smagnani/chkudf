@@ -38,7 +38,7 @@ void SetSectorSize(void)
         buffer[36] = 0;
         printf("  Device is: '%s' (type %d)\n", buffer + 8, buffer[0] & 0x1f);
         if ((buffer[0] & 0x1f) == 5) {  // Test for CD/DVD
-          isType5 = TRUE;
+          isType5 = true;
           secsize = 2048;
           printf("  Setting sector size to %u for CD/DVD device.\n", secsize);
         } else {
@@ -46,7 +46,7 @@ void SetSectorSize(void)
           cdb[0] = 0x25;
           result = do_scsi(cdb, 10, buffer, 8, 0, sensedata, sensebufsize);
           if (!result) {
-            secsize = S_endian32(*(UINT32 *)(buffer + 4));
+            secsize = S_endian32(*(uint32_t *)(buffer + 4));
             printf("  READ CAPACITY reports a sector size of %u (0x%x).\n", secsize, secsize);
           }
           if (!secsize) {
@@ -56,7 +56,7 @@ void SetSectorSize(void)
               /*
                * MODE SENSE worked
                */
-              if (S_endian16(*(UINT16 *)(buffer + 6)) == 8) {
+              if (S_endian16(*(uint16_t *)(buffer + 6)) == 8) {
                 /*
                  * MODE SENSE returned a block descriptor
                  */
@@ -73,7 +73,7 @@ void SetSectorSize(void)
   }
   if (secsize == 0) {                 /* Block size still not set */
     secsize = 0x200;
-    found = FALSE;
+    found = false;
     avdpbuf = malloc(MAX_SECTOR_SIZE);
     if (avdpbuf) {
       secsize >>= 1;    // Precompensate for initial 'secsize <<= 1'

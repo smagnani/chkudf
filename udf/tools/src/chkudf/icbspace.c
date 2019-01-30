@@ -9,7 +9,7 @@
  * 0 if equal. Used only by read_icb for sorting the icb list.
  */
 
-int compare_address(UINT16 ptn1, UINT16 ptn2, UINT32 addr1, UINT32 addr2)
+int compare_address(uint16_t ptn1, uint16_t ptn2, uint32_t addr1, uint32_t addr2)
 {
   if (ptn1 > ptn2) return 1;
   if (ptn1 < ptn2) return -1;
@@ -22,7 +22,7 @@ int compare_address(UINT16 ptn1, UINT16 ptn2, UINT32 addr1, UINT32 addr2)
  * The following routine takes a File Entry as input and tracks the space
  * used by the file data and by the Extended Attributes of that file.
  */
-int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
+int track_file_allocation(const struct FE_or_EFE *xFE, uint16_t ptn)
 {
   unsigned long long file_length;
   unsigned long long infoLength;
@@ -30,14 +30,14 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
   struct long_ad *lad;
   struct short_ad *sad;
   struct AllocationExtentDesc *AED = NULL; 
-  UINT16 ADlength;
-  UINT32 Location_AEDP, ad_offset;
-  UINT16 Next_ptn;
-  UINT32 Next_LBN;
-  UINT32 L_EA, L_AD;
-  size_t xfe_hdr_sz;
-  UINT8 *ad_start;
-  BOOL   isLAD;
+  uint16_t ADlength;
+  uint32_t Location_AEDP, ad_offset;
+  uint16_t Next_ptn;
+  uint32_t Next_LBN;
+  uint32_t L_EA, L_AD;
+  size_t   xfe_hdr_sz;
+  uint8_t *ad_start;
+  bool     isLAD;
 
   ad_offset = 0;   //Offset into the allocation descriptors
   Next_ptn = 0;    //The partition ref no of the previous AD
@@ -63,11 +63,11 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
       isLAD = (U_endian16(xFE->sICBTag.Flags) & ADTYPEMASK) == ADLONG;
       sizeAD = isLAD ?  sizeof(struct long_ad) : sizeof(struct short_ad);
       file_length = 0;
-      ad_start = ((UINT8 *) xFE) + xfe_hdr_sz + L_EA;
+      ad_start = ((uint8_t *) xFE) + xfe_hdr_sz + L_EA;
       printf("\n  [type=%s, ADlength=%u, info_length=%llu]  ",
              isLAD ? "LONG" : "SHORT", ADlength, infoLength);
       while (ad_offset < ADlength) {
-        UINT32 curExtentLength;
+        uint32_t curExtentLength;
         sad = (struct short_ad *)(ad_start + ad_offset);
         lad = (struct long_ad *)(ad_start + ad_offset);
 
@@ -148,7 +148,7 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
                 }
               }
               if (!error) {
-                ad_start = (UINT8 *)(AED + 1);
+                ad_start = (uint8_t *)(AED + 1);
                 ADlength = U_endian32(AED->L_AD);
                 ad_offset = 0;
               } else {
@@ -195,8 +195,8 @@ int track_file_allocation(const struct FE_or_EFE *xFE, UINT16 ptn)
  * This means that on write once media, errors will be generated when more
  * than one File Entry in an ICB hierarchy identifies the same space.
  */
-int walk_icb_hierarchy(struct FE_or_EFE *xFE, UINT16 ptn, UINT32 Location,
-                   UINT32 Length, int ICB_offs)
+int walk_icb_hierarchy(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location,
+                       uint32_t Length, int ICB_offs)
 {
   int i, error;
 
@@ -264,12 +264,12 @@ int walk_icb_hierarchy(struct FE_or_EFE *xFE, UINT16 ptn, UINT32 Location,
  *   FID == 0, space is not tracked and link counts not incremented.
  *   FID == 1, space is tracked and link counts are incremented.
  */
-int read_icb(struct FE_or_EFE *xFE, UINT16 ptn, UINT32 Location, UINT32 Length,
+int read_icb(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location, uint32_t Length,
              int FID)
 {
-  UINT32 interval;
-  INT32  ICB_offs;
-  int    error, temp;
+  uint32_t interval;
+  int32_t  ICB_offs;
+  int      error, temp;
   struct FE_or_EFE *EA;
   struct long_ad *sExtAttrICB = NULL;
 

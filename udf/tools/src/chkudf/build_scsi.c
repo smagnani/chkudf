@@ -6,8 +6,8 @@
  * The following routine builds a MODE SENSE 10 CDB in the area pointed to
  * by buffer.
  */
-UINT8 *scsi_modesense10(UINT8 *buffer, int DBD, int PC, int pagecode,
-                       int pagelength)
+uint8_t *scsi_modesense10(uint8_t *buffer, int DBD, int PC, int pagecode,
+                          int pagelength)
 {
   /* 
    * Mode header and block descriptor are each 8 bytes, thus we have to
@@ -31,8 +31,8 @@ UINT8 *scsi_modesense10(UINT8 *buffer, int DBD, int PC, int pagecode,
  * The following routine builds a READ 10 CDB in the area pointed to by
  * buffer.
  */
-UINT8 *scsi_read10(UINT8 *buffer, int LBA, int length, int sectorsize,
-                  int DPO, int FUA, int RelAdr)
+uint8_t *scsi_read10(uint8_t *buffer, int LBA, int length, int sectorsize,
+                     int DPO, int FUA, int RelAdr)
 {
   int  *ip;
 
