@@ -127,7 +127,7 @@ int ReadSectors(void *buffer, uint32_t address, uint32_t Count)
  *                         (see constraints spelled out under "Count")
  * @return     non-NULL    Pointer to cached block data
  */
-static const void* CachePBlocks(uint32_t p_address, uint16_t p_ref, uint32_t Count)
+static const uint8_t* CachePBlocks(uint32_t p_address, uint16_t p_ref, uint32_t Count)
 {
   const void *cachedBuf = NULL;
   sST_desc *PM_ST;
@@ -191,6 +191,7 @@ int ReadLBlocks(void *buffer, uint32_t p_address, uint16_t p_ref, uint32_t Count
     sST_desc *PM_ST;
     uint32_t i;
     int error = 1;
+    uint8_t *destBuffer = (uint8_t*) buffer;
 
     if (p_ref < PTN_no) {
       switch(Part_Info[p_ref].type) {
@@ -203,7 +204,7 @@ int ReadLBlocks(void *buffer, uint32_t p_address, uint16_t p_ref, uint32_t Count
             for (i = 0; !error && (i < Count); i++) {
               cachedBuf = CachePBlocks(p_address + i, p_ref, 1);
               if (cachedBuf) {
-                memcpy(buffer + (i << bdivshift), cachedBuf, blocksize);
+                memcpy(destBuffer + (i << bdivshift), cachedBuf, blocksize);
               } else {
                 error = 1;
               }
@@ -214,7 +215,7 @@ int ReadLBlocks(void *buffer, uint32_t p_address, uint16_t p_ref, uint32_t Count
         case PTN_TYP_REAL:
           cachedBuf = CachePBlocks(p_address, p_ref, Count);
           if (cachedBuf) {
-            memcpy(buffer, cachedBuf, Count << bdivshift);
+            memcpy(destBuffer, cachedBuf, Count << bdivshift);
             error = 0;
           }
           break;
@@ -226,7 +227,7 @@ int ReadLBlocks(void *buffer, uint32_t p_address, uint16_t p_ref, uint32_t Count
           for (i = 0; !error && (i < Count); i++) {
             cachedBuf = CachePBlocks(p_address + i, p_ref, 1);
             if (cachedBuf) {
-              memcpy(buffer + (i << bdivshift), cachedBuf, blocksize);
+              memcpy(destBuffer + (i << bdivshift), cachedBuf, blocksize);
             } else {
               error = 1;
             }
@@ -274,14 +275,14 @@ unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, uint16_t pa
   unsigned int       bytesRemaining;
   int                error;
   bool               firstpass;
-  void              *fileData;
+  uint8_t           *fileData;
   const uint16_t     adtype = U_endian16(xfe->sICBTag.Flags) & ADTYPEMASK;
 
   firstpass = true;
   error = 0;
   curFileOffset = startOffset;
   bytesRemaining = bytesRequested;  // TODO: This should be reduced if xfe InfoLength is too small
-  fileData = buffer;
+  fileData = (uint8_t*) buffer;
   infoLength =   (((unsigned long long) U_endian32(xfe->InfoLengthH)) << 32)
                | U_endian32(xfe->InfoLengthL);
 
@@ -443,7 +444,7 @@ unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, uint16_t pa
         sector = curExtentLocation + (((uint32_t) offset) >> bdivshift);
 
         if (curExtentType == E_RECORDED) {
-          const void *cacheBuf;
+          const uint8_t *cacheBuf;
 
           // Note, block-at-a-time in case of sparing or virtual mapping
           cacheBuf = CachePBlocks(sector, curPartitionIndex, 1);
