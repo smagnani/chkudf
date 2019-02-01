@@ -13,7 +13,7 @@ chkudf: $(OBJS)
 	$(CC) -o chkudf -g $(OBJS)
 
 .c.o:
-	$(CC) -Wall -g -c $*.c
+	$(CC) -Wall -Wshadow -Wswitch-default -Wswitch-enum -Wuninitialized -g -c $*.c
 
 clean:
 	@-/bin/rm -f chkudf *.o *~ *.bak

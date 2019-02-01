@@ -156,6 +156,10 @@ int track_file_allocation(const struct FE_or_EFE *xFE, uint16_t ptn)
               }
               printf("\n      [NEW ADlength=%u]  ", ADlength);
               break;
+
+            // No other cases, this is just to avoid a "missing default" warning
+            default:
+              break;
           }
         }  // curExtentLength != 0
       }    // while (ad_offset < ADlength)

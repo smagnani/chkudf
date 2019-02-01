@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include "chkudf.h"
 #include "protos.h"
@@ -20,6 +21,14 @@ void cleanup(void)
       case PTN_TYP_SPARE:
         free(((struct _sST_desc *)Part_Info[i].Extra)->Map);
         free(Part_Info[i].Extra);
+        break;
+
+      case PTN_TYP_NONE:
+      case PTN_TYP_REAL:
+        break;
+
+      default:
+        assert(false);  // Coding error - unknown partition type
         break;
     }
   }

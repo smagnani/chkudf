@@ -159,6 +159,10 @@ static void ReadSpaceTable(uint16_t ptn)
               nextUSESize     = extentLength;
               nextUSELocation = extentLocation;
               break;
+
+            // No other cases, this is just to avoid a "missing default" warning
+            default:
+              break;
           }  // switch (extentType)
         }    // if (extentLength)
 
