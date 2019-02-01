@@ -187,12 +187,12 @@ int check_filespace(void)
   }    // for each partition
 
   printf("  There are %u directories and %u files.\n", Num_Dirs, Num_Files);
-  if (Num_Dirs != ID_Dirs) {
-    printf("**The integrity descriptor (if it existed) indicated %u directories.\n",
+  if (ID_UID && (Num_Dirs != ID_Dirs)) {
+    printf("**The integrity descriptor indicated %u directories.\n",
            ID_Dirs);
   }
-  if (Num_Files != ID_Files) {
-    printf("**The integrity descriptor (if it existed) indicated %u files.\n",
+  if (ID_UID && (Num_Files != ID_Files)) {
+    printf("**The integrity descriptor indicated %u files.\n",
            ID_Files);
   }
   if (Num_Type_Err) {
