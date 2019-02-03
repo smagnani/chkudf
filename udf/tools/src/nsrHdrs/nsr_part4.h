@@ -181,6 +181,7 @@ struct ICBTag {
 #define FILE_TYPE_SOCKET              10
 #define FILE_TYPE_TERMINAL_ENTRY      11
 #define FILE_TYPE_SYMLINK             12
+#define FILE_TYPE_STREAMDIR           13
 
 /* ICB Flags Constants */
 

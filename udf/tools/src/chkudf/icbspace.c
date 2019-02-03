@@ -269,7 +269,7 @@ int walk_icb_hierarchy(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location,
  *   FID == 1, space is tracked and link counts are incremented.
  */
 int read_icb(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location, uint32_t Length,
-             int FID)
+             int FID, uint8_t characteristics)
 {
   uint32_t interval;
   int32_t  ICB_offs;
@@ -365,20 +365,19 @@ int read_icb(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location, uint32_t Le
         ICBlist[ICB_offs].Link = 0;
       }
       walk_icb_hierarchy(xFE, ptn, Location, Length, ICB_offs);
-      switch(xFE->sICBTag.FileType) {
-        case FILE_TYPE_UNSPECIFIED:
-          Num_Type_Err++;
-          break;
 
-        case FILE_TYPE_DIRECTORY:
-          Num_Dirs++;
-          break;
-
-        case FILE_TYPE_RAW:
+      // Accounting for cross-check of Logical Volume Integrity Descriptor
+      // These are the clarified rules first specified in UDF 2.50.
+      if (FID && !(characteristics & (PARENT_ATTR | DELETE_ATTR))) {
+        if (characteristics & DIR_ATTR) {
+          if (xFE->sICBTag.FileType != FILE_TYPE_STREAMDIR) {
+            Num_Dirs++;
+          }
+        } else {
+          // @todo Don't bump this when we're traversing a stream directory
           Num_Files++;
-          break;
+        }
       }
-
       if (U_endian16(xFE->sTag.uTagID) == TAGID_EXT_FILE_ENTRY) {
         sExtAttrICB = &xFE->EFE.sExtAttrICB;
       } else {
@@ -392,7 +391,7 @@ int read_icb(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location, uint32_t Le
             printf(" EA: [%x:%08x]", U_endian16(sExtAttrICB->Location_PartNo),
                    U_endian32(sExtAttrICB->Location_LBN));
             read_icb(EA, U_endian16(sExtAttrICB->Location_PartNo), U_endian32(sExtAttrICB->Location_LBN),
-                     EXTENT_LENGTH(sExtAttrICB->ExtentLengthAndType), 0);
+                     EXTENT_LENGTH(sExtAttrICB->ExtentLengthAndType), 0, 0);
           } else {
             printf("\n**EA field contains illegal partition reference number.\n");
           }

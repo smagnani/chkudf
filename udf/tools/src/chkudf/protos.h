@@ -182,7 +182,7 @@ extern unsigned int   FID_Loc_Wrong;
  ****************************************************************************/
 
 int read_icb(struct FE_or_EFE *FE, uint16_t, uint32_t Location, uint32_t Length,
-             int FID);
+             int FID, uint8_t characteristics);
 
 
 /*****************************************************************************

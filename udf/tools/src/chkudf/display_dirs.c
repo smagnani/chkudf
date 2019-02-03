@@ -99,7 +99,13 @@ int DisplayDirs(void)
     offs[depth] = 0;
     addr[depth] = address;
     part[depth] = partition;
-    read_icb(ICB, part[depth], addr[depth], EXTENT_LENGTH(RootDirICB.ExtentLengthAndType), 0);
+    error = read_icb(ICB, part[depth], addr[depth],
+                     EXTENT_LENGTH(RootDirICB.ExtentLengthAndType), 0, 0);
+    if (error)
+      break;
+
+    Num_Dirs++;  // We have to count the root directory ourselves
+
     printf("\n");
     do {
       printf("ICB %x:%05x offset %4x\n", part[depth], addr[depth], offs[depth]);
@@ -137,7 +143,7 @@ int DisplayDirs(void)
               printf(" parent location OK");
             }
             read_icb(ICB, U_endian16(File->ICB.Location_PartNo), U_endian32(File->ICB.Location_LBN),
-            		 EXTENT_LENGTH(File->ICB.ExtentLengthAndType), 1);
+                     EXTENT_LENGTH(File->ICB.ExtentLengthAndType), 1, File->Characteristics);
           } else {
             printf("%04x:%08x: ", U_endian16(File->ICB.Location_PartNo), U_endian32(File->ICB.Location_LBN));
             /*
@@ -152,7 +158,7 @@ int DisplayDirs(void)
             } else {
               printDchars((uint8_t *)File + FILE_ID_DESC_CONSTANT_LEN + U_endian16(File->L_IU), File->L_FI);
               read_icb(ICB, U_endian16(File->ICB.Location_PartNo), U_endian32(File->ICB.Location_LBN),
-                       EXTENT_LENGTH(File->ICB.ExtentLengthAndType), 1);
+                       EXTENT_LENGTH(File->ICB.ExtentLengthAndType), 1, File->Characteristics);
               checkICB(ICB, File->ICB, File->Characteristics & DIR_ATTR);
             }
           }
@@ -184,7 +190,7 @@ int DisplayDirs(void)
        * claim no FID is identifying this ICB.
        */
       if (depth > 0) {
-        read_icb(ICB, part[depth], addr[depth], blocksize, 0);
+        read_icb(ICB, part[depth], addr[depth], blocksize, 0, 0);
       }
     } while (depth > 0);
 
