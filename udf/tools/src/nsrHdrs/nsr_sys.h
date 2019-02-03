@@ -39,6 +39,7 @@
 /* For little endian machines */
 #define S_endian32(x) endian32(x)
 #define S_endian16(x) endian16(x)
+#define U_endian64(x) (x)
 #define U_endian32(x) (x)
 #define U_endian16(x) (x)
 
@@ -48,6 +49,7 @@
 
 #define S_endian32(x) (x)
 #define S_endian16(x) (x)
+#define U_endian64(x) endian64(x)
 #define U_endian32(x) endian32(x)
 #define U_endian16(x) endian16(x)
 

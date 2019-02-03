@@ -54,16 +54,15 @@ void GetVAT(void)
           Error.Sector = U_endian32(VATICB->sTag.uTagLoc);
           Fatal = true;
 #else     // Obsolete code for UDF1.50 VAT format. @todo Retain it in case we ever see 1.50 media?
-          unsigned long long infoLength =   (((unsigned long long) U_endian32(VATICB->InfoLengthH)) << 32)
-                                          | U_endian32(VATICB->InfoLengthL);
+          uint64_t infoLength = U_endian64(VATICB->InfoLength);
           if ((infoLength <= 0x3FFFFFFFFULL) && ((size_t) infoLength) == infoLength) {
-            Part_Info[VirtPart].Extra = malloc(infoLength);
+            Part_Info[VirtPart].Extra = malloc(infoLength);   // @todo This may not work as expected on 32-bit systems
           }
           if (Part_Info[VirtPart].Extra) {
-            printf("  Allocated %llu (0x%llx) bytes for the VAT.\n", infoLength, infoLength);
+            printf("  Allocated %" PRIu64 " (0x%" PRIx64 ") bytes for the VAT.\n", infoLength, infoLength);
             // FIXME: short read and read error are not handled
             ReadFileData(Part_Info[VirtPart].Extra, (struct FE_or_EFE*)VATICB, Part_Info[VirtPart].Num,
-                         0, infoLength, &i);
+                         0, infoLength, &i);   // @todo ReadFileData() isn't coded to read > UINT32_MAX a a time
             Part_Info[VirtPart].Len = (uint32_t)((infoLength - 36) >> 2);
             printf("  Virtual partition is %u sectors long.\n", Part_Info[VirtPart].Len);
             printf("%sVAT Identifier is: ", CheckRegid((struct udfEntityId *)(Part_Info[VirtPart].Extra + Part_Info[VirtPart].Len), E_REGID_VAT) ? "**" : "  ");

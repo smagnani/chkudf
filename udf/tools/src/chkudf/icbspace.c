@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <stdio.h>
 #include <malloc.h>
 #include <string.h>
@@ -24,8 +25,8 @@ int compare_address(uint16_t ptn1, uint16_t ptn2, uint32_t addr1, uint32_t addr2
  */
 int track_file_allocation(const struct FE_or_EFE *xFE, uint16_t ptn)
 {
-  unsigned long long file_length;
-  unsigned long long infoLength;
+  uint64_t file_length;
+  uint64_t infoLength;
   int    error, sizeAD, Prev_Typ;
   struct long_ad *lad;
   struct short_ad *sad;
@@ -44,8 +45,7 @@ int track_file_allocation(const struct FE_or_EFE *xFE, uint16_t ptn)
   Next_LBN = 0;    //The LBN of the sector after the previous AD
   Prev_Typ = -1;   //The type of the previous AD
 
-  infoLength =   (((unsigned long long) U_endian32(xFE->InfoLengthH)) << 32)
-               | U_endian32(xFE->InfoLengthL);
+  infoLength = U_endian64(xFE->InfoLength);
   if (U_endian16(xFE->sTag.uTagID) == TAGID_EXT_FILE_ENTRY) {
     xfe_hdr_sz = sizeof(struct ExtFileEntry);
     L_EA = U_endian32(xFE->EFE.L_EA);
@@ -64,7 +64,7 @@ int track_file_allocation(const struct FE_or_EFE *xFE, uint16_t ptn)
       sizeAD = isLAD ?  sizeof(struct long_ad) : sizeof(struct short_ad);
       file_length = 0;
       ad_start = ((uint8_t *) xFE) + xfe_hdr_sz + L_EA;
-      printf("\n  [type=%s, ADlength=%u, info_length=%llu]  ",
+      printf("\n  [type=%s, ADlength=%u, info_length=%" PRIu64 "]  ",
              isLAD ? "LONG" : "SHORT", ADlength, infoLength);
       while (ad_offset < ADlength) {
         uint32_t curExtentLength;
@@ -76,7 +76,7 @@ int track_file_allocation(const struct FE_or_EFE *xFE, uint16_t ptn)
         if (isLAD) {
           ptn = U_endian16(lad->Location_PartNo);
         }
-        printf("\n    [ad_offset=%u, atype=%d, loc=%u, len=%u, file_length=%llu]  ",
+        printf("\n    [ad_offset=%u, atype=%d, loc=%u, len=%u, file_length=%" PRIu64 "]  ",
                ad_offset,
                EXTENT_TYPE(sad->ExtentLengthAndType),
                U_endian32(sad->Location),
@@ -163,7 +163,7 @@ int track_file_allocation(const struct FE_or_EFE *xFE, uint16_t ptn)
           }
         }  // curExtentLength != 0
       }    // while (ad_offset < ADlength)
-      printf("  [file_length=%llu]  ", file_length);
+      printf("  [file_length=%" PRIu64 "]  ", file_length);
       if (file_length != infoLength) {
         if (((infoLength + blocksize - 1) & ~(blocksize - 1)) == file_length) {
           printf(" **ADs rounded up");
@@ -178,7 +178,7 @@ int track_file_allocation(const struct FE_or_EFE *xFE, uint16_t ptn)
       break;
 
     case ADNONE:
-      if (U_endian32(xFE->InfoLengthL) != L_AD) {
+      if (U_endian64(xFE->InfoLength) != L_AD) {
         Error.Code = ERR_BAD_AD;
         Error.Sector = U_endian32(xFE->sTag.uTagLoc);
         Error.Expected = infoLength;
@@ -217,7 +217,7 @@ int walk_icb_hierarchy(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location,
     if (!error) {
       if (!CheckTag((struct tag *)xFE, Location + i, TAGID_FILE_ENTRY, 16, Length)) {
         ICBlist[ICB_offs].LinkRec = U_endian16(xFE->LinkCount);
-        ICBlist[ICB_offs].UniqueID_L = U_endian32(xFE->FE.UniqueIdL);
+        ICBlist[ICB_offs].UniqueID = U_endian64(xFE->FE.UniqueId);
         ICBlist[ICB_offs].FE_LBN = Location + i;
         ICBlist[ICB_offs].FE_Ptn = ptn;
         track_file_allocation(xFE, ptn);
@@ -225,7 +225,7 @@ int walk_icb_hierarchy(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location,
         ClearError();
         if (!CheckTag((struct tag *)xFE, Location + i, TAGID_EXT_FILE_ENTRY, 16, Length)) {
           ICBlist[ICB_offs].LinkRec = U_endian16(xFE->LinkCount);
-          ICBlist[ICB_offs].UniqueID_L = U_endian32(xFE->EFE.UniqueIdL);
+          ICBlist[ICB_offs].UniqueID = U_endian64(xFE->EFE.UniqueId);
           ICBlist[ICB_offs].FE_LBN = Location + i;
           ICBlist[ICB_offs].FE_Ptn = ptn;
           track_file_allocation(xFE, ptn);
@@ -357,7 +357,7 @@ int read_icb(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location, uint32_t Le
       }
       ICBlist[ICB_offs].LBN = Location;
       ICBlist[ICB_offs].Ptn = ptn;
-      ICBlist[ICB_offs].UniqueID_L = 0;
+      ICBlist[ICB_offs].UniqueID = 0;
       ICBlist[ICB_offs].LinkRec = 0;
       if (FID) {
         ICBlist[ICB_offs].Link = 1;

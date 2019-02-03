@@ -196,9 +196,8 @@ struct LogicalVolumeIntegrityDesc {
     struct timestamp    sRecordingTime;
     uint32_t            integrityType;
     struct extent_ad    nextIntegrityExtent;
-    uint32_t            UniqueIdL;
-    uint32_t            UniqueIdH;
-    uint8_t            reserved[24];
+    uint64_t            UniqueId;
+    uint8_t             reserved[24];
     uint32_t            N_P;    /* num Partitions */
     uint32_t            L_IU;   /* Len implement use */
 /* Variable-length stuff follows: (see Macros below) */

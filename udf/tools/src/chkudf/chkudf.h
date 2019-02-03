@@ -109,7 +109,7 @@ typedef struct _sICB_trk {
     uint16_t Ptn;
     uint16_t Link;
     uint16_t LinkRec;
-    uint32_t UniqueID_L;
+    uint64_t UniqueID;
     uint32_t FE_LBN;
     uint16_t FE_Ptn;
 } sICB_trk;

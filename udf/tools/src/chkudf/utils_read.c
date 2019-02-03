@@ -1,4 +1,5 @@
 #define _LARGEFILE64_SOURCE    // lseek64()
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -258,7 +259,7 @@ int ReadLBlocks(void *buffer, uint32_t p_address, uint16_t p_ref, uint32_t Count
  * @return       Number of bytes read
  */
 unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, uint16_t part,
-                          unsigned long long startOffset, unsigned int bytesRequested,
+                          uint64_t startOffset, unsigned int bytesRequested,
                           uint32_t *data_start_loc)
 {
   const char *exts_ptr, *exts_end;
@@ -269,9 +270,9 @@ unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, uint16_t pa
   uint32_t           curExtentLength;
   uint32_t           curExtentType;
   uint32_t           blockBytesAvailable;
-  unsigned long long infoLength;
-  unsigned long long curFileOffset;
-  unsigned long long offset;
+  uint64_t           infoLength;
+  uint64_t           curFileOffset;
+  uint64_t           offset;
   unsigned int       bytesRemaining;
   int                error;
   bool               firstpass;
@@ -283,8 +284,7 @@ unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, uint16_t pa
   curFileOffset = startOffset;
   bytesRemaining = bytesRequested;  // TODO: This should be reduced if xfe InfoLength is too small
   fileData = (uint8_t*) buffer;
-  infoLength =   (((unsigned long long) U_endian32(xfe->InfoLengthH)) << 32)
-               | U_endian32(xfe->InfoLengthL);
+  infoLength = U_endian64(xfe->InfoLength);
 
   do {
     uint32_t  L_EA, L_AD;
@@ -323,7 +323,7 @@ unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, uint16_t pa
       *data_start_loc = U_endian32(xfe->sTag.uTagLoc);
       // @todo Why qualify with !startOffset?
       if ((L_AD != infoLength) && !startOffset) {
-        printf("**Embedded data error: L_AD = %u, Information Length = %llu\n",
+        printf("**Embedded data error: L_AD = %u, Information Length = %" PRIu64 "\n",
                L_AD, infoLength);
       }
 
@@ -441,7 +441,7 @@ unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, uint16_t pa
           blockBytesAvailable = bytesRemaining;
 
         // Speculative - don't use resulting value if E_UNALLOCATED
-        sector = curExtentLocation + (((uint32_t) offset) >> bdivshift);
+        sector = curExtentLocation + (offset32 >> bdivshift);
 
         if (curExtentType == E_RECORDED) {
           const uint8_t *cacheBuf;

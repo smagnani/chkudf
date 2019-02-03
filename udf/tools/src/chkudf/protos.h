@@ -62,7 +62,7 @@ void cleanup(void);
 int GetRootDir(void);
 int DisplayDirs(void);
 int GetFID(struct FileIDDesc *FID, const struct FE_or_EFE *fe, uint16_t part,
-           unsigned int offset);
+           uint64_t offset);
 
 /*****************************************************************************
  * do_scsi.c
@@ -168,7 +168,7 @@ extern uint_least32_t ICBlist_len;
 extern uint_least32_t ICBlist_alloc;
 extern uint32_t       ID_Dirs;
 extern uint32_t       ID_Files;
-extern uint32_t       ID_UID;
+extern uint64_t       ID_UID;
 extern unsigned int   Num_Dirs;
 extern unsigned int   Num_Files;
 extern unsigned int   Num_Type_Err;
@@ -293,7 +293,7 @@ int ReadSectors(void *buffer, uint32_t address, uint32_t Count);
 int ReadLBlocks(void *buffer, uint32_t address, uint16_t partition, uint32_t Count);
 
 unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *ICB, uint16_t part,
-                          unsigned long long startOffset, unsigned int bytesRequested,
+                          uint64_t startOffset, unsigned int bytesRequested,
                           uint32_t *data_start_loc);
 
 /*****************************************************************************

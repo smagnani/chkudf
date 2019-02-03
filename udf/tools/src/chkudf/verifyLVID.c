@@ -1,4 +1,5 @@
 #include "../nsrHdrs/nsr.h"
+#include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -42,11 +43,11 @@ int verifyLVID(uint32_t loc, uint32_t len)
             printf(" Illegal! (%u)\n", U_endian32(LVID->integrityType));
             break;
         }
-        ID_UID = U_endian32(LVID->UniqueIdL);
+        ID_UID = U_endian64(LVID->UniqueId);
         LVIDIU = (struct LVIDImplUse *)(buffer + 80 + U_endian32(LVID->N_P) * 8);
         ID_Files = U_endian32(LVIDIU->numFiles);
         ID_Dirs = U_endian32(LVIDIU->numDirectories);
-        printf("  %u directories, %u files, highest UniqueID is %u.\n",
+        printf("  %u directories, %u files, highest UniqueID is %" PRIu64 ".\n",
                ID_Dirs, ID_Files, ID_UID);
         printf("  Min read ver. %x, min write ver. %x, max write ver %x.\n",
                U_endian16(LVIDIU->MinUDFRead), U_endian16(LVIDIU->MinUDFWrite),

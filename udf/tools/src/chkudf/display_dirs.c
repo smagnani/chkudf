@@ -1,4 +1,5 @@
 #include "../nsrHdrs/nsr.h"
+#include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -67,7 +68,7 @@ int GetRootDir(void)
 
 int DisplayDirs(void)
 {
-  unsigned int offs[MAX_DEPTH + 1];   // Offset into current directory data
+  uint64_t     offs[MAX_DEPTH + 1];   // Offset into current directory data
   uint32_t     addr[MAX_DEPTH + 1];   // Address of ICB of current dir
   uint16_t     part[MAX_DEPTH + 1];   // Partition of ICB of current dir
   int depth, i, error;
@@ -108,8 +109,8 @@ int DisplayDirs(void)
 
     printf("\n");
     do {
-      printf("ICB %x:%05x offset %4x\n", part[depth], addr[depth], offs[depth]);
-      if (offs[depth] >= U_endian32(ICB->InfoLengthL)) {
+      printf("ICB %x:%05x offset %4" PRIx64 "\n", part[depth], addr[depth], offs[depth]);
+      if (offs[depth] >= U_endian64(ICB->InfoLength)) {
         for (i = 1; i <= depth; i++) printf("   ");
         printf("++End of directory\n");
         depth--;
@@ -210,7 +211,7 @@ int DisplayDirs(void)
  *                       begins
  */
 int GetFID(struct FileIDDesc *FID, const struct FE_or_EFE *fe, uint16_t part,
-           unsigned int offset)
+           uint64_t offset)
 {
   unsigned int bytesRead;
   uint32_t location;

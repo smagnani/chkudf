@@ -230,18 +230,15 @@ struct FileEntry {
     uint8_t  RecFormat;
     uint8_t  RecDisplayAttr;
     uint32_t RecLength;
-    uint32_t InfoLengthL;
-    uint32_t InfoLengthH;
-    uint32_t LogBlocksL;
-    uint32_t LogBlocksH;
+    uint64_t InfoLength;
+    uint64_t LogBlocks;
     struct timestamp sAccessTime;   /* each timestamp is 12 bytes long */
     struct timestamp sModifyTime;
     struct timestamp sAttrTime;
     uint32_t Checkpoint;
     struct long_ad sExtAttrICB;     /* 16 bytes */
     struct implEntityId sImpID;
-    uint32_t UniqueIdL;           /* for 13346 */
-    uint32_t UniqueIdH;
+    uint64_t UniqueId;              /* for 13346 */
     uint32_t L_EA;
     uint32_t L_AD;
     /* allocation descriptors go here: ADMacros at end of file */
@@ -288,12 +285,9 @@ struct ExtFileEntry {
     uint8_t  RecFormat;
     uint8_t  RecDisplayAttr;
     uint32_t RecLength;
-    uint32_t InfoLengthL;
-    uint32_t InfoLengthH;
-    uint32_t ObjectSizeL;
-    uint32_t ObjectSizeH;
-    uint32_t LogBlocksL;
-    uint32_t LogBlocksH;
+    uint64_t InfoLength;
+    uint64_t ObjectSize;
+    uint64_t LogBlocks;
     struct timestamp sAccessTime;   /* each timestamp is 12 bytes long */
     struct timestamp sModifyTime;
     struct timestamp sCreationTime;
@@ -303,8 +297,7 @@ struct ExtFileEntry {
     struct long_ad sExtAttrICB;     /* 16 bytes */
     struct long_ad sStreamDirICB;   /* 16 bytes */
     struct implEntityId sImpID;
-    uint32_t UniqueIdL;           /* for 13346 */
-    uint32_t UniqueIdH;
+    uint64_t UniqueId;              /* for 13346 */
     uint32_t L_EA;
     uint32_t L_AD;
     /* allocation descriptors go here: ADMacros at end of file */
@@ -320,30 +313,25 @@ struct FE_or_EFE {
     uint8_t  RecFormat;
     uint8_t  RecDisplayAttr;
     uint32_t RecLength;
-    uint32_t InfoLengthL;
-    uint32_t InfoLengthH;
+    uint64_t InfoLength;
 
     union {
       struct FE {
-        uint32_t LogBlocksL;
-        uint32_t LogBlocksH;
+        uint64_t LogBlocks;
         struct timestamp sAccessTime;   /* each timestamp is 12 bytes long */
         struct timestamp sModifyTime;
         struct timestamp sAttrTime;
         uint32_t Checkpoint;
         struct long_ad sExtAttrICB;     /* 16 bytes */
         struct implEntityId sImpID;
-        uint32_t UniqueIdL;           /* for 13346 */
-        uint32_t UniqueIdH;
+        uint64_t UniqueId;              /* for 13346 */
         uint32_t L_EA;
         uint32_t L_AD;
         /* allocation descriptors go here: ADMacros at end of file */
       } FE;
       struct EFE {
-        uint32_t ObjectSizeL;
-        uint32_t ObjectSizeH;
-        uint32_t LogBlocksL;
-        uint32_t LogBlocksH;
+        uint64_t ObjectSize;
+        uint64_t LogBlocks;
         struct timestamp sAccessTime;   /* each timestamp is 12 bytes long */
         struct timestamp sModifyTime;
         struct timestamp sCreationTime;
@@ -353,8 +341,7 @@ struct FE_or_EFE {
         struct long_ad sExtAttrICB;     /* 16 bytes */
         struct long_ad sStreamDirICB;   /* 16 bytes */
         struct implEntityId sImpID;
-        uint32_t UniqueIdL;           /* for 13346 */
-        uint32_t UniqueIdH;
+        uint64_t UniqueId;              /* for 13346 */
         uint32_t L_EA;
         uint32_t L_AD;
         /* allocation descriptors go here: ADMacros at end of file */

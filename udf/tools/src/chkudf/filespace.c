@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <stdio.h>
 #include "chkudf.h"
 #include "protos.h"
@@ -205,24 +206,26 @@ int check_filespace(void)
 int check_uniqueid(void)
 {
   int i, j;
-  uint32_t Max;
+  uint64_t Max;
 
   Max = 0;
   printf("\n--Checking Unique ID list.\n");
   for (i = 0; i < ICBlist_len; i++) {
-    if (ICBlist[i].UniqueID_L > Max) Max = ICBlist[i].UniqueID_L;
+    if (ICBlist[i].UniqueID > Max) {
+      Max = ICBlist[i].UniqueID;
+    }
 
     for (j = i + 1; j < ICBlist_len; j++) {
-      if (ICBlist[i].UniqueID_L == ICBlist[j].UniqueID_L) {
-        printf("ICBs at %04x:%08x and %04x:%08x have a Unique ID of %u.\n",
+      if (ICBlist[i].UniqueID == ICBlist[j].UniqueID) {
+        printf("ICBs at %04x:%08x and %04x:%08x have a Unique ID of %" PRIu64 ".\n",
                ICBlist[i].Ptn, ICBlist[i].LBN, ICBlist[j].Ptn, ICBlist[j].LBN,
-               ICBlist[i].UniqueID_L);
+               ICBlist[i].UniqueID);
       }
     }
   }
-  printf("  The maximum Unique ID is %u.\n", Max);
+  printf("  The maximum Unique ID is %" PRIu64 ".\n", Max);
   if (Max != (ID_UID-1)) {
-    printf("**The Integrity Descriptor indicated a maximum Unique ID of %u.\n",
+    printf("**The Integrity Descriptor indicated a maximum Unique ID of %" PRIu64 ".\n",
            (ID_UID-1));
   }
   return 0;

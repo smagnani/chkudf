@@ -12,6 +12,24 @@
 #define TITLELEN 78
 #define MAXCOLUMNS 8
 
+uint64_t endian64(uint64_t toswap)
+{
+  size_t i;
+  uint64_t swappedValue = 0;
+
+  uint8_t* pDestByte   = ((uint8_t*)(&swappedValue)) + sizeof(uint64_t) - 1;
+  uint8_t* pSourceByte = (uint8_t*)(&toswap);
+
+  for (i=0; i<sizeof(uint64_t); ++i)
+  {
+    *pDestByte = *pSourceByte;
+    ++pSourceByte;
+    --pDestByte;
+  }
+
+  return swappedValue;
+}
+
 uint32_t endian32(uint32_t toswap)
 {
   return (toswap << 24) | 
