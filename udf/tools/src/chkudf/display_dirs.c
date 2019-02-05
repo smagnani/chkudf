@@ -7,6 +7,17 @@
 #include "chkudf.h"
 #include "protos.h"
 
+struct dirLevel {
+  uint16_t     part;   // Partition for directory ICB
+  uint32_t     addr;   // Partition-relative block address of directory ICB
+  uint64_t     offs;   // Current offset within directory data
+};
+
+// 4096 == page size on many systems.
+// We use that knowledge here purely in an attempt at allocation efficiency.
+// LEVELS_PER_ALLOC can be any positive value.
+#define LEVELS_PER_ALLOC    (4096 / sizeof(struct dirLevel))
+
 /*
  *  Read the FSD and get the root directory ICB address
  */
@@ -39,7 +50,7 @@ int GetRootDir(void)
             // on filesystems having a stub stream directory
             track_filespace(U_endian16(StreamDirICB.Location_PartNo),
                             U_endian32(StreamDirICB.Location_LBN),
-							EXTENT_LENGTH(StreamDirICB.ExtentLengthAndType));
+                            EXTENT_LENGTH(StreamDirICB.ExtentLengthAndType));
           }
           error = 0;
           if (EXTENT_LENGTH(FSDPtr->sNextExtent.ExtentLengthAndType)) {
@@ -68,12 +79,11 @@ int GetRootDir(void)
 
 int DisplayDirs(void)
 {
-  uint64_t     offs[MAX_DEPTH + 1];   // Offset into current directory data
-  uint32_t     addr[MAX_DEPTH + 1];   // Address of ICB of current dir
-  uint16_t     part[MAX_DEPTH + 1];   // Partition of ICB of current dir
   int depth, i, error;
-  struct FileIDDesc *File = NULL;     // Directory entry for the current file
-  struct FE_or_EFE  *ICB  = NULL;     // ICB for current directory
+  struct FileIDDesc *File  = NULL;    // Directory entry for the current file
+  struct FE_or_EFE  *ICB   = NULL;    // ICB for current directory
+  struct dirLevel   *level = NULL;
+  size_t maxLevel = 0;                // Max subscript that can be used with 'level'
 
   printf("\n--File Space report:\n");
 
@@ -89,18 +99,21 @@ int DisplayDirs(void)
     }
 
     printf("\nDisplaying directory hierarchy:\n%04x:%08x: \\", partition, address);
-    File = (struct FileIDDesc *)malloc(blocksize);
-    ICB = (struct FE_or_EFE *)malloc(blocksize);
-    if (!File || !ICB) {
+
+    maxLevel = LEVELS_PER_ALLOC - 1;
+    level = (struct dirLevel *)  calloc(LEVELS_PER_ALLOC, sizeof(struct dirLevel));
+    File  = (struct FileIDDesc *)malloc(blocksize);
+    ICB   = (struct FE_or_EFE *) malloc(blocksize);
+    if (!File || !ICB || !level) {
       printf("**Couldn't allocate space for FID buffer.\n");
       break;
     }
 
     depth = 1;
-    offs[depth] = 0;
-    addr[depth] = address;
-    part[depth] = partition;
-    error = read_icb(ICB, part[depth], addr[depth],
+    level[depth].offs = 0;
+    level[depth].addr = address;
+    level[depth].part = partition;
+    error = read_icb(ICB, level[depth].part, level[depth].addr,
                      EXTENT_LENGTH(RootDirICB.ExtentLengthAndType), 0, 0);
     if (error)
       break;
@@ -109,15 +122,17 @@ int DisplayDirs(void)
 
     printf("\n");
     do {
-      printf("ICB %x:%05x offset %4" PRIx64 "\n", part[depth], addr[depth], offs[depth]);
-      if (offs[depth] >= U_endian64(ICB->InfoLength)) {
+      struct dirLevel *curLevel = &level[depth];
+      printf("ICB %x:%05x offset %4" PRIx64 "\n", curLevel->part,
+             curLevel->addr, curLevel->offs);
+      if (curLevel->offs >= U_endian64(ICB->InfoLength)) {
         for (i = 1; i <= depth; i++) printf("   ");
         printf("++End of directory\n");
         depth--;
       } else {
-    	// @todo Consider warning if offs[depth] is less than sizeof(struct tag)
+        // @todo Consider warning if offs[depth] is less than sizeof(struct tag)
         //     from the end of a block. See UDF2.01 sec. 2.3.4.4.
-        error = GetFID(File, ICB, part[depth], offs[depth]);
+        error = GetFID(File, ICB, curLevel->part, curLevel->offs);
         if (!error) {
           for (i = 0; i < depth; i++) printf("   ");
           if (File->Characteristics & DIR_ATTR) {
@@ -134,12 +149,12 @@ int DisplayDirs(void)
             } else {
               printf("NAME OK");
             }
-            if (depth == 1 && ((U_endian16(File->ICB.Location_PartNo) != part[depth]) ||
-                               (U_endian32(File->ICB.Location_LBN)    != addr[depth]))) {
-              printf(" BAD PARENT OF ROOT (should be %04x:%08x", part[depth], addr[depth]);
-            } else if (depth > 1 && ((U_endian16(File->ICB.Location_PartNo) != part[depth - 1]) ||
-                      (U_endian32(File->ICB.Location_LBN)    != addr[depth - 1]))) {
-              printf(" BAD PARENT (should be %04x:%08x", part[depth - 1], addr[depth - 1]);
+            if (depth == 1 && ((U_endian16(File->ICB.Location_PartNo) != curLevel->part) ||
+                               (U_endian32(File->ICB.Location_LBN)    != curLevel->addr))) {
+              printf(" BAD PARENT OF ROOT (should be %04x:%08x", curLevel->part, curLevel->addr);
+            } else if (depth > 1 && ((U_endian16(File->ICB.Location_PartNo) != level[depth - 1].part) ||
+                      (U_endian32(File->ICB.Location_LBN)    != level[depth - 1].addr))) {
+              printf(" BAD PARENT (should be %04x:%08x", level[depth - 1].part, level[depth - 1].addr);
             } else {
               printf(" parent location OK");
             }
@@ -165,18 +180,30 @@ int DisplayDirs(void)
           }
           printf("\n");
           DumpError();
-          offs[depth] += (FILE_ID_DESC_CONSTANT_LEN + File->L_FI + U_endian16(File->L_IU) + 3) & ~3;
+          curLevel->offs += (FILE_ID_DESC_CONSTANT_LEN + File->L_FI + U_endian16(File->L_IU) + 3) & ~3;
           if ((File->Characteristics & DIR_ATTR) && 
               ! (File->Characteristics & PARENT_ATTR) &&
               ! (File->Characteristics & DELETE_ATTR)) {
-            if (depth < MAX_DEPTH) {
+            if (depth >= maxLevel) {
+              // Time to grow the array
+              void *largerLevel = realloc(level,
+                                          sizeof(struct dirLevel) * ((maxLevel+1) + LEVELS_PER_ALLOC));
+              if (largerLevel) {
+                level = (struct dirLevel *) largerLevel;
+                memset(&level[maxLevel+1], 0, LEVELS_PER_ALLOC * sizeof(struct dirLevel));
+                maxLevel += LEVELS_PER_ALLOC;
+              }
+            }
+            if (depth < maxLevel) {
               depth++;
-              offs[depth] = 0;
-              addr[depth] = U_endian32(File->ICB.Location_LBN);
-              part[depth] = U_endian16(File->ICB.Location_PartNo);
+              level[depth].offs = 0;
+              level[depth].addr = U_endian32(File->ICB.Location_LBN);
+              level[depth].part = U_endian16(File->ICB.Location_PartNo);
             } else {
               for (i = 0; i <= depth; i++) printf("   ");
               printf(" +more subdirectories (not displayed)\n");
+              // Note, this kills any ability to regenerate the Logical Volume Integrity Descriptor
+              // because we can't get accurate file & directory counts
             }
           }
         } else {
@@ -191,7 +218,7 @@ int DisplayDirs(void)
        * claim no FID is identifying this ICB.
        */
       if (depth > 0) {
-        read_icb(ICB, part[depth], addr[depth], blocksize, 0, 0);
+        read_icb(ICB, level[depth].part, level[depth].addr, blocksize, 0, 0);
       }
     } while (depth > 0);
 
@@ -199,6 +226,7 @@ int DisplayDirs(void)
 
   free(File);
   free(ICB);
+  free(level);
 
   return 0;
 }
