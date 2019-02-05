@@ -106,6 +106,15 @@ void DisplayUdfID(struct udfEntityId * ueip)
 }
 
 /********************************/
+/* Display an Application ID    */
+/********************************/
+void DisplayAppID(struct regid *pAppID)
+{
+  DisplayRegIDID(pAppID);
+  printf("\n");
+}
+
+/********************************/
 /* Display an implementation ID */
 /********************************/
 

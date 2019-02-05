@@ -117,11 +117,11 @@ int checkPVD(struct PrimaryVolDes *mPVD, struct PrimaryVolDes *rPVD)
       printf("**(R) Volume Abstract location: ");
       printExtentAD(rPVD->sVolCopyrightNotice);
     }
-    printf("  (M) App. ID: ");
-    DisplayImplID((struct implEntityId *)&mPVD->sApplicationID);
+    printf("  (M) App. ID:  ");
+    DisplayAppID(&mPVD->sApplicationID);
     if (RVDS_Len && memcmp(&mPVD->sApplicationID, &rPVD->sApplicationID, sizeof(struct udfEntityId))) {
-      printf("**(R) App. ID: ");
-      DisplayImplID((struct implEntityId *)&rPVD->sApplicationID);
+      printf("**(R) App. ID:  ");
+      DisplayAppID(&rPVD->sApplicationID);
     }
     printf("  (M) Impl. ID: ");
     DisplayImplID(&mPVD->sImplementationID);

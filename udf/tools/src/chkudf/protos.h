@@ -332,6 +332,8 @@ int CheckRegid(const struct udfEntityId *reg, const char *ID);
 void DisplayImplID(struct implEntityId * ieip);
 void DisplayUdfID(struct udfEntityId * ueip);
 void DisplayRegIDID( struct regid *RegIDp);
+void DisplayAppID(struct regid *pAppID);
+
 //void printOSInfo( uint8_t osClass, uint8_t osIdentifier );
 
 
