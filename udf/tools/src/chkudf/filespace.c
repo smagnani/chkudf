@@ -215,8 +215,14 @@ int check_uniqueid(void)
       Max = ICBlist[i].UniqueID;
     }
 
-    for (j = i + 1; j < ICBlist_len; j++) {
+    for (j = 0; j < ICBlist_len; j++) {
+      if (j == i)
+        continue;
+
       if (ICBlist[i].UniqueID == ICBlist[j].UniqueID) {
+        if (j < i)
+          break;    // This duplicate was already reported in an earlier context
+
         printf("ICBs at %04x:%08x and %04x:%08x have a Unique ID of %" PRIu64 ".\n",
                ICBlist[i].Ptn, ICBlist[i].LBN, ICBlist[j].Ptn, ICBlist[j].LBN,
                ICBlist[i].UniqueID);
