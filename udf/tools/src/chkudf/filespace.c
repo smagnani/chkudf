@@ -206,13 +206,14 @@ int check_filespace(void)
 int check_uniqueid(void)
 {
   int i, j;
-  uint64_t Max;
+  uint64_t maxUID;
+  uint64_t nextUID;
 
-  Max = 0;
+  maxUID = 0;
   printf("\n--Checking Unique ID list.\n");
   for (i = 0; i < ICBlist_len; i++) {
-    if (ICBlist[i].UniqueID > Max) {
-      Max = ICBlist[i].UniqueID;
+    if (ICBlist[i].UniqueID > maxUID) {
+      maxUID = ICBlist[i].UniqueID;
     }
 
     for (j = 0; j < ICBlist_len; j++) {
@@ -229,10 +230,15 @@ int check_uniqueid(void)
       }
     }
   }
-  printf("  The maximum Unique ID is %" PRIu64 ".\n", Max);
-  if (Max != (ID_UID-1)) {
-    printf("**The Integrity Descriptor indicated a maximum Unique ID of %" PRIu64 ".\n",
-           (ID_UID-1));
+
+  nextUID = maxUID + 1;
+  // UDF reserves UIDs ending in 00000000 - 0000000F
+  if (!(nextUID & 0xFFFFFFF0))
+    nextUID = (nextUID | 0xF) + 1;
+  printf("  The next Unique ID is %" PRIu64 ".\n", nextUID);
+  if (ID_UID && (nextUID != ID_UID)) {
+    printf("**The Integrity Descriptor indicated a next Unique ID of %" PRIu64 ".\n",
+           ID_UID);
   }
   return 0;
 }
