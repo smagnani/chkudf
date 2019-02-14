@@ -27,23 +27,18 @@ int track_file_allocation(const struct FE_or_EFE *xFE, uint16_t ptn)
 {
   uint64_t file_length;
   uint64_t infoLength;
-  int    error, sizeAD, Prev_Typ;
+  int    error, sizeAD;
   struct long_ad *lad;
   struct short_ad *sad;
   struct AllocationExtentDesc *AED = NULL; 
   uint16_t ADlength;
   uint32_t Location_AEDP, ad_offset;
-  uint16_t Next_ptn;
-  uint32_t Next_LBN;
   uint32_t L_EA, L_AD;
   size_t   xfe_hdr_sz;
   uint8_t *ad_start;
   bool     isLAD;
 
   ad_offset = 0;   //Offset into the allocation descriptors
-  Next_ptn = 0;    //The partition ref no of the previous AD
-  Next_LBN = 0;    //The LBN of the sector after the previous AD
-  Prev_Typ = -1;   //The type of the previous AD
 
   infoLength = U_endian64(xFE->InfoLength);
   if (U_endian16(xFE->sTag.uTagID) == TAGID_EXT_FILE_ENTRY) {
@@ -92,16 +87,6 @@ int track_file_allocation(const struct FE_or_EFE *xFE, uint16_t ptn)
               track_filespace(ptn, U_endian32(sad->Location), curExtentLength);
               // @todo If extent is invalid (i.e. huge length) we may continue on
               //       for quite a bit even though we've left the tracks
-              if ((ptn == Next_ptn) && (U_endian32(sad->Location) == Next_LBN) &&
-                  (EXTENT_TYPE(sad->ExtentLengthAndType) == Prev_Typ)) {
-                Error.Code = ERR_SEQ_ALLOC;
-                Error.Sector = xFE->sTag.uTagLoc;
-                Error.Expected = Next_LBN;
-                DumpError();
-              }
-              Next_ptn = ptn;
-              Next_LBN = U_endian32(sad->Location) + (curExtentLength >> bdivshift);
-              Prev_Typ = EXTENT_TYPE(sad->ExtentLengthAndType);
               if (file_length >= infoLength) {
                 printf(" (Tail)");
               } else {
