@@ -212,6 +212,7 @@ int check_uniqueid(void)
   maxUID = 0;
   printf("\n--Checking Unique ID list.\n");
   for (i = 0; i < ICBlist_len; i++) {
+    bool bDuplicate = false;
     if (ICBlist[i].UniqueID > maxUID) {
       maxUID = ICBlist[i].UniqueID;
     }
@@ -228,9 +229,12 @@ int check_uniqueid(void)
         if (j < i)
           break;    // This duplicate was already reported in an earlier context
 
-        printf("ICBs at %04x:%08x and %04x:%08x have a Unique ID of %" PRIu64 ".\n",
-               ICBlist[i].Ptn, ICBlist[i].LBN, ICBlist[j].Ptn, ICBlist[j].LBN,
-               ICBlist[i].UniqueID);
+        if (!bDuplicate) {
+          printf("**Multiple ICBs with unique ID %" PRIu64 ":\n", ICBlist[i].UniqueID);
+          printf("    %04x:%08x\n", ICBlist[i].Ptn, ICBlist[i].LBN);
+          bDuplicate = true;
+        }
+        printf("    %04x:%08x\n", ICBlist[j].Ptn, ICBlist[j].LBN);
       }
     }
   }
