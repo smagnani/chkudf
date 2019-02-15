@@ -216,6 +216,10 @@ int check_uniqueid(void)
       maxUID = ICBlist[i].UniqueID;
     }
 
+    if ((ICBlist[i].UniqueID > 0) && ((ICBlist[i].UniqueID & 0xFFFFFFF0) == 0)) {
+      printf("ICB at %04x:%08x has illegal UID 0x%" PRIX64 "\n", ICBlist[i].Ptn,
+             ICBlist[i].LBN, ICBlist[i].UniqueID);
+    }
     for (j = 0; j < ICBlist_len; j++) {
       if (j == i)
         continue;
