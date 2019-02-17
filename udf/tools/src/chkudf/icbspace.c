@@ -254,7 +254,7 @@ int walk_icb_hierarchy(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location,
  *   FID == 1, space is tracked and link counts are incremented.
  */
 int read_icb(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location, uint32_t Length,
-             int FID, uint8_t characteristics)
+             int FID, uint16_t characteristics, uint16_t* pPrevCharacteristics)
 {
   uint32_t interval;
   int32_t  ICB_offs;
@@ -263,6 +263,10 @@ int read_icb(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location, uint32_t Le
   struct long_ad *sExtAttrICB = NULL;
 
   error = 0;
+
+  if (pPrevCharacteristics) {
+    *pPrevCharacteristics = 0;
+  }
 
   if (Length == 0) {
     // Nothing to track
@@ -298,6 +302,15 @@ int read_icb(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location, uint32_t Le
            * Increment our link count to note the fact.
            */
           ICBlist[ICB_offs].Link++;
+          if (pPrevCharacteristics) {
+            *pPrevCharacteristics = ICBlist[ICB_offs].Characteristics;
+          }
+          if (   !(ICBlist[ICB_offs].Characteristics & CHILD_ATTR)
+              && (characteristics & (CHILD_ATTR | DIR_ATTR)) == (CHILD_ATTR | DIR_ATTR)) {
+            // First time this directory has been counted as a child
+            Num_Dirs++;
+          }
+          ICBlist[ICB_offs].Characteristics |= characteristics;
         }
         ReadLBlocks(xFE, ICBlist[ICB_offs].FE_LBN, ICBlist[ICB_offs].FE_Ptn, 1);
       } else if (temp == 1) {
@@ -346,8 +359,10 @@ int read_icb(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location, uint32_t Le
       ICBlist[ICB_offs].LinkRec = 0;
       if (FID) {
         ICBlist[ICB_offs].Link = 1;
+        ICBlist[ICB_offs].Characteristics = characteristics;
       } else {
         ICBlist[ICB_offs].Link = 0;
+        ICBlist[ICB_offs].Characteristics = 0;
       }
       walk_icb_hierarchy(xFE, ptn, Location, Length, ICB_offs);
 
@@ -376,7 +391,7 @@ int read_icb(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location, uint32_t Le
             printf(" EA: [%x:%08x]", U_endian16(sExtAttrICB->Location_PartNo),
                    U_endian32(sExtAttrICB->Location_LBN));
             read_icb(EA, U_endian16(sExtAttrICB->Location_PartNo), U_endian32(sExtAttrICB->Location_LBN),
-                     EXTENT_LENGTH(sExtAttrICB->ExtentLengthAndType), 0, 0);
+                     EXTENT_LENGTH(sExtAttrICB->ExtentLengthAndType), 0, 0, NULL);
           } else {
             printf("\n**EA field contains illegal partition reference number.\n");
           }

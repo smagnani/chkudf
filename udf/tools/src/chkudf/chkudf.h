@@ -112,7 +112,12 @@ typedef struct _sICB_trk {
     uint64_t UniqueID;
     uint32_t FE_LBN;
     uint16_t FE_Ptn;
+    uint16_t Characteristics;
 } sICB_trk;
+
+// Pseudo-characteristic used with read_icb() to mean a (directory) ICB
+// has been referenced as a child, in contrast with PARENT_ATTR.
+#define CHILD_ATTR    BITEIGHT
 
 /*----------------------------------------------------------------------------
  * Volume space management

@@ -114,7 +114,7 @@ int DisplayDirs(void)
     level[depth].addr = address;
     level[depth].part = partition;
     error = read_icb(ICB, level[depth].part, level[depth].addr,
-                     EXTENT_LENGTH(RootDirICB.ExtentLengthAndType), 0, 0);
+                     EXTENT_LENGTH(RootDirICB.ExtentLengthAndType), 0, 0, NULL);
     if (error)
       break;
 
@@ -132,6 +132,8 @@ int DisplayDirs(void)
       } else {
         // @todo Consider warning if offs[depth] is less than sizeof(struct tag)
         //     from the end of a block. See UDF2.01 sec. 2.3.4.4.
+        bool bCycle = false;
+        bool bSkipAlreadyTraversedDir = false;
         error = GetFID(File, ICB, curLevel->part, curLevel->offs);
         if (!error) {
           for (i = 0; i < depth; i++) printf("   ");
@@ -154,12 +156,13 @@ int DisplayDirs(void)
               printf(" BAD PARENT OF ROOT (should be %04x:%08x)", curLevel->part, curLevel->addr);
             } else if (depth > 1 && ((U_endian16(File->ICB.Location_PartNo) != level[depth - 1].part) ||
                       (U_endian32(File->ICB.Location_LBN)    != level[depth - 1].addr))) {
-              printf(" BAD PARENT (should be %04x:%08x)", level[depth - 1].part, level[depth - 1].addr);
+              // @todo Hard-linked directories can trigger this - remove it?
+              printf(" unexpected parent (expected %04x:%08x)", level[depth - 1].part, level[depth - 1].addr);
             } else {
               printf(" parent location OK");
             }
             read_icb(ICB, U_endian16(File->ICB.Location_PartNo), U_endian32(File->ICB.Location_LBN),
-                     EXTENT_LENGTH(File->ICB.ExtentLengthAndType), 1, File->Characteristics);
+                     EXTENT_LENGTH(File->ICB.ExtentLengthAndType), 1, File->Characteristics, NULL);
           } else {
             printf("%04x:%08x: ", U_endian16(File->ICB.Location_PartNo), U_endian32(File->ICB.Location_LBN));
             /*
@@ -172,16 +175,41 @@ int DisplayDirs(void)
               printf("[DELETED] ");
               printDchars((uint8_t *)File + FILE_ID_DESC_CONSTANT_LEN + U_endian16(File->L_IU), File->L_FI);
             } else {
+              uint16_t filePartition = U_endian16(File->ICB.Location_PartNo);
+              uint32_t fileLocation  = U_endian32(File->ICB.Location_LBN);
               printDchars((uint8_t *)File + FILE_ID_DESC_CONSTANT_LEN + U_endian16(File->L_IU), File->L_FI);
-              read_icb(ICB, U_endian16(File->ICB.Location_PartNo), U_endian32(File->ICB.Location_LBN),
-                       EXTENT_LENGTH(File->ICB.ExtentLengthAndType), 1, File->Characteristics);
-              checkICB(ICB, File->ICB, File->Characteristics & DIR_ATTR);
+              if (File->Characteristics & DIR_ATTR) {
+                for (i=1; i<=depth; ++i) {
+                  if (   (filePartition == level[i].part)
+                      && (fileLocation  == level[i].addr)) {
+                    printf("**Directory cycle: %04x:%08x link to %04x:%08x\n",
+                           curLevel->part, curLevel->addr, filePartition, fileLocation);
+                    bCycle = true;
+                  }
+                }
+              }
+              if (!bCycle) {
+                uint16_t prevCharacteristics = 0;
+                read_icb(ICB, filePartition, fileLocation,
+                         EXTENT_LENGTH(File->ICB.ExtentLengthAndType), 1,
+                         File->Characteristics | CHILD_ATTR,
+                         &prevCharacteristics);
+                checkICB(ICB, File->ICB, File->Characteristics & DIR_ATTR);
+
+                // If this is a directory that's already been traversed
+                // because of a hard link, skip decent into it
+                // (both unnecessary, and would mess up link counts)
+                if ((prevCharacteristics & (DIR_ATTR | CHILD_ATTR)) == (DIR_ATTR | CHILD_ATTR)) {
+                  bSkipAlreadyTraversedDir = true;
+                }
+              }
             }
           }
           printf("\n");
           DumpError();
           curLevel->offs += (FILE_ID_DESC_CONSTANT_LEN + File->L_FI + U_endian16(File->L_IU) + 3) & ~3;
           if ((File->Characteristics & DIR_ATTR) && 
+              !bCycle && !bSkipAlreadyTraversedDir &&
               ! (File->Characteristics & PARENT_ATTR) &&
               ! (File->Characteristics & DELETE_ATTR)) {
             if (depth >= maxLevel) {
@@ -218,7 +246,7 @@ int DisplayDirs(void)
        * claim no FID is identifying this ICB.
        */
       if (depth > 0) {
-        read_icb(ICB, level[depth].part, level[depth].addr, blocksize, 0, 0);
+        read_icb(ICB, level[depth].part, level[depth].addr, blocksize, 0, 0, NULL);
       }
     } while (depth > 0);
 
