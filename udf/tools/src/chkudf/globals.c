@@ -43,7 +43,7 @@ sError        Error = {0, 0, 0, 0};
 char *Error_Msgs[] = {
 /*  1 */    "Expected Tag ID of %lld, found %lld",
             "Expected Tag location of %08llx, read %08llx",
-            "Expected Tag checksum of %02llx, computed %02llx",
+            "Expected Tag checksum of %02llx, found %02llx",
             "Expected Tag CRC of %04llx, found %04llx",
 /*  5 */    "Not an Anchor Volume Descriptor Pointer",
             "%lld sectors did not contain a volume descriptor matching %lld",
