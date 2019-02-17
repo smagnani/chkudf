@@ -151,10 +151,10 @@ int DisplayDirs(void)
             }
             if (depth == 1 && ((U_endian16(File->ICB.Location_PartNo) != curLevel->part) ||
                                (U_endian32(File->ICB.Location_LBN)    != curLevel->addr))) {
-              printf(" BAD PARENT OF ROOT (should be %04x:%08x", curLevel->part, curLevel->addr);
+              printf(" BAD PARENT OF ROOT (should be %04x:%08x)", curLevel->part, curLevel->addr);
             } else if (depth > 1 && ((U_endian16(File->ICB.Location_PartNo) != level[depth - 1].part) ||
                       (U_endian32(File->ICB.Location_LBN)    != level[depth - 1].addr))) {
-              printf(" BAD PARENT (should be %04x:%08x", level[depth - 1].part, level[depth - 1].addr);
+              printf(" BAD PARENT (should be %04x:%08x)", level[depth - 1].part, level[depth - 1].addr);
             } else {
               printf(" parent location OK");
             }
