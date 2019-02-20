@@ -113,8 +113,7 @@ int DisplayDirs(void)
     level[depth].offs = 0;
     level[depth].addr = address;
     level[depth].part = partition;
-    error = read_icb(ICB, level[depth].part, level[depth].addr,
-                     EXTENT_LENGTH(RootDirICB.ExtentLengthAndType), 0, 0, NULL);
+    error = read_icb(ICB, RootDirICB, NULL, NULL);
     if (error)
       break;
 
@@ -161,8 +160,7 @@ int DisplayDirs(void)
             } else {
               printf(" parent location OK");
             }
-            read_icb(ICB, U_endian16(File->ICB.Location_PartNo), U_endian32(File->ICB.Location_LBN),
-                     EXTENT_LENGTH(File->ICB.ExtentLengthAndType), 1, File->Characteristics, NULL);
+            read_icb(ICB, File->ICB, File, NULL);
           } else {
             printf("%04x:%08x: ", U_endian16(File->ICB.Location_PartNo), U_endian32(File->ICB.Location_LBN));
             /*
@@ -190,10 +188,7 @@ int DisplayDirs(void)
               }
               if (!bCycle) {
                 uint16_t prevCharacteristics = 0;
-                read_icb(ICB, filePartition, fileLocation,
-                         EXTENT_LENGTH(File->ICB.ExtentLengthAndType), 1,
-                         File->Characteristics | CHILD_ATTR,
-                         &prevCharacteristics);
+                read_icb(ICB, File->ICB, File, &prevCharacteristics);
                 checkICB(ICB, File->ICB, File->Characteristics & DIR_ATTR);
 
                 // If this is a directory that's already been traversed
@@ -246,7 +241,12 @@ int DisplayDirs(void)
        * claim no FID is identifying this ICB.
        */
       if (depth > 0) {
-        read_icb(ICB, level[depth].part, level[depth].addr, blocksize, 0, 0, NULL);
+        struct long_ad icbAddr;
+        memset(&icbAddr, 0, sizeof(icbAddr));
+        icbAddr.Location_PartNo = U_endian16(level[depth].part);
+        icbAddr.Location_LBN    = U_endian32(level[depth].addr);
+        icbAddr.ExtentLengthAndType = U_endian32(blocksize);
+        read_icb(ICB, icbAddr, NULL, NULL);
       }
     } while (depth > 0);
 

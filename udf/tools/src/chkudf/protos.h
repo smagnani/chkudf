@@ -181,8 +181,8 @@ extern unsigned int   FID_Loc_Wrong;
  * This routine tracks ICBs, link counts, and file space
  ****************************************************************************/
 
-int read_icb(struct FE_or_EFE *FE, uint16_t, uint32_t Location, uint32_t Length,
-             int FID, uint16_t characteristics, uint16_t* pPrevCharacteristics);
+int read_icb(struct FE_or_EFE *FE, struct long_ad icbExtent,
+             struct FileIDDesc *FID, uint16_t* pPrevCharacteristics);
 
 
 /*****************************************************************************

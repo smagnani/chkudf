@@ -253,14 +253,18 @@ int walk_icb_hierarchy(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location,
  *   FID == 0, space is not tracked and link counts not incremented.
  *   FID == 1, space is tracked and link counts are incremented.
  */
-int read_icb(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location, uint32_t Length,
-             int FID, uint16_t characteristics, uint16_t* pPrevCharacteristics)
+int read_icb(struct FE_or_EFE *xFE, struct long_ad icbExtent,
+             struct FileIDDesc *FID, uint16_t* pPrevCharacteristics)
 {
   uint32_t interval;
   int32_t  ICB_offs;
   int      error, temp;
   struct FE_or_EFE *EA;
   struct long_ad *sExtAttrICB = NULL;
+
+  uint16_t ptn      = U_endian16(icbExtent.Location_PartNo);
+  uint32_t Location = U_endian32(icbExtent.Location_LBN);
+  uint32_t Length   = EXTENT_LENGTH(icbExtent.ExtentLengthAndType);
 
   error = 0;
 
@@ -306,11 +310,12 @@ int read_icb(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location, uint32_t Le
             *pPrevCharacteristics = ICBlist[ICB_offs].Characteristics;
           }
           if (   !(ICBlist[ICB_offs].Characteristics & CHILD_ATTR)
-              && (characteristics & (CHILD_ATTR | DIR_ATTR)) == (CHILD_ATTR | DIR_ATTR)) {
+              && ((FID->Characteristics & (PARENT_ATTR | DIR_ATTR)) == DIR_ATTR)) {
             // First time this directory has been counted as a child
+            ICBlist[ICB_offs].Characteristics |= CHILD_ATTR;
             Num_Dirs++;
           }
-          ICBlist[ICB_offs].Characteristics |= characteristics;
+          ICBlist[ICB_offs].Characteristics |= FID->Characteristics;
         }
         ReadLBlocks(xFE, ICBlist[ICB_offs].FE_LBN, ICBlist[ICB_offs].FE_Ptn, 1);
       } else if (temp == 1) {
@@ -359,7 +364,7 @@ int read_icb(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location, uint32_t Le
       ICBlist[ICB_offs].LinkRec = 0;
       if (FID) {
         ICBlist[ICB_offs].Link = 1;
-        ICBlist[ICB_offs].Characteristics = characteristics;
+        ICBlist[ICB_offs].Characteristics = FID->Characteristics;
       } else {
         ICBlist[ICB_offs].Link = 0;
         ICBlist[ICB_offs].Characteristics = 0;
@@ -368,9 +373,10 @@ int read_icb(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location, uint32_t Le
 
       // Accounting for cross-check of Logical Volume Integrity Descriptor
       // These are the clarified rules first specified in UDF 2.50.
-      if (FID && !(characteristics & (PARENT_ATTR | DELETE_ATTR))) {
-        if (characteristics & DIR_ATTR) {
+      if (FID && !(FID->Characteristics & (PARENT_ATTR | DELETE_ATTR))) {
+        if (FID->Characteristics & DIR_ATTR) {
           if (xFE->sICBTag.FileType != FILE_TYPE_STREAMDIR) {
+            ICBlist[ICB_offs].Characteristics |= CHILD_ATTR;
             Num_Dirs++;
           }
         } else {
@@ -390,8 +396,7 @@ int read_icb(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location, uint32_t Le
           if (U_endian16(sExtAttrICB->Location_PartNo) < PTN_no) {
             printf(" EA: [%x:%08x]", U_endian16(sExtAttrICB->Location_PartNo),
                    U_endian32(sExtAttrICB->Location_LBN));
-            read_icb(EA, U_endian16(sExtAttrICB->Location_PartNo), U_endian32(sExtAttrICB->Location_LBN),
-                     EXTENT_LENGTH(sExtAttrICB->ExtentLengthAndType), 0, 0, NULL);
+            read_icb(EA, *sExtAttrICB, NULL, NULL);
           } else {
             printf("\n**EA field contains illegal partition reference number.\n");
           }
