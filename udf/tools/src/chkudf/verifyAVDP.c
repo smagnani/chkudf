@@ -128,9 +128,9 @@ void VerifyAVDP(void)
              avdp_count > 1 ? "  " : "**", avdp_count,
              avdp_count == 1 ? "" : "s");
       printf("%sMain Volume Descriptor Sequence is at %u, %u bytes long.\n",
-               VDS_Len < 32768 ? "**" : "  ", VDS_Loc, VDS_Len);
+               VDS_Len < (16 << bdivshift) ? "**" : "  ", VDS_Loc, VDS_Len);
       printf("%sReserve Volume Descriptor Sequence is at %u, %u bytes long.\n",
-               RVDS_Len < 32768 ? "**" : "  ", RVDS_Loc, RVDS_Len);
+               RVDS_Len < (16 << bdivshift) ? "**" : "  ", RVDS_Loc, RVDS_Len);
       if (!VDS_Len && !RVDS_Len) {
         printf("**Both Volume Descriptor Sequences have zero length.\n");
         Fatal = true;
