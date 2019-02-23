@@ -245,8 +245,9 @@ int check_uniqueid(void)
     nextUID = (nextUID | 0xF) + 1;
   printf("  The next Unique ID is %" PRIu64 ".\n", nextUID);
   if (ID_UID && (nextUID != ID_UID)) {
-    printf("**The Integrity Descriptor indicated a next Unique ID of %" PRIu64 ".\n",
-           ID_UID);
+    const char* errFlag = (ID_UID > nextUID) ? "  " : "**";
+    printf("%sThe Integrity Descriptor indicated a next Unique ID of %" PRIu64 ".\n",
+           errFlag, ID_UID);
   }
   return 0;
 }
