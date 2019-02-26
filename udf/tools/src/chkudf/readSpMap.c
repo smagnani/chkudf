@@ -197,7 +197,7 @@ static void ReadSpaceTable(uint16_t ptn)
         // Do this after the above print to provide context in the event of
         // a tracking error
         if (extentType == E_ALLOCATED) {
-          track_freespace(ptn, extentLocation, extentLength >> bdivshift);
+          track_freespace(ptn, extentLocation, extentLength);
         }
         ++sad;
         ad_offset += sizeof(sad);
