@@ -546,7 +546,7 @@ int checkLVD(struct LogVolDesc *mLVD, struct LogVolDesc *rLVD)
 
           default:
             Part_Info[i].type = PTN_TYP_NONE;
-            printf("illegal type (%u).\n", sPartMap1->uPartMapType);
+            printf("**illegal type (%u).\n", sPartMap1->uPartMapType);
         }
         offset += sPartMap1->uPartMapLen;
       }

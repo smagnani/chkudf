@@ -415,14 +415,14 @@ unsigned int ReadFileData(void *buffer, const struct FE_or_EFE *xfe, uint16_t pa
             exts_ptr = exts_end;
           }
         } else if (offset < curExtentLength) {
-            // curFileOffset is at "offset" bytes into the current extent
-            break;
+          // curFileOffset is at "offset" bytes into the current extent
+          break;
         } else {
-            // Haven't reached the extent containing curFileOffset yet
-            // FIXME: Terminate if curExtentLength == 0
-            offset -= curExtentLength;
-            exts_ptr += (adtype == ADSHORT) ? sizeof(struct short_ad)
-                                            : sizeof(struct long_ad);
+          // Haven't reached the extent containing curFileOffset yet
+          // FIXME: Terminate if curExtentLength == 0
+          offset -= curExtentLength;
+          exts_ptr += (adtype == ADSHORT) ? sizeof(struct short_ad)
+                                          : sizeof(struct long_ad);
         }
       }
       // Now to read from the right extent

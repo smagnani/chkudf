@@ -154,7 +154,7 @@ int check_filespace(void)
             } else {
               if (numReported == 0) {
                 if (pass == 1)
-                  printf("  In-use blocks marked free:\n");
+                  printf("**In-use blocks marked free:\n");
                 else
                   printf("  Free blocks marked in-use:\n");
               }
@@ -178,11 +178,12 @@ int check_filespace(void)
         }     // for each partition slot
 
         if (numSuppressed > 0) {
-          printf("  (%d additional mismatching bytes)\n", numSuppressed);
+          printf("**(%d additional mismatching bytes)\n", numSuppressed);
         }
       }  // for each pass
 
-      printf("\n  %u in-use blocks mismarked free.\n", numMismarkedFree);
+      printf("\n%s%u in-use blocks mismarked free.\n",
+             (numMismarkedFree > 0) ? "**" : "  ", numMismarkedFree);
       printf("  %u free blocks mismarked in-use.\n", numMismarkedInUse);
     }  // if maps are available to compare
   }    // for each partition
@@ -271,11 +272,11 @@ int check_uniqueid(void)
 
             if (!bDuplicate) {
               printf("**Multiple ICBs with unique ID %" PRIu64 ":\n", jUniqueID);
-              printf("    %04x:%08x%s\n", ICBlist[i].Ptn, ICBlist[i].LBN,
+              printf("**  %04x:%08x%s\n", ICBlist[i].Ptn, ICBlist[i].LBN,
                      (ii > 0) ? " [link]" : "");
               bDuplicate = true;
             }
-            printf("    %04x:%08x%s\n", ICBlist[j].Ptn, ICBlist[j].LBN,
+            printf("**  %04x:%08x%s\n", ICBlist[j].Ptn, ICBlist[j].LBN,
                    (jj > 0) ? " [link]" : "");
             break;   // stop processing [j], don't want to print it more than once
           }

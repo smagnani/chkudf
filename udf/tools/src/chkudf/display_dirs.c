@@ -94,7 +94,7 @@ int DisplayDirs(void)
     uint16_t partition = U_endian16(RootDirICB.Location_PartNo);
 
     if (!EXTENT_LENGTH(RootDirICB.ExtentLengthAndType)) {
-      printf("  No root directory.\n");
+      printf("**No root directory.\n");
       break;
     }
 
@@ -145,14 +145,14 @@ int DisplayDirs(void)
             printf("%04x:%08x: [parent] ", U_endian16(File->ICB.Location_PartNo), 
                                            U_endian32(File->ICB.Location_LBN));
             if (File->L_FI) {
-              printf("ILLEGAL NAME ");
+              printf("**ILLEGAL NAME ");
               printDchars((uint8_t *)File + FILE_ID_DESC_CONSTANT_LEN + U_endian16(File->L_IU), File->L_FI);
             } else {
               printf("NAME OK");
             }
             if (depth == 1 && ((U_endian16(File->ICB.Location_PartNo) != curLevel->part) ||
                                (U_endian32(File->ICB.Location_LBN)    != curLevel->addr))) {
-              printf(" BAD PARENT OF ROOT (should be %04x:%08x)", curLevel->part, curLevel->addr);
+              printf("** BAD PARENT OF ROOT (should be %04x:%08x)", curLevel->part, curLevel->addr);
             } else if (depth > 1 && ((U_endian16(File->ICB.Location_PartNo) != level[depth - 1].part) ||
                       (U_endian32(File->ICB.Location_LBN)    != level[depth - 1].addr))) {
               // @todo Hard-linked directories can trigger this - remove it?
@@ -180,7 +180,7 @@ int DisplayDirs(void)
                 for (i=1; i<=depth; ++i) {
                   if (   (filePartition == level[i].part)
                       && (fileLocation  == level[i].addr)) {
-                    printf("**Directory cycle: %04x:%08x link to %04x:%08x\n",
+                    printf(" **Directory cycle: %04x:%08x link to %04x:%08x\n",
                            curLevel->part, curLevel->addr, filePartition, fileLocation);
                     bCycle = true;
                   }

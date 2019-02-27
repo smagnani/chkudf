@@ -40,7 +40,7 @@ int verifyLVID(uint32_t loc, uint32_t len)
             printf(" [Close]\n");
             break;
           default:
-            printf(" Illegal! (%u)\n", U_endian32(LVID->integrityType));
+            printf("** Illegal! (%u)\n", U_endian32(LVID->integrityType));
             break;
         }
         ID_UID = U_endian64(LVID->UniqueId);

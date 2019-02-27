@@ -166,9 +166,9 @@ static void ReadSpaceTable(uint16_t ptn)
           }  // switch (extentType)
         }    // if (extentLength)
 
-        printf("    [ad_offset=%u, atype=%u, loc=%u, len=%u]%s\n",
-                ad_offset, extentType, extentLocation, extentLength,
-                Error.Code ? " (ILLEGAL!)" : "");
+        printf("%s  [ad_offset=%u, atype=%u, loc=%u, len=%u]\n",
+                Error.Code ? "**" : "  ",
+                ad_offset, extentType, extentLocation, extentLength);
 
         if (Error.Code == ERR_UNSORTED_EXTENTS) {
           if (bWarnedUnsorted) {
