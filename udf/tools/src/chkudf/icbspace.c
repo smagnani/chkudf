@@ -101,7 +101,7 @@ int track_file_allocation(const struct FE_or_EFE *xFE, uint16_t ptn)
 
             case E_UNALLOCATED:
               if (file_length >= infoLength) {
-                printf(" (ILLEGAL TAIL)");
+                printf(" **(ILLEGAL TAIL)");
               } else {
                 file_length += curExtentLength;
               }
