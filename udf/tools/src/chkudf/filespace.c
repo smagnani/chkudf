@@ -163,10 +163,12 @@ int check_filespace(void)
                      j, j * 8, j* 8 + 7, Part_Info[i].SpMap[j], Part_Info[i].MyMap[j], mismatchBits);
 
               if (askForMore && ((numReported % askForMore) == 0)) {
-                char ans;
-                printf("Print more? ");
-                fflush(stdout);
-                ans = getchar();
+                char ans = g_defaultAnswer;
+                if (!g_defaultAnswer) {
+                  printf("Print more? ");
+                  fflush(stdout);
+                  ans = getchar();
+                }
                 if ((ans == 'n') || (ans == 'N')) {
                   bSuppress = true;
                 } else if ((ans == 'a') || (ans == 'A')) {

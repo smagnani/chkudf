@@ -9,21 +9,45 @@
 #include "chkudf.h"
 #include "protos.h"
 
+void die_usage(const char* myName)
+{
+    fprintf(stderr, "**Usage: %s [-n|-y] [-v] device_or_file\n", myName);
+    exit(EXIT_USAGE);
+}
+
 int main(int argc, char **argv)
 {
   char   *devname;
   struct stat fileinfo;
+  int opt;
 
 /*
  * Initialize cache management structures
  */
   initialize();
 
+  while ((opt = getopt(argc, argv, "ny")) != -1) {
+    switch (opt) {
+      case 'n':
+      case 'y':
+        if (g_defaultAnswer) {
+          fprintf(stderr, "**Only one of -n or -y may be specified.\n");
+          die_usage(argv[0]);
+        }
+        g_defaultAnswer = (char) opt;
+        break;
+
+      default:
+        die_usage(argv[0]);
+        break;
+     }
+   }
+
 /*
  * Find the name of the file or device we're talking to
  */
-  if (argc > 1) {
-    devname = argv[1];
+  if (optind < argc) {
+    devname = argv[optind];
   } else {
     devname = getenv("DEVICE");
   }
@@ -54,7 +78,8 @@ int main(int argc, char **argv)
       printf("**Can't open %s (error %d)\n", devname, errno);
     }
   } else {
-    printf("**You must either specify the device or set the DEVICE environment variable.\n");
+    fprintf(stderr, "**You must either specify the device or set the DEVICE environment variable.\n");
+    die_usage(argv[0]);
   }
   return 0;
 }

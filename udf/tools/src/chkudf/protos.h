@@ -119,6 +119,7 @@ void GetVAT(void);
  * The following are global variables used by chkudf.
  ****************************************************************************/
 
+extern char           g_defaultAnswer;   // == '\0' (interactive), 'y', or 'n'
 extern uint32_t       blocksize;
 extern uint_least8_t  bdivshift;
 extern uint32_t       secsize;

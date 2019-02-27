@@ -36,6 +36,7 @@ int            sensebufsize = 18;           // Sense data buffer size
  * directly related to the file system.
  ---------------------------------------------------------------------------*/
 
+char          g_defaultAnswer;
 sCacheData    Cache[NUM_CACHE];
 uint_least8_t bufno = 0;
 sError        Error = {0, 0, 0, 0};
