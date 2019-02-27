@@ -115,7 +115,7 @@ int track_filespace(uint16_t ptn, uint32_t addr, uint32_t extentNumBytes)
 
 int check_filespace(void)
 {
-  int i, j;
+  unsigned int i, j;
   int pass;    // 1 == in-use blocks marked free, 2 == free blocks marked in-use
 
   for (i = 0; i < PTN_no; i++) {
@@ -123,7 +123,7 @@ int check_filespace(void)
       unsigned int numMapBytes = BITMAP_NUM_BYTES(Part_Info[i].Len);
       unsigned int numMismarkedFree = 0;
       unsigned int numMismarkedInUse = 0;
-      printf("\n--Checking partition reference %d for space errors.\n", i);
+      printf("\n--Checking partition reference %u for space errors.\n", i);
       for (pass = 1; pass <= 2; ++pass) {
         int numSuppressed = 0;
         int numReported = 0;
@@ -159,7 +159,7 @@ int check_filespace(void)
                   printf("  Free blocks marked in-use:\n");
               }
               ++numReported;
-              printf("  **At byte %d, (sectors %d-%d), recorded mask is %02x, mapped is %02x (mismatch %02x)\n",
+              printf("  **At byte %u, (sectors %u-%u), recorded mask is %02x, mapped is %02x (mismatch %02x)\n",
                      j, j * 8, j* 8 + 7, Part_Info[i].SpMap[j], Part_Info[i].MyMap[j], mismatchBits);
 
               if (askForMore && ((numReported % askForMore) == 0)) {
