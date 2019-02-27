@@ -10,7 +10,7 @@ OBJS=chkudf.o read_udf.o errors.o utils.o verifyVRS.o verifyAVDP.o \
 all:	chkudf
 
 chkudf: $(OBJS)
-	$(CC) -o chkudf -g $(OBJS)
+	$(CC) -o chkudf -g $(OBJS) -lblkid
 
 .c.o:
 	$(CC) -Wall -Wshadow -Wswitch-default -Wswitch-enum -Wuninitialized -Wpointer-arith -g -c $*.c

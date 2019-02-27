@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <blkid/blkid.h>     // libblkid
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,11 +17,20 @@ void SetSectorSize(void)
   char   *avdpbuf;
   int    result, found;
   struct stat fileinfo;
+  bool bFullDiskBlockDevice = false;
 
   secsize = 0;
 
-  fstat(device, &fileinfo);
-  if (S_ISBLK(fileinfo.st_mode)) {
+  if ((fstat(device, &fileinfo) == 0) && S_ISBLK(fileinfo.st_mode)) {
+    char diskname[32];
+    dev_t fullDiskDev = 0;
+    result = blkid_devno_to_wholedisk(fileinfo.st_rdev, diskname,
+                                      sizeof(diskname), &fullDiskDev);
+    if (result == 0) {
+      bFullDiskBlockDevice = (fileinfo.st_rdev == fullDiskDev);
+    }
+  }
+  if (bFullDiskBlockDevice) {
     /*
      * The device is a block device, let's try some SCSI stuff...
      */
