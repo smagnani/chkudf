@@ -11,12 +11,13 @@
 
 #ifndef __CHKUDF_H__
 #define __CHKUDF_H__
-#define NUM_PARTS       4
-#define MAX_DEPTH       16
-#define MAX_SECTOR_SIZE 65536
-#define NUM_CACHE       4
-#define MAX_VOL_EXTS    100
-#define ICB_Alloc       1000
+#define NUM_PARTS             4
+#define MAX_DEPTH             16
+#define MAX_SECTOR_SIZE       65536
+#define NUM_CACHE             4
+#define MAX_VOL_EXTS          100
+#define ICB_Alloc             1000
+#define LINKED_UIDS_PER_CHUNK  4
 
 /*
  * common inline functions
@@ -113,6 +114,8 @@ typedef struct _sICB_trk {
     uint32_t FE_LBN;
     uint16_t FE_Ptn;
     uint16_t Characteristics;
+    uint32_t *LinkedUIDs;
+    uint32_t MaxLinkedUIDs;
 } sICB_trk;
 
 // Pseudo-characteristic used with read_icb() to mean a (directory) ICB

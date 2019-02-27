@@ -5,6 +5,10 @@
 #include "chkudf.h"
 #include "protos.h"
 
+// Forward declarations
+static bool set_true_unique_id(sICB_trk *pICBinfo, uint64_t uniqueID);
+static bool link_icb(sICB_trk *pICBinfo, uint32_t uniqueID_L);
+
 /* 
  * returns 1 if address 1 is greater than address 2, -1 if less than, and
  * 0 if equal. Used only by read_icb for sorting the icb list.
@@ -201,16 +205,16 @@ int walk_icb_hierarchy(struct FE_or_EFE *xFE, uint16_t ptn, uint32_t Location,
     error = ReadLBlocks(xFE, Location + i, ptn, 1);
     if (!error) {
       if (!CheckTag((struct tag *)xFE, Location + i, TAGID_FILE_ENTRY, 16, Length)) {
+        set_true_unique_id(ICBlist + ICB_offs, U_endian64(xFE->FE.UniqueId));
         ICBlist[ICB_offs].LinkRec = U_endian16(xFE->LinkCount);
-        ICBlist[ICB_offs].UniqueID = U_endian64(xFE->FE.UniqueId);
         ICBlist[ICB_offs].FE_LBN = Location + i;
         ICBlist[ICB_offs].FE_Ptn = ptn;
         track_file_allocation(xFE, ptn);
       } else {
         ClearError();
         if (!CheckTag((struct tag *)xFE, Location + i, TAGID_EXT_FILE_ENTRY, 16, Length)) {
+          set_true_unique_id(ICBlist + ICB_offs, U_endian64(xFE->EFE.UniqueId));
           ICBlist[ICB_offs].LinkRec = U_endian16(xFE->LinkCount);
-          ICBlist[ICB_offs].UniqueID = U_endian64(xFE->EFE.UniqueId);
           ICBlist[ICB_offs].FE_LBN = Location + i;
           ICBlist[ICB_offs].FE_Ptn = ptn;
           track_file_allocation(xFE, ptn);
@@ -305,7 +309,12 @@ int read_icb(struct FE_or_EFE *xFE, struct long_ad icbExtent,
            * A FID was pointing to this ICB, which we already have tracked.
            * Increment our link count to note the fact.
            */
-          ICBlist[ICB_offs].Link++;
+          if (U_endian16(FID->sTag.uDescriptorVersion) > 2) {
+            link_icb(ICBlist + ICB_offs, U_endian32(FID->ICB.UdfUniqueId_L));
+          } else {
+            // Pre-UDF2.00: UdfUniqueId_L not available
+            ICBlist[ICB_offs].Link++;
+          }
           if (pPrevCharacteristics) {
             *pPrevCharacteristics = ICBlist[ICB_offs].Characteristics;
           }
@@ -358,16 +367,16 @@ int read_icb(struct FE_or_EFE *xFE, struct long_ad icbExtent,
          (ICB_offs < (ICBlist_len - 1))) {
         ICB_offs++;
       }
+
+      memset(ICBlist + ICB_offs, 0, sizeof(ICBlist[ICB_offs]));
       ICBlist[ICB_offs].LBN = Location;
       ICBlist[ICB_offs].Ptn = ptn;
-      ICBlist[ICB_offs].UniqueID = 0;
-      ICBlist[ICB_offs].LinkRec = 0;
       if (FID) {
         ICBlist[ICB_offs].Link = 1;
         ICBlist[ICB_offs].Characteristics = FID->Characteristics;
-      } else {
-        ICBlist[ICB_offs].Link = 0;
-        ICBlist[ICB_offs].Characteristics = 0;
+        if (U_endian16(FID->sTag.uDescriptorVersion) > 2) {
+          ICBlist[ICB_offs].UniqueID = U_endian32(FID->ICB.UdfUniqueId_L);
+        }
       }
       walk_icb_hierarchy(xFE, ptn, Location, Length, ICB_offs);
 
@@ -409,4 +418,95 @@ int read_icb(struct FE_or_EFE *xFE, struct long_ad icbExtent,
     DumpError();
   }
   return error;
+}
+
+static bool add_linked_uid(sICB_trk *pICBinfo, uint32_t uniqueID_L)
+{
+  bool bSuccess = false;
+  uint32_t i;
+
+  if (!pICBinfo->LinkedUIDs) {
+    pICBinfo->LinkedUIDs = calloc(LINKED_UIDS_PER_CHUNK, sizeof(uniqueID_L));
+    if (pICBinfo->LinkedUIDs) {
+      pICBinfo->MaxLinkedUIDs = LINKED_UIDS_PER_CHUNK;
+    }
+  }
+
+  for (i=0; i < pICBinfo->MaxLinkedUIDs; ++i) {
+    if (pICBinfo->LinkedUIDs[i] == 0) {
+      pICBinfo->LinkedUIDs[i] = uniqueID_L;
+      bSuccess = true;
+      break;
+    }
+  }
+
+  if (!bSuccess) {
+    // Time to grow the array
+    uint32_t newMaxLinkedUIDs = pICBinfo->MaxLinkedUIDs + LINKED_UIDS_PER_CHUNK;
+    uint32_t *newLinkedUIDs   = realloc(pICBinfo->LinkedUIDs, newMaxLinkedUIDs * sizeof(uint32_t));
+    if (newLinkedUIDs) {
+      pICBinfo->LinkedUIDs    = newLinkedUIDs;
+      pICBinfo->MaxLinkedUIDs = newMaxLinkedUIDs;
+      pICBinfo->LinkedUIDs[i] = uniqueID_L;
+      bSuccess = true;
+      memset(pICBinfo->LinkedUIDs + i + 1, 0, sizeof(uint32_t) * (LINKED_UIDS_PER_CHUNK - 1));
+    }
+  }
+
+  return bSuccess;
+}
+
+/**
+ * Make the unique ID from an (Extended) File Entry the 'real' ID for its ICB.
+ *
+ * @param[in,out]  pICBinfo    Tracking entry for the EFE/FE containing the uniqueID
+ * @param[in]      uniqueID    Unique ID recorded in the EFE/FE
+ */
+static bool set_true_unique_id(sICB_trk *pICBinfo, uint64_t uniqueID)
+{
+  bool bSuccess = false;
+
+  if ((pICBinfo->UniqueID & UINT64_C(0xFFFFFFFF00000000)) == 0) {
+    // pICBinfo->UniqueID might be a 32-bit ID from a struct FileIDDesc
+    if (pICBinfo->UniqueID == (uniqueID & 0xFFFFFFFF)) {
+      pICBinfo->UniqueID = uniqueID;  // Possibly filling in the high word
+      bSuccess = true;
+    } else {
+//    printf("Found unique ID %" PRIu64 " for hard link %" PRIu64, uniqueID, pICBinfo->UniqueID);
+      bSuccess = add_linked_uid(pICBinfo, (uint32_t) pICBinfo->UniqueID);
+      pICBinfo->UniqueID = uniqueID;
+    }
+  } else {
+    if (pICBinfo->UniqueID == uniqueID) {
+      bSuccess = true;
+    } else {
+      // @todo report an error - attempt to change unique ID
+    }
+  }
+
+  return bSuccess;
+}
+
+/**
+ * Increment the link count for an ICB, and associate the specified (short) unique ID
+ * with that ICB.
+ *
+ * @param[in,out]  pICBinfo    Tracking entry for an ICB
+ * @param[in]      uniqueID_L  Unique ID recorded in a FileIDDesc referencing the ICB
+ *
+ * @return @b      true        Success
+ * @return @b      false       Memory allocation failure
+ */
+static bool link_icb(sICB_trk *pICBinfo, uint32_t uniqueID_L)
+{
+  bool bSuccess = true;
+  // @todo check for illegal uniqueID_L
+
+  pICBinfo->Link++;
+  if (uniqueID_L != (pICBinfo->UniqueID & 0xFFFFFFFF)) {
+//  printf(" Hard link unique ID %u -> %" PRIu64 "\n", uniqueID_L, pICBinfo->UniqueID);
+    bSuccess = add_linked_uid(pICBinfo, uniqueID_L);
+  }
+
+  return bSuccess;
 }

@@ -50,7 +50,8 @@ struct long_ad {
     uint32_t        Location_LBN;     /* partition relative block # */
     uint16_t        Location_PartNo;  /* partition number */
     uint16_t        uUdfFlags;        /* See UDF1.01 2.3.10.1 */
-    uint8_t         aImpUse[4];
+    uint32_t        UdfUniqueId_L;    // Only in File Identifier Descriptors; see UDF2.00 2.3.4.3.
+                                      // Reserved in earlier UDF versions.
 };
 
 #define EXTENT_LENGTH(extentLengthAndType)    (U_endian32(extentLengthAndType) & 0x3FFFFFFF)

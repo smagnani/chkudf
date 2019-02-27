@@ -205,39 +205,84 @@ int check_filespace(void)
 
 int check_uniqueid(void)
 {
-  int i, j;
+  int i, j, ii, jj;
   uint64_t maxUID;
   uint64_t nextUID;
 
-  maxUID = 0;
   printf("\n--Checking Unique ID list.\n");
+
+  // Determine the maximum unique ID we've encountered
+  maxUID = 0;
   for (i = 0; i < ICBlist_len; i++) {
-    bool bDuplicate = false;
+    uint32_t *linkedUIDs = ICBlist[i].LinkedUIDs;
     if (ICBlist[i].UniqueID > maxUID) {
       maxUID = ICBlist[i].UniqueID;
     }
 
-    if ((ICBlist[i].UniqueID > 0) && ((ICBlist[i].UniqueID & 0xFFFFFFF0) == 0)) {
-      printf("ICB at %04x:%08x has illegal UID 0x%" PRIX64 "\n", ICBlist[i].Ptn,
-             ICBlist[i].LBN, ICBlist[i].UniqueID);
-    }
-    for (j = 0; j < ICBlist_len; j++) {
-      if (j == i)
-        continue;
-
-      if (ICBlist[i].UniqueID == ICBlist[j].UniqueID) {
-        if (j < i)
-          break;    // This duplicate was already reported in an earlier context
-
-        if (!bDuplicate) {
-          printf("**Multiple ICBs with unique ID %" PRIu64 ":\n", ICBlist[i].UniqueID);
-          printf("    %04x:%08x\n", ICBlist[i].Ptn, ICBlist[i].LBN);
-          bDuplicate = true;
-        }
-        printf("    %04x:%08x\n", ICBlist[j].Ptn, ICBlist[j].LBN);
+    for (j = 0; j < ICBlist[i].MaxLinkedUIDs; j++) {
+      if (linkedUIDs[j] > maxUID) {
+        maxUID = linkedUIDs[j];
       }
     }
   }
+
+  // Scan for illegal values
+  for (i = 0; i < ICBlist_len; i++) {
+    uint32_t *linkedUIDs = ICBlist[i].LinkedUIDs;
+    if ((ICBlist[i].UniqueID > 0) && ((ICBlist[i].UniqueID & 0xFFFFFFF0) == 0)) {
+      printf("**ICB at %04x:%08x has illegal UID 0x%" PRIX64 "\n", ICBlist[i].Ptn,
+             ICBlist[i].LBN, ICBlist[i].UniqueID);
+    }
+
+    for (j = 0; j < ICBlist[i].MaxLinkedUIDs; j++) {
+      if ((linkedUIDs[j] > 0) && ((linkedUIDs[j] & 0xFFFFFFF0) == 0)) {
+        printf("**ICB at %04x:%08x has illegal linked UID 0x%" PRIX64 "\n", ICBlist[i].Ptn,
+               ICBlist[i].LBN, ICBlist[i].UniqueID);
+      }
+    }
+  }
+
+  for (i = 0; i < ICBlist_len; i++) {
+
+    for (ii=0; ii <= ICBlist[i].MaxLinkedUIDs; ++ii) {
+      uint64_t iUniqueID = (ii == 0) ? ICBlist[i].UniqueID
+                                     : ICBlist[i].LinkedUIDs[ii-1];
+      if ((ii > 0) && !iUniqueID)
+        break;   // No more linked UIDs for [i]
+
+      bool bDuplicate = false;
+      bool bAlreadyReported = false;
+      for (j = 0; !bAlreadyReported && (j < ICBlist_len); j++) {
+        if (j == i)
+          continue;  // @todo This skips over duplicate checking within ICBlist[i].LinkedUIDs
+
+        for (jj=0; jj <= ICBlist[j].MaxLinkedUIDs; ++jj) {
+          uint64_t jUniqueID = (jj == 0) ? ICBlist[j].UniqueID
+                                         : ICBlist[j].LinkedUIDs[jj-1];
+          if ((jj > 0) && !jUniqueID)
+            break;   // No more linked UIDs for [j]
+
+          if (iUniqueID == jUniqueID) {
+            if (j < i) {
+              // This duplicate was already reported in an earlier context
+              bAlreadyReported = true;
+             break;
+            }
+
+            if (!bDuplicate) {
+              printf("**Multiple ICBs with unique ID %" PRIu64 ":\n", jUniqueID);
+              printf("    %04x:%08x%s\n", ICBlist[i].Ptn, ICBlist[i].LBN,
+                     (ii > 0) ? " [link]" : "");
+              bDuplicate = true;
+            }
+            printf("    %04x:%08x%s\n", ICBlist[j].Ptn, ICBlist[j].LBN,
+                   (jj > 0) ? " [link]" : "");
+            break;   // stop processing [j], don't want to print it more than once
+          }
+        }   // for each unique ID in entry [j]
+      }     // for each entry [j]
+    }       // for each unique ID in entry [i]
+  }         // for each entry [i]
 
   nextUID = maxUID + 1;
   // UDF reserves UIDs ending in 00000000 - 0000000F
