@@ -26,13 +26,14 @@ int Num_Places = 8;
 
 bool Get_Last_BGS()
 {
-  unsigned long buffer;
+  unsigned long num512ByteBlocks;
   int      result;
   bool     success = false;
 
-  result = ioctl(device, BLKGETSIZE, &buffer);
+  result = ioctl(device, BLKGETSIZE, &num512ByteBlocks);
   if (!result) {
-    LastSector = (buffer * 512) / secsize - 1;
+    // Note, 9 == log2(512)
+    LastSector = (uint32_t) (num512ByteBlocks >> (sdivshift - 9)) - 1;
     LastSectorAccurate = true;
     success = true;
   }
