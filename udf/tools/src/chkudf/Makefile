@@ -1,5 +1,3 @@
-include ../../../config.mk
-
 OBJS=chkudf.o read_udf.o errors.o utils.o verifyVRS.o verifyAVDP.o \
 	globals.o checkTag.o verifyVDS.o verifyVD.o verifyRegid.o \
         setLastSector.o build_scsi.o utils_read.o init.o \
@@ -7,13 +5,17 @@ OBJS=chkudf.o read_udf.o errors.o utils.o verifyVRS.o verifyAVDP.o \
         readSpMap.o filespace.o icbspace.o linkcount.o setSectorSize.o \
         setFirstSector.o do_scsi.o verifyLVID.o
 
+CFLAGS := -Wall -Wshadow -Wswitch-default -Wswitch-enum -Wuninitialized -Wpointer-arith -g $(EXTRA_CFLAGS)
+
 all:	chkudf
 
 chkudf: $(OBJS)
-	$(CC) -o chkudf -g $(OBJS) -lblkid
+	@echo "  LD chkudf"
+	@$(CC) $(CFLAGS) -o chkudf -g $(OBJS) -lblkid
 
 .c.o:
-	$(CC) -Wall -Wshadow -Wswitch-default -Wswitch-enum -Wuninitialized -Wpointer-arith -g -c $*.c
+	@echo "  CC" $*.c
+	@$(CC) $(CFLAGS) -c $*.c
 
 clean:
 	@-/bin/rm -f chkudf *.o *~ *.bak
