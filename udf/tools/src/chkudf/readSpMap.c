@@ -200,7 +200,7 @@ static void ReadSpaceTable(uint16_t ptn)
           track_freespace(ptn, extentLocation, extentLength);
         }
         ++sad;
-        ad_offset += sizeof(sad);
+        ad_offset += sizeof(*sad);
       }  // walk short_ads
 
     }  // walk USE block chain
