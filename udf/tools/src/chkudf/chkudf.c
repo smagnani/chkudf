@@ -49,37 +49,32 @@ int main(int argc, char **argv)
   if (optind < argc) {
     devname = argv[optind];
   } else {
-    devname = getenv("DEVICE");
+    die_usage(argv[0]);
   }
 
-  if (devname) {
-    device = open(devname, O_RDONLY);
+  device = open(devname, O_RDONLY);
 
-    if (device > 0) {
-      printf("--Determining device/media parameters.\n");
-      SetSectorSize();
-      SetLastSector();
-      if (LastSector == -1) {
-        fstat(device, &fileinfo);
-        LastSector = (fileinfo.st_size >> sdivshift) - 1;
-      }
-      printf("  Last Sector = %u (0x%x) and is%s accurate\n", LastSector,
-             LastSector, LastSectorAccurate ? "" : " not");
-      if (!LastSectorAccurate) {
-        SetLastSectorAccurate();
-      }
-      if (isType5) {
-        SetFirstSector();
-      }
-      Check_UDF();
-      cleanup();
-      close(device);
-    } else {
-      printf("**Can't open %s (error %d)\n", devname, errno);
+  if (device > 0) {
+    printf("--Determining device/media parameters.\n");
+    SetSectorSize();
+    SetLastSector();
+    if (LastSector == -1) {
+      fstat(device, &fileinfo);
+      LastSector = (fileinfo.st_size >> sdivshift) - 1;
     }
+    printf("  Last Sector = %u (0x%x) and is%s accurate\n", LastSector,
+           LastSector, LastSectorAccurate ? "" : " not");
+    if (!LastSectorAccurate) {
+      SetLastSectorAccurate();
+    }
+    if (isType5) {
+      SetFirstSector();
+    }
+    Check_UDF();
+    cleanup();
+    close(device);
   } else {
-    fprintf(stderr, "**You must either specify the device or set the DEVICE environment variable.\n");
-    die_usage(argv[0]);
+    printf("**Can't open %s (error %d)\n", devname, errno);
   }
   return 0;
 }
