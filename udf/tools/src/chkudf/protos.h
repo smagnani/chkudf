@@ -268,6 +268,7 @@ uint32_t endian32(uint32_t toswap);
 uint16_t endian16(uint16_t toswap);
 uint16_t doCRC(uint8_t *buffer, int n);
 int Is_Charspec(const struct charspec *chars);
+bool IsKnownUDFVersion(uint16_t bcdVersion);
 void printDstring(const uint8_t *start, uint8_t fieldLen);
 void printDchars(const uint8_t *start, uint8_t length);
 void printCharSpec(struct charspec chars);

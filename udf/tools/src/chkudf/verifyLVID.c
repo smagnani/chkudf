@@ -17,7 +17,7 @@ int verifyLVID(uint32_t loc, uint32_t len)
   uint32_t                          *Table;
   uint8_t                           *buffer;
   struct LogicalVolumeIntegrityDesc *LVID;
-  struct LVIDImplUse                 *LVIDIU;
+  struct LVIDImplUse                *LVIDIU;
 
   printf("  Verifying the Logical Volume Integrity Descriptor Sequence.\n");
   buffer = malloc(secsize);
@@ -45,22 +45,41 @@ int verifyLVID(uint32_t loc, uint32_t len)
         }
         ID_UID = U_endian64(LVID->UniqueId);
         LVIDIU = (struct LVIDImplUse *)(buffer + 80 + U_endian32(LVID->N_P) * 8);
-        ID_Files = U_endian32(LVIDIU->numFiles);
-        ID_Dirs = U_endian32(LVIDIU->numDirectories);
-        printf("  %u directories, %u files, next UniqueID is %" PRIu64 ".\n",
-               ID_Dirs, ID_Files, ID_UID);
-        printf("  Min read ver. %x, min write ver. %x, max write ver %x.\n",
-               U_endian16(LVIDIU->MinUDFRead), U_endian16(LVIDIU->MinUDFWrite),
-               U_endian16(LVIDIU->MaxUDFWrite));
-        printf("  Recorded by: ");
-        DisplayImplID(&(LVIDIU->implementationID));
+
+        bool bProcessIU = true;
+        if (U_endian32(LVID->L_IU) != 46) {
+          if (   IsKnownUDFVersion(U_endian16(LVIDIU->MaxUDFWrite))
+              && IsKnownUDFVersion(U_endian16(LVIDIU->MinUDFRead))) {
+            printf("**Length of Implementation use is %u (expected 46).\n",
+                   U_endian32(LVID->L_IU));
+            printf("  Continuing since data appears valid.\n");
+          } else {
+            printf("**Length of Implementation use is %u (expected 46).\n",
+                   U_endian32(LVID->L_IU));
+            bProcessIU = false;
+          }
+        }
+        if (bProcessIU) {
+          ID_Files = U_endian32(LVIDIU->numFiles);
+          ID_Dirs = U_endian32(LVIDIU->numDirectories);
+          printf("  %u directories, %u files, next UniqueID is %" PRIu64 ".\n",
+                 ID_Dirs, ID_Files, ID_UID);
+          printf("  Min read ver. %x, min write ver. %x, max write ver %x.\n",
+                 U_endian16(LVIDIU->MinUDFRead), U_endian16(LVIDIU->MinUDFWrite),
+                 U_endian16(LVIDIU->MaxUDFWrite));
+          if (U_endian16(LVIDIU->MinUDFRead) > 0x201) {
+            printf("**Cannot reliably analyze media that has min read ver > 201\n");
+          }
+          printf("  Recorded by: ");
+          DisplayImplID(&(LVIDIU->implementationID));
+        } else {
+          printf("  Next unique ID is %" PRIu64 "\n", ID_UID);
+        }
         Table = (uint32_t *)(buffer + 80);
         for (j = 0; j < U_endian32(LVID->N_P); j++) {
           printf("  Partition reference %u has %u of %u blocks available.\n",
                  j, U_endian32(Table[j]), U_endian32(Table[j + U_endian32(LVID->N_P)]));
         }
-        printf("%sLength of Implementation use is %u.\n", U_endian32(LVID->L_IU) ==
-               46 ? "  " : "**", U_endian32(LVID->L_IU));
         if (U_endian32(LVID->nextIntegrityExtent.Length)) {
           len = U_endian32(LVID->nextIntegrityExtent.Length);
           loc = U_endian32(LVID->nextIntegrityExtent.Location);

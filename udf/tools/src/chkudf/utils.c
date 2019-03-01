@@ -237,3 +237,27 @@ unsigned int countSetBits(unsigned int value)
 
   return numSetBits;
 }
+
+// As of 2019-02-27
+bool IsKnownUDFVersion(uint16_t bcdVersion)
+{
+  bool bKnown;
+  switch (bcdVersion) {
+    case 0x100:
+    case 0x101:
+    case 0x102:
+    case 0x150:
+    case 0x200:
+    case 0x201:
+    case 0x250:
+    case 0x260:
+      bKnown = true;
+      break;
+
+    default:
+      bKnown = false;
+      break;
+  }
+
+  return bKnown;
+}
