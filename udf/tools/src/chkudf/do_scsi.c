@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <memory.h>
-#include "../nsrHdrs/nsr.h"
+#include "nsr.h"
 #include "chkudf.h"
 #include "protos.h"
 

@@ -1,5 +1,5 @@
 #include <sys/types.h>
-#include "../nsrHdrs/nsr.h"
+#include "nsr.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/ioctl.h>

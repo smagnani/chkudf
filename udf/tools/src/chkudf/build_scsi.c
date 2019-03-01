@@ -1,5 +1,5 @@
 #include <string.h>
-#include "../nsrHdrs/nsr.h"
+#include "nsr.h"
 #include "protos.h"
 
 /*

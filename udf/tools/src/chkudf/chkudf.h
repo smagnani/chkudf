@@ -27,7 +27,7 @@
 #define MIN(a,b)  ((a)<(b)?(a):(b))
 #define BITMAP_NUM_BYTES(numBits)    (((numBits) + 7) >> 3)
 
-#include "../nsrHdrs/nsr.h"
+#include "nsr.h"
 /*----------------------------------------------------------------------------
  * Read cache management - the checker makes no effort to be efficient, so 
  * some read caching is done.

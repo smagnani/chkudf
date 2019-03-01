@@ -1,4 +1,4 @@
-#include "../nsrHdrs/nsr.h"
+#include "nsr.h"
 #include "chkudf.h"
 #include "protos.h"
 #include <stdio.h>
