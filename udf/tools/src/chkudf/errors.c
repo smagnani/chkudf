@@ -7,8 +7,10 @@ void DumpError(void)
 {
   if (Error.Code > 0) {
     printf("**[%08x] ", Error.Sector);
-    printf(Error_Msgs[Error.Code - 1], Error.Expected, Error.Found);
+    printf(Error_Msgs[Error.Code - 1].format, Error.Expected, Error.Found);
     printf(".\n");
+
+    g_exitStatus |= Error_Msgs[Error.Code - 1].exitCode;
   }
   ClearError();
 }

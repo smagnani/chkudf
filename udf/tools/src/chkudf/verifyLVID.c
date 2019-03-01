@@ -19,7 +19,7 @@ int verifyLVID(uint32_t loc, uint32_t len)
   struct LogicalVolumeIntegrityDesc *LVID;
   struct LVIDImplUse                *LVIDIU;
 
-  printf("  Verifying the Logical Volume Integrity Descriptor Sequence.\n");
+  Information("  Verifying the Logical Volume Integrity Descriptor Sequence.\n");
   buffer = malloc(secsize);
   if (buffer) {
     LVID = (struct LogicalVolumeIntegrityDesc *)buffer;
@@ -40,7 +40,7 @@ int verifyLVID(uint32_t loc, uint32_t len)
             printf(" [Close]\n");
             break;
           default:
-            printf("** Illegal! (%u)\n", U_endian32(LVID->integrityType));
+            UDFError("** Illegal! (%u)\n", U_endian32(LVID->integrityType));
             break;
         }
         ID_UID = U_endian64(LVID->UniqueId);
@@ -50,12 +50,12 @@ int verifyLVID(uint32_t loc, uint32_t len)
         if (U_endian32(LVID->L_IU) != 46) {
           if (   IsKnownUDFVersion(U_endian16(LVIDIU->MaxUDFWrite))
               && IsKnownUDFVersion(U_endian16(LVIDIU->MinUDFRead))) {
-            printf("**Length of Implementation use is %u (expected 46).\n",
-                   U_endian32(LVID->L_IU));
-            printf("  Continuing since data appears valid.\n");
+            MinorError("**Length of Implementation use is %u (expected 46).\n",
+                       U_endian32(LVID->L_IU));
+            Information("  Continuing since data appears valid.\n");
           } else {
-            printf("**Length of Implementation use is %u (expected 46).\n",
-                   U_endian32(LVID->L_IU));
+            UDFError("**Length of Implementation use is %u (expected 46).\n",
+                     U_endian32(LVID->L_IU));
             bProcessIU = false;
           }
         }
@@ -68,12 +68,12 @@ int verifyLVID(uint32_t loc, uint32_t len)
                  U_endian16(LVIDIU->MinUDFRead), U_endian16(LVIDIU->MinUDFWrite),
                  U_endian16(LVIDIU->MaxUDFWrite));
           if (U_endian16(LVIDIU->MinUDFRead) > 0x201) {
-            printf("**Cannot reliably analyze media that has min read ver > 201\n");
+            OperationalError("**Cannot reliably analyze media that has min read ver > 201\n");
           }
           printf("  Recorded by: ");
           DisplayImplID(&(LVIDIU->implementationID));
         } else {
-          printf("  Next unique ID is %" PRIu64 "\n", ID_UID);
+          Verbose("  Next unique ID is %" PRIu64 "\n", ID_UID);
         }
         Table = (uint32_t *)(buffer + 80);
         for (j = 0; j < U_endian32(LVID->N_P); j++) {

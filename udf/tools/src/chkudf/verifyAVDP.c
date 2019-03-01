@@ -16,16 +16,16 @@ void VerifyAVDP(void)
 
   AVDPtr = (struct AnchorVolDesPtr *)malloc(secsize);
   if (AVDPtr) {
-    printf("\n--Verifying the Anchor Volume Descriptor Pointers.\n");
+    Information("\n--Verifying the Anchor Volume Descriptor Pointers.\n");
     
     for (i = 0; front_avdp[i] != -1; i++) {
-      printf("  Checking %u: ", lastSessionStartLBA + front_avdp[i]);
+      Verbose("  Checking %u: ", lastSessionStartLBA + front_avdp[i]);
       result = ReadSectors(AVDPtr, lastSessionStartLBA + front_avdp[i], 1);
       if (!result) {
         result = CheckTag((struct tag *)AVDPtr, lastSessionStartLBA + front_avdp[i], TAGID_ANCHOR, 
                           16, 496);
         if (result < CHECKTAG_OK_LIMIT) {
-          printf("AVDP present.\n");
+          Verbose("AVDP present.\n");
           DumpError();
           track_volspace(lastSessionStartLBA + front_avdp[i], 1, "Front AVDP");
           if (!avdp_count) {
@@ -47,23 +47,23 @@ void VerifyAVDP(void)
           } /* If first AVDP */
           avdp_count++;
         } else {
-          printf("No AVDP.\n");
+          Verbose("No AVDP.\n");
           ClearError();
         } /* If is AVDP */
       } else {
-        printf("read error.\n");
+        OperationalError("read error.\n");
       }
     }
 
     /* Check the end referenced AVDPs */
     for (i = 0; back_avdp[i] != -1; i++) {
-      printf("  Checking %u (n - %d): ", LastSector - back_avdp[i], back_avdp[i]);
+      Verbose("  Checking %u (n - %d): ", LastSector - back_avdp[i], back_avdp[i]);
       result = ReadSectors(AVDPtr, LastSector - back_avdp[i], 1);
       if (!result) {
         result = CheckTag((struct tag *)AVDPtr, LastSector - back_avdp[i], 
                           TAGID_ANCHOR, 16, 496);
         if (result < CHECKTAG_OK_LIMIT) {
-          printf("AVDP present.\n");
+          Verbose("AVDP present.\n");
           DumpError();
           track_volspace(LastSector - back_avdp[i], 1, "Back AVDP");
           if (!avdp_count) {
@@ -85,11 +85,11 @@ void VerifyAVDP(void)
           } /* If first AVDP */
           avdp_count++;
         } else {
-          printf("No AVDP.\n");
+          Verbose("No AVDP.\n");
           ClearError();
         } /* If is AVDP */
       } else {
-        printf("read error.\n");
+        OperationalError("read error.\n");
       }
     }
 
@@ -124,26 +124,30 @@ void VerifyAVDP(void)
 //      }  /* If sector is read */
 //    }
     if (avdp_count) {
-      printf("%sFound %d Anchor Volume Descriptor Pointer%s.\n",
-             avdp_count > 1 ? "  " : "**", avdp_count,
-             avdp_count == 1 ? "" : "s");
-      printf("%sMain Volume Descriptor Sequence is at %u, %u bytes long.\n",
-               VDS_Len < (16 << bdivshift) ? "**" : "  ", VDS_Loc, VDS_Len);
-      printf("%sReserve Volume Descriptor Sequence is at %u, %u bytes long.\n",
-               RVDS_Len < (16 << bdivshift) ? "**" : "  ", RVDS_Loc, RVDS_Len);
+      // @todo We could be a little more tolerant here
+      UDFErrorIf(avdp_count == 1,
+                 "Found %d Anchor Volume Descriptor Pointer%s.\n",
+                 avdp_count,
+                 avdp_count == 1 ? "" : "s");
+      UDFErrorIf(VDS_Len < (16 << bdivshift),
+                 "Main Volume Descriptor Sequence is at %u, %u bytes long.\n",
+                 VDS_Loc, VDS_Len);
+      UDFErrorIf(RVDS_Len < (16 << bdivshift),
+                 "Reserve Volume Descriptor Sequence is at %u, %u bytes long.\n",
+                 RVDS_Loc, RVDS_Len);
       if (!VDS_Len && !RVDS_Len) {
-        printf("**Both Volume Descriptor Sequences have zero length.\n");
+        UDFError("**Both Volume Descriptor Sequences have zero length.\n");
         Fatal = true;
       }
     } else {
-      printf("**No Anchor Volume Descriptor Pointers found.\n");
+      UDFError("**No Anchor Volume Descriptor Pointers found.\n");
       Error.Code = ERR_NOAVDP;
       Error.Sector = LastSector;
       Fatal = true;
     }
     free(AVDPtr);
   } else {
-    printf("**Couldn't allocate memory for reading AVDP.\n");
+    OperationalError("**Couldn't allocate memory for reading AVDP.\n");
     Fatal = true;
   }
 }

@@ -17,7 +17,7 @@ int ReadVRD (uint8_t *VRD, int i)
   count = 2048 >> sdivshift;
   if (count == 0) count = 1;
   sector = (32768 >> sdivshift) + i * count + lastSessionStartLBA;
-  printf("  VRS %d (sector %u): ", i, sector);
+  Verbose("  VRS %d (sector %u): ", i, sector);
   return ReadSectors(VRD, sector, count);
 }
 
@@ -35,7 +35,7 @@ int VerifyVRS(void)
 
   VRS = (uint8_t *)malloc(MAX(secsize, 2048));
   if (VRS) {
-    printf("\n--Verifying the Volume Recognition Sequence.\n");
+    Information("\n--Verifying the Volume Recognition Sequence.\n");
     /* Process ISO9660 VRS */
     i = 0;
     while (VRS_OK) {
@@ -45,12 +45,12 @@ int VerifyVRS(void)
         if (VRS_OK) {
           Term = VRS[0] == 0xff;
           switch (VRS[0]) {
-            case 0: printf("ISO 9660 Boot Record\n");                        break;
-            case 1: printf("ISO 9660 Primary Volume Descriptor\n");          break;
-            case 2: printf("ISO 9660 Supplementary Volume Descriptor\n");    break;
-            case 3: printf("ISO 9660 Volume Partition Descriptor\n");        break;
-            case 255: printf("ISO 9660 Volume Descriptor Set Terminator\n"); break;
-            default: printf("9660 VRS (code %u)\n", VRS[0]);
+            case 0: Verbose("ISO 9660 Boot Record\n");                        break;
+            case 1: Verbose("ISO 9660 Primary Volume Descriptor\n");          break;
+            case 2: Verbose("ISO 9660 Supplementary Volume Descriptor\n");    break;
+            case 3: Verbose("ISO 9660 Volume Partition Descriptor\n");        break;
+            case 255: Verbose("ISO 9660 Volume Descriptor Set Terminator\n"); break;
+            default: Verbose("9660 VRS (code %u)\n", VRS[0]);
           }
           i++;
         }
@@ -59,24 +59,24 @@ int VerifyVRS(void)
       }
     }
     if (i) {
-      printf(" %u ISO 9660 descriptors found.\n", i);
+      Verbose(" %u ISO 9660 descriptors found.\n", i);
       if (!Term) {
-        printf("**However, it was not terminated!\n");
+        UDFError("**However, it was not terminated!\n");
       }
     } else {
-      printf(" No ISO 9660 descriptors found.\n");
+      Verbose(" No ISO 9660 descriptors found.\n");
     }
 
     /* Process ISO 13346 */
     Term = 0;  //No terminating descriptor yet
     if (!error) {
-      printf("  VRS %u            : ", i);
+      Verbose("  VRS %u            : ", i);
       VRS_OK = !strncmp((const char*) VRS+1, VRS_ISO13346_BEGIN, 5);
       if (VRS_OK) {
         BEA_Found = true;
-        printf("Beginning Extended Area descriptor found.\n");
+        Verbose("Beginning Extended Area descriptor found.\n");
       } else {
-        printf("**BEA01 is not present, skipping remaining VRS.\n");
+        UDFError("**BEA01 is not present, skipping remaining VRS.\n");
       }
     }
     while (VRS_OK && !Term) {
@@ -88,11 +88,11 @@ int VerifyVRS(void)
           if (NSR_Found) {
             UDF_Version = VRS[5] & 0x0f;
             Version_OK = true;
-            printf("NSR0%u descriptor found.\n", UDF_Version);
+            Verbose("NSR0%u descriptor found.\n", UDF_Version);
           }
         } else {
           if (!strncmp((const char*) VRS+1, VRS_ISO13346_NSR, 4)) {
-            printf("\n**Found an extra NSR descriptor.\n");
+            MinorError("\n**Found an extra NSR descriptor.\n");
           }
         }
         Term = !strncmp((const char*) VRS+1, VRS_ISO13346_END, 5);
@@ -104,16 +104,16 @@ int VerifyVRS(void)
       }
     }
     if (BEA_Found && !NSR_Found) {
-      printf("\n**NSR0x is not present in the VRS!\n");
+      UDFError("\n**NSR0x is not present in the VRS!\n");
     }
     if (BEA_Found) {
       if (Term) {
-        printf("VRS sequence was terminated.\n");
+        Verbose("VRS sequence was terminated.\n");
       } else {
-        printf("\n**TEA01 is not present in the VRS!\n");
+        UDFError("\n**TEA01 is not present in the VRS!\n");
       }
     } else {
-      printf("\n**No Extended VRS found.\n");
+      UDFError("\n**No Extended VRS found.\n");
     }
     if (i) {
       track_volspace(lastSessionStartLBA + (32768 >> sdivshift), 
@@ -122,7 +122,7 @@ int VerifyVRS(void)
     }
     free(VRS);
   } else {
-    printf("\n**Unable to allocate memory for reading the VRS.\n");
+    OperationalError("\n**Unable to allocate memory for reading the VRS.\n");
   }
   return error;
 }

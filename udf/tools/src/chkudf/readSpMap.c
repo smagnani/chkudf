@@ -11,9 +11,9 @@ static int ReadSpaceBitmap(uint16_t ptn)
   struct SpaceBitmapHdr *BMD;
 
   if (Part_Info[ptn].Space != -1) {
-    printf("\n--Reading the Space Bitmap Descriptor for partition reference %u.\n", ptn);
-    printf("  Descriptor is %u sectors at %u:%u.\n",
-           Part_Info[ptn].SpLen >> bdivshift, ptn, Part_Info[ptn].Space);
+    Information("\n--Reading the Space Bitmap Descriptor for partition reference %u.\n", ptn);
+    Verbose("  Descriptor is %u sectors at %u:%u.\n",
+            Part_Info[ptn].SpLen >> bdivshift, ptn, Part_Info[ptn].Space);
     BMD = (struct SpaceBitmapHdr *)malloc(Part_Info[ptn].SpLen);
     if (BMD) {
       ReadLBlocks(BMD, Part_Info[ptn].Space, ptn, Part_Info[ptn].SpLen >> bdivshift);
@@ -22,22 +22,22 @@ static int ReadSpaceBitmap(uint16_t ptn)
       CheckTag((struct tag *)BMD, Part_Info[ptn].Space, TAGID_SPACE_BMAP,
                0, Part_Info[ptn].SpLen);
       if (Error.Code == ERR_TAGID) {
-        printf("**Not a space bitmap descriptor.\n");
+        UDFError("**Not a space bitmap descriptor.\n");
       } else {
         DumpError();
       }
       if (!Error.Code) {
         unsigned int mapBytesRequired = BITMAP_NUM_BYTES(Part_Info[ptn].Len);
         unsigned int mapBytesRecorded = U_endian32(BMD->N_Bytes);
-        printf("  Partition is %u blocks long, requiring %u bytes.\n",
-               Part_Info[ptn].Len, mapBytesRequired);
+        Verbose("  Partition is %u blocks long, requiring %u bytes.\n",
+                Part_Info[ptn].Len, mapBytesRequired);
         if (U_endian32(BMD->N_Bits) != Part_Info[ptn].Len) {
-          printf("**Partition is %u blocks long but is described by %u bits.\n",
-                 Part_Info[ptn].Len, U_endian32(BMD->N_Bits));
+          UDFError("**Partition is %u blocks long but is described by %u bits.\n",
+                   Part_Info[ptn].Len, U_endian32(BMD->N_Bits));
         }
         if (BITMAP_NUM_BYTES(U_endian32(BMD->N_Bits)) != mapBytesRecorded) {
-          printf("**Bitmap descriptor requires %u bytes to hold %u bits.\n",
-                 mapBytesRecorded, U_endian32(BMD->N_Bits));
+          UDFError("**Bitmap descriptor requires %u bytes to hold %u bits.\n",
+                   mapBytesRecorded, U_endian32(BMD->N_Bits));
         }
         if (Part_Info[ptn].SpMap && (mapBytesRecorded < Part_Info[ptn].SpLen)) {
           memcpy(Part_Info[ptn].SpMap,
@@ -47,14 +47,14 @@ static int ReadSpaceBitmap(uint16_t ptn)
           // Mask out bits for blocks beyond end of partition
           Part_Info[ptn].SpMap[mapBytesRequired-1] &= Part_Info[ptn].FinalMapByteMask;
 
-          printf("  Read the space bitmap for partition reference %u.\n", ptn);
+          Verbose("  Read the space bitmap for partition reference %u.\n", ptn);
         }
       } else {
         DumpError();
       }
       free(BMD);
     } else {
-      printf("**Couldn't allocate memory for space bitmap.\n");  // if (BMD)
+      OperationalError("**Couldn't allocate memory for space bitmap.\n");  // if (BMD)
     }
   }
 
@@ -72,7 +72,7 @@ static void ReadSpaceTable(uint16_t ptn)
     bool     bWarnedUnsorted = false;
     const uint32_t maxExtentLength = 0x3FFFFFFF & ~(blocksize - 1);
 
-    printf("\n--Reading Unallocated Space Entries for partition reference %u.\n", ptn);
+    Information("\n--Reading Unallocated Space Entries for partition reference %u.\n", ptn);
     while (nextUSELocation != -1) {
       struct short_ad *sad;
       uint32_t L_AD;
@@ -82,7 +82,7 @@ static void ReadSpaceTable(uint16_t ptn)
       uint32_t curUSELocation = nextUSELocation;
       nextUSELocation = -1;
 
-      printf("  [loc=%u, size=%u]\n", curUSELocation, curUSESize);
+      Debug("  [loc=%u, size=%u]\n", curUSELocation, curUSESize);
       ReadLBlocks(USE, curUSELocation, ptn, 1);
       // @todo Handle nextSpaceSize > blocksize gracefully
       track_filespace(ptn, curUSELocation, blocksize);
@@ -90,7 +90,7 @@ static void ReadSpaceTable(uint16_t ptn)
       CheckTag((struct tag *)USE, curUSELocation, TAGID_UNALLOC_SP_ENTRY,
                0, curUSESize);
       if (Error.Code == ERR_TAGID) {
-        printf("    **Not a space entry descriptor.\n");
+        UDFError("    **Not a space entry descriptor.\n");
         break;
       }
 
@@ -166,9 +166,9 @@ static void ReadSpaceTable(uint16_t ptn)
           }  // switch (extentType)
         }    // if (extentLength)
 
-        printf("%s  [ad_offset=%u, atype=%u, loc=%u, len=%u]\n",
-                Error.Code ? "**" : "  ",
-                ad_offset, extentType, extentLocation, extentLength);
+        Debug("%s  [ad_offset=%u, atype=%u, loc=%u, len=%u]\n",
+              Error.Code ? "**" : "  ",
+              ad_offset, extentType, extentLocation, extentLength);
 
         if (Error.Code == ERR_UNSORTED_EXTENTS) {
           if (bWarnedUnsorted) {

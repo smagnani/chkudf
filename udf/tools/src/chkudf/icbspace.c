@@ -63,8 +63,8 @@ int track_file_allocation(const struct FE_or_EFE *xFE, uint16_t ptn)
       sizeAD = isLAD ?  sizeof(struct long_ad) : sizeof(struct short_ad);
       file_length = 0;
       ad_start = ((uint8_t *) xFE) + xfe_hdr_sz + L_EA;
-      printf("\n  [type=%s, ADlength=%u, info_length=%" PRIu64 "]  ",
-             isLAD ? "LONG" : "SHORT", ADlength, infoLength);
+      Debug("\n  [type=%s, ADlength=%u, info_length=%" PRIu64 "]  ",
+            isLAD ? "LONG" : "SHORT", ADlength, infoLength);
       while (ad_offset < ADlength) {
         uint32_t curExtentLength;
         sad = (struct short_ad *)(ad_start + ad_offset);
@@ -75,7 +75,7 @@ int track_file_allocation(const struct FE_or_EFE *xFE, uint16_t ptn)
         if (isLAD) {
           ptn = U_endian16(lad->Location_PartNo);
         }
-        printf("\n    [ad_offset=%u, atype=%d, loc=%u, len=%u, file_length=%" PRIu64 "]  ",
+        Debug("\n    [ad_offset=%u, atype=%d, loc=%u, len=%u, file_length=%" PRIu64 "]  ",
                ad_offset,
                EXTENT_TYPE(sad->ExtentLengthAndType),
                U_endian32(sad->Location),
@@ -92,7 +92,7 @@ int track_file_allocation(const struct FE_or_EFE *xFE, uint16_t ptn)
               // @todo If extent is invalid (i.e. huge length) we may continue on
               //       for quite a bit even though we've left the tracks
               if (file_length >= infoLength) {
-                printf(" (Tail)");
+                Debug(" (Tail)");
               } else {
                 file_length += curExtentLength;
               }
@@ -101,12 +101,12 @@ int track_file_allocation(const struct FE_or_EFE *xFE, uint16_t ptn)
 
             case E_UNALLOCATED:
               if (file_length >= infoLength) {
-                printf(" **(ILLEGAL TAIL)");
+                UDFError(" **(ILLEGAL TAIL)");
               } else {
                 file_length += curExtentLength;
               }
               ad_offset += sizeAD;
-              printf(" --Unallocated Extent--");
+              Debug(" --Unallocated Extent--");
               break;
 
             case E_ALLOCEXTENT:
@@ -124,7 +124,7 @@ int track_file_allocation(const struct FE_or_EFE *xFE, uint16_t ptn)
                 error = 1;
               }
               if (error) {
-                printf("Error=%d, Error.Code=%d\n", error, Error.Code);
+                Debug("Error=%d, Error.Code=%d\n", error, Error.Code);
                 DumpError();
               }
               if (error == 2) {
@@ -143,7 +143,7 @@ int track_file_allocation(const struct FE_or_EFE *xFE, uint16_t ptn)
               } else {
                 ad_offset = ADlength;
               }
-              printf("\n      [NEW ADlength=%u]  ", ADlength);
+              Debug("\n      [NEW ADlength=%u]  ", ADlength);
               break;
 
             // No other cases, this is just to avoid a "missing default" warning
@@ -472,7 +472,7 @@ static bool set_true_unique_id(sICB_trk *pICBinfo, uint64_t uniqueID)
       pICBinfo->UniqueID = uniqueID;  // Possibly filling in the high word
       bSuccess = true;
     } else {
-//    printf("Found unique ID %" PRIu64 " for hard link %" PRIu64, uniqueID, pICBinfo->UniqueID);
+      Debug("Found unique ID %" PRIu64 " for hard link %" PRIu64, uniqueID, pICBinfo->UniqueID);
       bSuccess = add_linked_uid(pICBinfo, (uint32_t) pICBinfo->UniqueID);
       pICBinfo->UniqueID = uniqueID;
     }
@@ -504,7 +504,7 @@ static bool link_icb(sICB_trk *pICBinfo, uint32_t uniqueID_L)
 
   pICBinfo->Link++;
   if (uniqueID_L != (pICBinfo->UniqueID & 0xFFFFFFFF)) {
-//  printf(" Hard link unique ID %u -> %" PRIu64 "\n", uniqueID_L, pICBinfo->UniqueID);
+    Debug(" Hard link unique ID %u -> %" PRIu64 "\n", uniqueID_L, pICBinfo->UniqueID);
     bSuccess = add_linked_uid(pICBinfo, uniqueID_L);
   }
 

@@ -140,8 +140,8 @@ int ReadVDS(uint8_t *buf, char *name, uint32_t loc, uint32_t len)
                * A PD already exists.  Replace if OK
                */
               if (U_endian16(PD->uPartNumber) != U_endian16(PDt->uPartNumber)) {
-                printf("\n**A PD that doesn't match the previous one was found.\n"
-                       "Only one partition allowed per volume.\n");
+                UDFError("\n**A PD that doesn't match the previous one was found.\n"
+                         "Only one partition allowed per volume.\n");
               } else {
                 if (U_endian32(PDt->uVolDescSeqNum) > U_endian32(PD->uVolDescSeqNum)) {
                   printf("Replaced PD seq. %u with %u.\n",
@@ -213,8 +213,8 @@ int ReadVDS(uint8_t *buf, char *name, uint32_t loc, uint32_t len)
             break;
 
           default:
-            printf("\n**Unknown Tag (%u) found in VDS!\n",
-                   U_endian16(vdtag->uTagID));
+            UDFError("\n**Unknown Tag (%u) found in VDS!\n",
+                     U_endian16(vdtag->uTagID));
         }
       } else {
         DumpError();
@@ -236,7 +236,7 @@ int VerifyVDS()
   struct PartDesc         *mainPD,   *reservePD;
   uint8_t *buffer_main, *buffer_reserve;
   
-  printf("\n--Verifying Volume Descriptor Sequences.\n");
+  Information("\n--Verifying Volume Descriptor Sequences.\n");
 
   buffer_main = malloc(secsize * 5);
   buffer_reserve = malloc(secsize * 5);

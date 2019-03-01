@@ -120,6 +120,9 @@ void GetVAT(void);
  ****************************************************************************/
 
 extern char           g_defaultAnswer;   // == '\0' (interactive), 'y', or 'n'
+extern bool           g_bVerbose;
+extern bool           g_bDebug;
+extern uint8_t        g_exitStatus;
 extern uint32_t       blocksize;
 extern uint_least8_t  bdivshift;
 extern uint32_t       secsize;
@@ -143,7 +146,7 @@ extern int            sensebufsize;
 extern sCacheData     Cache[];
 extern uint_least8_t  bufno;
 extern sError         Error;
-extern char          *Error_Msgs[];
+extern ErrorSeverity  Error_Msgs[];
 
 
 extern uint16_t       UDF_Version;
@@ -203,6 +206,18 @@ void initialize(void);
 
 int TestLinkCount(void);
 
+/*****************************************************************************
+ * print.c
+ *
+ * Output messages and keep track of severity
+ ****************************************************************************/
+int Debug(const char* format, ...);
+int Verbose(const char* format, ...);
+int Information(const char* format, ...);
+int MinorError(const char* format, ...);
+int UDFError(const char* format, ...);
+int UDFErrorIf(bool bError, const char* format, ...);
+int OperationalError(const char* format, ...);
 
 /*****************************************************************************
  * readSpMap.c

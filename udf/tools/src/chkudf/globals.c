@@ -37,46 +37,49 @@ int            sensebufsize = 18;           // Sense data buffer size
  ---------------------------------------------------------------------------*/
 
 char          g_defaultAnswer;
+bool          g_bVerbose;
+bool          g_bDebug;
+uint8_t       g_exitStatus;
 sCacheData    Cache[NUM_CACHE];
 uint_least8_t bufno = 0;
 sError        Error = {0, 0, 0, 0};
 
-char *Error_Msgs[] = {
-/*  1 */    "Expected Tag ID of %lld, found %lld",
-            "Expected Tag location of %08llx, read %08llx",
-            "Expected Tag checksum of %02llx, found %02llx",
-            "Expected Tag CRC of %04llx, found %04llx",
-/*  5 */    "Not an Anchor Volume Descriptor Pointer",
-            "%lld sectors did not contain a volume descriptor matching %lld",
-            "Either a non-valid structure or terminating descriptor was encountered",
-            "This program can handle %lld partitions and the logical volume has %lld",
-            "Error reading sector",
-/* 10 */    "No VAT present",
-            "Not able to allocate memory for VAT",
-            "No virtual space described",
-            "No file set descriptor found",
-            "Tag CRC length limit is %04llx, found %04llx",
-/* 15 */    "Volume Descriptor Sequences are not equivalent",
-            "Anchor Volume Descriptor Pointers are not equivalent",
-            "Volume Space overlap detected",
-            "No sparable partition present",
-            "NSR descriptor version should be %lld, was %lld",
-/* 20 */    "Not able to allocate memory for Sparing Map",
-            "Specified location does not contain a Sparing Map",
-            "Volume Descriptor Sequence not found",
-            "Can't allocate memory for Volume Descriptors",
-            "Partition Space overlap detected",
-/* 25 */    "No more memory for ICB tracking available",
-            "Expected Allocation Descriptors for %lld bytes, found %lld",
-            "%lld Partitions found, Partition Reference Number %lld out of range",
-            "%lld blocks in Partition, Logical Block Number %lld out of range",
-            "Adjacent Allocation Descriptors found (descriptor for %lld)",
-/* 30 */    "Expected Serial number of %lld, found %lld. (disabling reporting)",
-            "Expected Extent Type %lld, found prohibited type %lld",
-            "Expected AD Type %lld, found prohibited type %lld",
-            "Unallocated extents not sorted in ascending order",
-            "Found VAT ICB. Unfortunately, code to process it does not yet exist."
-/* 35 */    "Expected AD length %lld, but found unexpected zero-length extent at offset %lld.",
+ErrorSeverity Error_Msgs[] = {
+/*  1 */  { "Expected Tag ID of %lld, found %lld",               EXIT_UNCORRECTED_ERRORS },
+          { "Expected Tag location of %08llx, read %08llx",      EXIT_UNCORRECTED_ERRORS },
+          { "Expected Tag checksum of %02llx, found %02llx",     EXIT_UNCORRECTED_ERRORS },
+          { "Expected Tag CRC of %04llx, found %04llx",          EXIT_UNCORRECTED_ERRORS },
+/*  5 */  { "Not an Anchor Volume Descriptor Pointer",           EXIT_UNCORRECTED_ERRORS },
+          { "UNUSED", 0 },
+          { "UNUSED", 0 },
+          { "This program can handle %lld partitions and the logical volume has %lld", EXIT_OPERATIONAL_ERROR },
+          { "Error reading sector",                              EXIT_OPERATIONAL_ERROR  },
+/* 10 */  { "No VAT present",                                    EXIT_UNCORRECTED_ERRORS },
+          { "Not able to allocate memory for VAT",               EXIT_OPERATIONAL_ERROR  },
+          { "UNUSED", 0 },
+          { "No file set descriptor found",                      EXIT_UNCORRECTED_ERRORS },
+          { "Tag CRC length limit is %04llx, found %04llx",      EXIT_UNCORRECTED_ERRORS },
+/* 15 */  { "Volume Descriptor Sequences are not equivalent",    EXIT_MINOR_UNCORRECTED_ERRORS },
+          { "Anchor Volume Descriptor Pointers are not equivalent", EXIT_MINOR_UNCORRECTED_ERRORS },
+          { "Volume Space overlap detected",                     EXIT_UNCORRECTED_ERRORS },
+          { "UNUSED", 0},
+          { "NSR descriptor version should be %lld, was %lld",   EXIT_UNCORRECTED_ERRORS },
+/* 20 */  { "Not able to allocate memory for Sparing Map",       EXIT_OPERATIONAL_ERROR  },
+          { "Specified location does not contain a Sparing Map", EXIT_UNCORRECTED_ERRORS },
+          { "UNUSED", 0 },
+          { "Can't allocate memory for Volume Descriptors",      EXIT_OPERATIONAL_ERROR  },
+          { "Partition Space overlap detected",                  EXIT_UNCORRECTED_ERRORS },
+/* 25 */  { "No more memory for ICB tracking available",         EXIT_OPERATIONAL_ERROR  },
+          { "Expected Allocation Descriptors for %lld bytes, found %lld",           EXIT_UNCORRECTED_ERRORS },
+          { "%lld Partitions found, Partition Reference Number %lld out of range",  EXIT_UNCORRECTED_ERRORS },
+          { "%lld blocks in Partition, Logical Block Number %lld out of range",     EXIT_UNCORRECTED_ERRORS },
+          { "Adjacent Allocation Descriptors found (descriptor for %lld)",          EXIT_MINOR_UNCORRECTED_ERRORS },
+/* 30 */  { "Expected Serial number of %lld, found %lld. (disabling reporting)",    EXIT_UNCORRECTED_ERRORS },
+          { "Expected Extent Type %lld, found prohibited type %lld",                EXIT_UNCORRECTED_ERRORS },
+          { "Expected AD Type %lld, found prohibited type %lld",                    EXIT_UNCORRECTED_ERRORS },
+          { "Unallocated extents not sorted in ascending order",                    EXIT_MINOR_UNCORRECTED_ERRORS },
+          { "Found VAT ICB. Unfortunately, code to process it does not yet exist.", EXIT_OPERATIONAL_ERROR },
+/* 35 */  { "Expected AD length %lld, but found unexpected zero-length extent at offset %lld.", EXIT_UNCORRECTED_ERRORS },
 };
 
 

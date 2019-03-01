@@ -135,29 +135,34 @@ struct extent_ad_name {
  * for errors.c ------------------------------------------------------------
  */
 
+typedef struct _ErrorSeverity {
+    const char* format;
+    uint8_t     exitCode;   // EXIT_ #defines
+} ErrorSeverity;
+
 #define ERR_NONE                    0
 #define ERR_TAGID                   1
 #define ERR_TAGLOC                  2
 #define ERR_TAGCHECKSUM             3
 #define ERR_TAGCRC                  4
 #define ERR_NOAVDP                  5
-#define ERR_NO_VD                   6
-#define ERR_END_VDS                 7
+//#define ERR_NO_VD                   6
+//#define ERR_END_VDS                 7
 #define ERR_TOO_MANY_PARTS          8
 #define ERR_READ                    9
 #define ERR_NOVAT                  10
 #define ERR_NOVATMEM               11
-#define ERR_NO_VIRT_PTN            12
+//#define ERR_NO_VIRT_PTN            12
 #define ERR_NO_FSD                 13
 #define ERR_CRC_LENGTH             14
 #define ERR_VDS_NOT_EQUIVALENT     15
 #define ERR_AVDP_NOT_EQUIVALENT    16
 #define ERR_VOL_SPACE_OVERLAP      17
-#define ERR_NO_SPARE_PTN           18
+//#define ERR_NO_SPARE_PTN           18
 #define ERR_NSR_VERSION            19
 #define ERR_NOMAPMEM               20
 #define ERR_NO_MAP                 21
-#define ERR_NO_VDS                 22
+//#define ERR_NO_VDS                 22
 #define ERR_NO_VD_MEM              23
 #define ERR_FILE_SPACE_OVERLAP     24
 #define ERR_NO_ICB_MEM             25
@@ -175,6 +180,9 @@ struct extent_ad_name {
 /*
  * Exit codes   ------------------------------------------------------------
  */
-#define EXIT_USAGE   16
+#define EXIT_UNCORRECTED_ERRORS         (1U << 2)  // 4
+#define EXIT_OPERATIONAL_ERROR          (1U << 3)  // 8
+#define EXIT_USAGE                      (1U << 4)  // 16
+#define EXIT_MINOR_UNCORRECTED_ERRORS   (1U << 6)  // 64
 
 #endif

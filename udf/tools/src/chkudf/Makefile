@@ -1,4 +1,4 @@
-OBJS=chkudf.o read_udf.o errors.o utils.o verifyVRS.o verifyAVDP.o \
+OBJS=chkudf.o print.o read_udf.o errors.o utils.o verifyVRS.o verifyAVDP.o \
 	globals.o checkTag.o verifyVDS.o verifyVD.o verifyRegid.o \
         setLastSector.o build_scsi.o utils_read.o init.o \
         cleanup.o volspace.o getVAT.o getMap.o display_dirs.o verifyICB.o \

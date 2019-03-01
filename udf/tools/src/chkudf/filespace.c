@@ -123,7 +123,7 @@ int check_filespace(void)
       unsigned int numMapBytes = BITMAP_NUM_BYTES(Part_Info[i].Len);
       unsigned int numMismarkedFree = 0;
       unsigned int numMismarkedInUse = 0;
-      printf("\n--Checking partition reference %u for space errors.\n", i);
+      Information("\n--Checking partition reference %u for space errors.\n", i);
       for (pass = 1; pass <= 2; ++pass) {
         int numSuppressed = 0;
         int numReported = 0;
@@ -154,9 +154,9 @@ int check_filespace(void)
             } else {
               if (numReported == 0) {
                 if (pass == 1)
-                  printf("**In-use blocks marked free:\n");
+                  UDFError("**In-use blocks marked free:\n");
                 else
-                  printf("  Free blocks marked in-use:\n");
+                  MinorError("  Free blocks marked in-use:\n");
               }
               ++numReported;
               printf("  **At byte %u, (sectors %u-%u), recorded mask is %02x, mapped is %02x (mismatch %02x)\n",
@@ -190,19 +190,22 @@ int check_filespace(void)
     }  // if maps are available to compare
   }    // for each partition
 
-  printf("  There are %u directories and %u files.\n", Num_Dirs, Num_Files);
+  Information("  There are %u directories and %u files.\n", Num_Dirs, Num_Files);
   if (ID_UID && (Num_Dirs != ID_Dirs)) {
-    printf("**The integrity descriptor indicated %u directories.\n",
-           ID_Dirs);
+    UDFError("**The integrity descriptor indicated %u directories.\n",
+             ID_Dirs);
   }
   if (ID_UID && (Num_Files != ID_Files)) {
-    printf("**The integrity descriptor indicated %u files.\n",
-           ID_Files);
+    UDFError("**The integrity descriptor indicated %u files.\n",
+             ID_Files);
   }
   if (Num_Type_Err) {
-    printf("**%u files had a bad File Type.\n", Num_Type_Err);
+    UDFError("**%u files had a bad File Type.\n", Num_Type_Err);
   }
-  printf("\n%s%u FIDs had a wrong location value.\n", FID_Loc_Wrong ? "**" : "  ", FID_Loc_Wrong);
+  printf("\n");
+  if (FID_Loc_Wrong) {
+    UDFError("**%u FIDs had a wrong location value.\n", FID_Loc_Wrong);
+  }
   return 0;
 }
 
@@ -212,7 +215,7 @@ int check_uniqueid(void)
   uint64_t maxUID;
   uint64_t nextUID;
 
-  printf("\n--Checking Unique ID list.\n");
+  Information("\n--Checking Unique ID list.\n");
 
   // Determine the maximum unique ID we've encountered
   maxUID = 0;
@@ -233,14 +236,14 @@ int check_uniqueid(void)
   for (i = 0; i < ICBlist_len; i++) {
     uint32_t *linkedUIDs = ICBlist[i].LinkedUIDs;
     if ((ICBlist[i].UniqueID > 0) && ((ICBlist[i].UniqueID & 0xFFFFFFF0) == 0)) {
-      printf("**ICB at %04x:%08x has illegal UID 0x%" PRIX64 "\n", ICBlist[i].Ptn,
-             ICBlist[i].LBN, ICBlist[i].UniqueID);
+      UDFError("**ICB at %04x:%08x has illegal UID 0x%" PRIX64 "\n", ICBlist[i].Ptn,
+               ICBlist[i].LBN, ICBlist[i].UniqueID);
     }
 
     for (j = 0; j < ICBlist[i].MaxLinkedUIDs; j++) {
       if ((linkedUIDs[j] > 0) && ((linkedUIDs[j] & 0xFFFFFFF0) == 0)) {
-        printf("**ICB at %04x:%08x has illegal linked UID 0x%" PRIX64 "\n", ICBlist[i].Ptn,
-               ICBlist[i].LBN, ICBlist[i].UniqueID);
+        UDFError("**ICB at %04x:%08x has illegal linked UID 0x%" PRIX64 "\n", ICBlist[i].Ptn,
+                 ICBlist[i].LBN, ICBlist[i].UniqueID);
       }
     }
   }
@@ -269,17 +272,17 @@ int check_uniqueid(void)
             if (j < i) {
               // This duplicate was already reported in an earlier context
               bAlreadyReported = true;
-             break;
+              break;
             }
 
             if (!bDuplicate) {
-              printf("**Multiple ICBs with unique ID %" PRIu64 ":\n", jUniqueID);
-              printf("**  %04x:%08x%s\n", ICBlist[i].Ptn, ICBlist[i].LBN,
-                     (ii > 0) ? " [link]" : "");
+              UDFError("**Multiple ICBs with unique ID %" PRIu64 ":\n", jUniqueID);
+              UDFError("**  %04x:%08x%s\n", ICBlist[i].Ptn, ICBlist[i].LBN,
+                       (ii > 0) ? " [link]" : "");
               bDuplicate = true;
             }
-            printf("**  %04x:%08x%s\n", ICBlist[j].Ptn, ICBlist[j].LBN,
-                   (jj > 0) ? " [link]" : "");
+            UDFError("**  %04x:%08x%s\n", ICBlist[j].Ptn, ICBlist[j].LBN,
+                     (jj > 0) ? " [link]" : "");
             break;   // stop processing [j], don't want to print it more than once
           }
         }   // for each unique ID in entry [j]
@@ -291,11 +294,18 @@ int check_uniqueid(void)
   // UDF reserves UIDs ending in 00000000 - 0000000F
   if (!(nextUID & 0xFFFFFFF0))
     nextUID = (nextUID | 0xF) + 1;
-  printf("  The next Unique ID is %" PRIu64 ".\n", nextUID);
-  if (ID_UID && (nextUID != ID_UID)) {
-    const char* errFlag = (ID_UID > nextUID) ? "  " : "**";
-    printf("%sThe Integrity Descriptor indicated a next Unique ID of %" PRIu64 ".\n",
-           errFlag, ID_UID);
+
+  if (!ID_UID || (nextUID == ID_UID)) {
+    Verbose("  The next Unique ID is %" PRIu64 ".\n", nextUID);
+  } else {
+    if (ID_UID > nextUID) {
+      Verbose("  The next Unique ID is %" PRIu64 ".\n", nextUID);
+      Verbose("  The Integrity Descriptor indicated a next Unique ID of %" PRIu64 ".\n", ID_UID);
+    } else {
+      Information("  The next Unique ID is %" PRIu64 ".\n", nextUID);
+      UDFError("**The Integrity Descriptor indicated a next Unique ID of %" PRIu64 ".\n", ID_UID);
+    }
   }
+
   return 0;
 }
