@@ -11,11 +11,12 @@
 #include <errno.h>
 #include "nsr.h"
 #include "chkudf.h"
+#include "config.h"
 #include "protos.h"
 
 void die_usage(const char* myName)
 {
-    fprintf(stderr, "**Usage: %s [-n|-y] [-v|-d] device_or_file\n", myName);
+    fprintf(stderr, "**Usage: %s [-n|-y] [-v|-d] [-V] device_or_file\n", myName);
     exit(EXIT_USAGE);
 }
 
@@ -30,7 +31,7 @@ int main(int argc, char **argv)
  */
   initialize();
 
-  while ((opt = getopt(argc, argv, "dnvy")) != -1) {
+  while ((opt = getopt(argc, argv, "dnvVy")) != -1) {
     switch (opt) {
       case 'n':
       case 'y':
@@ -47,6 +48,11 @@ int main(int argc, char **argv)
       case 'v':
         g_bVerbose = true;
         break;
+
+      case 'V':
+    	printf("chkudf " PACKAGE_VERSION " (" __DATE__ ")\n");
+    	exit(0);
+    	break;
 
       default:
         die_usage(argv[0]);
