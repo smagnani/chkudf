@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// © Copyright 1996 Hewlett-Packard Development Company, L.P
+
 #ifndef __UDFH__
 #define __UDFH__
 

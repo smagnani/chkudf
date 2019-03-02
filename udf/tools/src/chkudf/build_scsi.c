@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright (c) 1999-2001 Ben Fennema. All rights reserved.
+
 #include <string.h>
 #include "nsr.h"
 #include "protos.h"

@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright (c) 1999-2001 Ben Fennema. All rights reserved.
+// Copyright (c) 2019 Steve Magnani. All rights reserved.
+
 #include <inttypes.h>
 #include <stdio.h>
 #include <malloc.h>
