@@ -19,7 +19,7 @@ int CheckRegid(const struct udfEntityId *reg, const char *ID)
   if (strncmp((const char*)reg->aID, ID, 23)) {
     error = 1;
   }
-  if (reg->uOSClass > 6) {
+  if (reg->uOSClass > OSCLASS_WINCE) {
     error = 1;
   }
   if ((U_endian16(reg->uUDFRevision) < 0x100) || (U_endian16(reg->uUDFRevision) > 0x201)) {
@@ -57,9 +57,12 @@ void printOSInfo( uint8_t osClass, uint8_t osIdentifier )
     case OSCLASS_OS2:   printf(" (OS/2)");       break;
     case OSCLASS_MAC:   printf(" (Macintosh)");  break;
     case OSCLASS_UNIX:  printf(" (UNIX)");       break;
-    case OSCLASS_WIN95: printf(" (Windows 9x)"); break;
+    case OSCLASS_WIN9x: printf(" (Windows 9x)"); break;
     case OSCLASS_WINNT: printf(" (Windows NT)"); break;
-    default:            printf(" (Illegal) ** NON-UDF 1.50 **");
+    case OSCLASS_OS400: printf(" (Windows NT)"); break;
+    case OSCLASS_BEOS:  printf(" (BeOS)");       break;
+    case OSCLASS_WINCE: printf(" (Windows CE)"); break;
+    default:            printf(" (Illegal) ** NON-UDF **");
   }
 
   if (osClass == OSCLASS_UNIX) {
@@ -72,13 +75,14 @@ void printOSInfo( uint8_t osClass, uint8_t osIdentifier )
       case OSID_LINUX:       printf(" Linux");       break;
       case OSID_MKLINUX:     printf(" MkLinux");     break;
       case OSID_FREEBSD:     printf(" FreeBSD");     break;
-      default:               printf(" (Unknown) ** NON-UDF1.50 **");
+      case OSID_NETBSD:      printf(" NetBSD");      break;
+      default:               printf(" (Unknown) ** NON-UDF **");
     }
-  } else if (osClass == OSCLASS_WIN95) {
+  } else if (osClass == OSCLASS_MAC) {
     switch (osIdentifier) {
-      case 0:              printf(" (95)");      break;
-      case 1:              printf(" (98)");      break;
-      default:             printf(" (Unknown)"); break;
+      case 0:                printf(" (pre-OS X)");    break;
+      case 1:                printf(" (OS X)");        break;
+      default:               printf(" (Unknown) ** NON-UDF **");
     }
   } else {
     if (osIdentifier != 0)

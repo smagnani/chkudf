@@ -40,8 +40,11 @@
 #define OSCLASS_OS2      2
 #define OSCLASS_MAC      3
 #define OSCLASS_UNIX     4
-#define OSCLASS_WIN95    5
+#define OSCLASS_WIN9x    5
 #define OSCLASS_WINNT    6
+#define OSCLASS_OS400    7
+#define OSCLASS_BEOS     8
+#define OSCLASS_WINCE    9
 
 #define OSID_GENERIC     0
 #define OSID_IBM_AIX     1
@@ -51,6 +54,7 @@
 #define OSID_LINUX       5
 #define OSID_MKLINUX     6
 #define OSID_FREEBSD     7
+#define OSID_NETBSD      8
 
 /* UDF 2.2.10 Virtual Allocation Table -------------------------*/
 #define FILE_TYPE_VAT             248  /* UDF 2.00 and later */
