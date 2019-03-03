@@ -1,9 +1,0 @@
-#
-# config.in for Udf
-#
-LINUX=/usr/src/linux
-MODPATH=/lib/modules
-CC=gcc
-LD=ld
-PCDEBUG=-g
-# UNSAFE_TOOLS is not set
