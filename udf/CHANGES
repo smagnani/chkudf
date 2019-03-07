@@ -1,0 +1,183 @@
+dgb: David Boynton
+blf: Ben Fennema      (bfennema@falcon.csc.calpoly.edu)
+rl:  Reinoud Lamberts (Reinoud@BitWizard.nl)
+rew: Roger E. Wolff   (R.E.Wolff@BitWizard.nl)
+
+
+10/02/98 dgb    Implemented some changes suggested by HJA Sandkuyl.
+                Moved files around to support user-land access to 
+                filesystem via library
+10/04/98        Implemented table-based lookup for timestamp conversions
+                Fixed unicode convertions, added volident field to superblock
+10/06/98        Implemented directory operations, most of which work!
+
+10/07/98 dgb    Milestone reached. Rudimentary directory and file reading.
+                Limited in number of directory entries, though, about 30-40.
+
+10/16/98        Attempting some multi-session support.
+
+10/18/98        Fixed some directory problems; still limited but
+                doesn't seem to crash or oops now.
+                Enhanced "df" output a little.  Generally much more stable.
+
+11/29/98        Added better support for 'extents', long directories are ok now.
+                Incorporated some changes from Ben Fennema, including mkudf.
+                Still can't handle the "Sequential.img" test case from Adaptec.
+                Improved taglist and added a new dumpfe tool.
+
+12/6/98         Good results with Thomas Tempelmann's UDF1.02.img, although
+                still needs some 'short_ad' updates, and filename translation.
+                Superficial support for virtual & sparable partitions.
+
+12/8/98 blf     Partition support for Spared Blocks and Virtual Partitions.
+                Definite bugs in Virtual Partitions (lastblock only set correctly
+                on files).
+
+12/10/98 rl     Changed "." and ".." file name translation into human
+                readable form.
+
+12/11/98 rl/rew Fixed incorrect name compare (udf_lookup).
+
+12/13/98 rew    Cleanup of CHANGES/TODO
+
+12/14/98 blf    Full partition support. Code cleanups. No warnings! :)
+                UDF1.02.img, SparedBlks.img, and Sequential.img all work.
+
+12/15/98 rl     Fixed udf/tools gcc warnings (except, on purpose, the mkudf
+                write_fileentry4 and dumpfe partstart ones).  Updated TODO.
+
+12/19/98 dgb    Added semaphore and reorganized udf_iget. 
+                Worked on byte order (incomplete). Implemented umask.
+                Fixed block size reporting, and count_free error.
+
+12/20/98 blf    Completed byte ordering (perhaps).
+                Support for strategy 4096
+                Really basic support for finding the unallocated space bitmap
+                (we really need support for unallocated space tables +
+                freed space tables/bitmaps...)
+
+2/9/99 dgb        Tested with Kernel 2.2.1. 
+                Added some ioctl's for extended attributes and volume ident.
+                Added UDF_COMPILING define to udf_fs_i.h to allow kernel to
+                compile without gagging on lb_addr.
+                Minor change to mkudf so it gives help w/'mkudf' and nothing
+                else. Changed 'dump' to 'dumpsect' to avoid conflict.
+
+03/07/99 blf    Beginnings of write support.. chmod + rm of files.
+                New implementation of udf_bmap            
+                Updates to mkudf
+
+03/12/99 blf    Bug fixes. Support for reading length on MMC-3 drives.
+
+03/30/99 blf    Continuation of write support. creation of files. (minus the
+                case where a new block needs to be allocated to fit the FID
+                in the block)
+                Moved all the code that bangs on the CDROM to lowlevel.c
+                Added code to do variable -> fixed block translation for
+                reading CDRW's on drives that only support variable packet
+                reading.
+                Futzed with the debugging code a bunch. Added udf_debug and
+                udf_info.
+
+04/09/99 blf    Added Configure script
+
+04/19/99 blf    Support for link, symlink, and mknod
+
+05/12/99 blf    Initial support for writing (no sparse files)
+
+05/28/99 blf    Fixed various directory entry writing bugs. Added rename
+                for files and directories. Add fsync support (untested)
+                Handle VAT's that are in the ICB.
+
+06/03/99 blf    Fixed writing for files > 1 block
+                Started spliting out support for AD_IN_ICB files.
+
+06/11/99 dgb    Added a UDF_RECOVERY compile option and update to ./src/namei.c
+                that enables a ".B=xxx" filename syntax, useful for recovering 
+                files from damaged discs.  Modified ./patch/Makefile to 
+                assist in building kernel patches.
+
+06/16/99 blf    (Hopefully) fixed rename for versions <= 2.2.5
+                Fixed sparse files
+                Fixed block allocation algorithm to function properly
+
+07/15/99 blf    Fixed deletes (truncate problems)
+                Fixed various write bugs
+                Add block extension to truncate routine
+                Recalculate crc on udf_insert_aext
+                Changes to mkudf
+
+08/19/99 blf    Ported to linux 2.3.7+
+                Rewrote inode_getblk
+
+09/02/99 blf    Fixed unicode and anchor location bugs
+
+09/16/99 dgb    Fixed Configure to handle RedHat 6.0's kernel (which reports 
+        "UTS_RELEASE 2.2.5-15".) Fixed Configure to make symlinks for 
+        patch and src directories. Modified patch system to dynamically 
+        create diff files, instead of using pre-build diffs, and to 
+        better handle the apply/unapply. First draft of a FAQ.
+        Modified "make lib" to make both static and shared libraries.
+
+09/18/99 dgb    Updated patch system to properly apply/unapply from kernel 2.2,
+        And updated patch-2.3 to only do updates, since the driver
+        is now in the kernel (2.3.17+).
+
+09/27/99 blf    Fixed bug in long directories. Fixed time hour problems.
+                Coped ioctl changes from 2.2 to 2.3 tree. Added 2.3.18 changes
+                to 2.2 tree.
+
+10/29/99 blf    Some read fixes and lots of write fixes.
+                Fixed mkudf so it hopefully correctly detects the size of
+                media.
+
+11/18/99 blf    Re-orgranized udfdecl.h
+                Fixed extent generation for continuous files > 2^30 - blocksize
+                Fixed FileIdent location for FileIdents starting on a block boundary.
+                mkudf updates
+
+01/17/00 blf    Fix UTS_SHORT to handle non numeric extraversions
+                Tested/Fixed UTF-8 <-> Wide character handling
+                Rewrote partition handling
+                Read sparing table into RAM to allow for adding entries to it
+                removed UDF_I_EXT0... info from the inode
+                Changing write code to only expand ADINICB files when we have to
+                Added code to allow ADINICB files to be mmap'd
+                Sync'd changes with 2.3 development
+                Got rid of the semaphore in udf_iget
+
+02/29/00 blf    Fix truncate
+                Added noadinicb/shortad options
+                Redid flag system
+                Added udf versioning info
+                Fixed block size calculations
+                Quota should be set everywhere correctly
+                Sync'd changes with 2.3 development
+                Added cdrwtool and pktcdvd to tools
+                mkudf updates
+
+04/26/00 blf    handle tables in addition to bitmaps
+                handle freed as well as unallocated bitmaps/tables
+                fixed bugs based on udf plugfest
+                Configure handling for SMP
+                mkudf updates
+
+12/25/00 blf	fixed a bunch of write bugs and a directory read bug
+
+06/05/01 blf	fixed a rename bug when rename caused a AD_IN_ICB to be expanded out of the directory
+		added strict mount option
+		added iocharset= to allow using NLS (vs default of utf8)
+		rewrote sparing support - added udf_relocate_blocks
+
+06/13/01 blf	fix i_blocks off by one error when expanding AD_IN_ICB
+		handle redhat and -ac kernels (quota changes)
+		handle creation time for efe's and use ctime correctly
+		update objectSize on inode write for efe's
+		handle FILE_TYPE_REALTIME as normal file
+
+10/10/01 blf	quota change fixes
+		rm BUG()
+		> 4 GB file bug
+		less stringent on directory errors (Matrix DVD)
+		lazier last block detection
+		default to strict UDF conformance
