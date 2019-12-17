@@ -1,1 +1,1 @@
-#define PACKAGE_VERSION "0.5"
+#define PACKAGE_VERSION "0.6"

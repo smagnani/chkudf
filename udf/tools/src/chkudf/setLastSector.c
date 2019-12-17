@@ -5,6 +5,7 @@
 #include "nsr.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/errno.h>
 #include <sys/ioctl.h>
 #include <string.h>
 #include <ctype.h>
@@ -39,6 +40,14 @@ bool Get_Last_BGS()
     LastSector = (uint32_t) (num512ByteBlocks >> (sdivshift - 9)) - 1;
     LastSectorAccurate = true;
     success = true;
+  } else if (errno == EFBIG) {
+    uint64_t numBytes;
+    result = ioctl(device, BLKGETSIZE64, &numBytes);
+    if (!result) {
+      LastSector = (uint32_t) (numBytes >> sdivshift) - 1;
+      LastSectorAccurate = true;
+      success = true;
+    }
   }
   return success;
 }
